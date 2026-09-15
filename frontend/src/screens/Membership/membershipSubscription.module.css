@@ -1,0 +1,485 @@
+.pageRoot {
+  min-height: 100vh;
+  background: #f6f7fb;
+}
+
+.navbar {
+  height: 64px;
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 0 24px;
+}
+
+.logo {
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  text-decoration: none;
+  color: #0f172a;
+}
+
+.navCenter {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+}
+
+.navItem {
+  padding: 16px 10px 14px;
+  text-decoration: none;
+  color: #475569;
+  font-weight: 650;
+  position: relative;
+}
+
+.navItemActive {
+  color: #0f172a;
+}
+
+.navItemActive::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 6px;
+  height: 2px;
+  background: #00b56a;
+  border-radius: 999px;
+}
+
+.navRight {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+}
+
+.getAppBtn {
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: #00b56a;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.getAppBtn:hover {
+  background: #00a862;
+  box-shadow: 0 18px 28px rgba(0, 181, 106, 0.18);
+}
+
+.getAppBtn:active {
+  transform: translateY(1px);
+}
+
+.getAppBtn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(0, 181, 106, 0.22);
+}
+
+.profileBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 160ms ease, box-shadow 160ms ease;
+}
+
+.profileBtn:hover {
+  background: #f8fafc;
+  box-shadow: 0 10px 20px rgba(2, 6, 23, 0.06);
+}
+
+.profileBtn:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.profileAvatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #2d6cff, #00d2a0);
+}
+
+.content {
+  padding: 22px 24px 56px;
+}
+
+.container {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.pageTitle {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: -0.3px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.pageSub {
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 560px;
+}
+
+.modeTabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 12px 0 14px;
+}
+
+.tabBtn {
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: #0f172a;
+  font-weight: 900;
+  cursor: pointer;
+  transition: box-shadow 160ms ease, transform 120ms ease, background 160ms ease;
+}
+
+.tabBtn:hover {
+  background: #f8fafc;
+  box-shadow: 0 10px 20px rgba(2, 6, 23, 0.06);
+}
+
+.tabBtn:active {
+  transform: translateY(1px);
+}
+
+.tabBtn:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.tabBtnActive {
+  border-color: rgba(0, 181, 106, 0.5);
+  box-shadow: 0 0 0 4px rgba(0, 181, 106, 0.15);
+}
+
+.card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.cardHeader {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.cardKicker {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  font-weight: 950;
+  color: #64748b;
+}
+
+.cardTitle {
+  font-size: 18px;
+  font-weight: 950;
+  margin-top: 6px;
+  letter-spacing: -0.2px;
+}
+
+.cardDesc {
+  margin-top: 6px;
+  color: #64748b;
+  line-height: 1.5;
+  font-size: 13px;
+}
+
+.planGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+@media (max-width: 860px) {
+  .planGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.planCard {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  background: #fff;
+}
+
+.planTitle {
+  font-weight: 950;
+  font-size: 16px;
+  letter-spacing: -0.2px;
+}
+
+.planMeta {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.planSub {
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.pill {
+  font-size: 12px;
+  font-weight: 900;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(45, 108, 255, 0.08);
+  border: 1px solid rgba(45, 108, 255, 0.22);
+  color: #0f172a;
+}
+
+.price {
+  font-weight: 950;
+  color: #0f172a;
+}
+
+.primaryBtn {
+  width: 100%;
+  height: 48px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: #00b56a;
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.primaryBtn:hover {
+  background: #00a862;
+}
+
+.primaryBtn:disabled {
+  background: #eef2f7;
+  color: #94a3b8;
+  cursor: not-allowed;
+  border-color: #e7eaf0;
+}
+
+.secondaryBtn {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  color: #0f172a;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.benefitsWrap {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.benefitsTitle {
+  font-weight: 950;
+  margin-bottom: 10px;
+}
+
+.benefitsList {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+}
+
+.benefitItem {
+  color: #475569;
+  line-height: 1.45;
+}
+
+.note {
+  margin-top: 12px;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.fieldRow {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.select {
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 0 12px;
+  font-weight: 700;
+  outline: none;
+  transition: box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.select:focus {
+  box-shadow: var(--ring);
+  border-color: rgba(45, 108, 255, 0.55);
+}
+
+.divider {
+  height: 1px;
+  background: var(--line);
+  margin: 16px 0;
+}
+
+.planSection {
+  margin-top: 4px;
+}
+
+.sectionTitle {
+  font-weight: 950;
+}
+
+.planPick {
+  text-align: left;
+  width: 100%;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  cursor: pointer;
+  color: #0f172a;
+  transition: box-shadow 160ms ease, transform 120ms ease, border-color 160ms ease;
+}
+
+.planPick:hover {
+  box-shadow: 0 10px 20px rgba(2, 6, 23, 0.06);
+}
+
+.planPickActive {
+  border-color: rgba(0, 181, 106, 0.6);
+  box-shadow: 0 0 0 4px rgba(0, 181, 106, 0.14);
+}
+
+.planPickTitle {
+  font-weight: 950;
+  font-size: 16px;
+  letter-spacing: -0.2px;
+}
+
+.planPickMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.planPickDesc {
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.checkoutRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 14px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.summary {
+  flex: 1;
+  min-width: 260px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.summaryTitle {
+  font-weight: 950;
+  margin-bottom: 10px;
+}
+
+.summaryLine {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #475569;
+  margin-top: 8px;
+}
+
+.errorMsg {
+  margin-top: 10px;
+  color: #b91c1c;
+  font-size: 13px;
+  line-height: 1.35;
+  white-space: pre-wrap;
+}
+
+.infoBanner {
+  margin-top: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(45, 108, 255, 0.25);
+  background: rgba(45, 108, 255, 0.08);
+  padding: 10px 12px;
+  color: #0f172a;
+  line-height: 1.45;
+}
+
+.skeletonLine {
+  height: 14px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(15, 23, 42, 0.06) 0%, rgba(15, 23, 42, 0.12) 40%, rgba(15, 23, 42, 0.06) 80%);
+}
+
+@media (max-width: 520px) {
+  .navbar,
+  .content {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}

@@ -1,0 +1,403 @@
+.pageRoot {
+  min-height: 100vh;
+  background: #f6f7fb;
+}
+
+.navbar {
+  height: 64px;
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 0 24px;
+}
+
+.logo {
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  text-decoration: none;
+}
+
+.navCenter {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+}
+
+.navItem {
+  padding: 16px 10px 14px;
+  text-decoration: none;
+  color: #475569;
+  font-weight: 650;
+  position: relative;
+}
+
+.navItemActive {
+  color: #0f172a;
+}
+
+.navItemActive::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 6px;
+  height: 2px;
+  background: #00b56a;
+  border-radius: 999px;
+}
+
+.navRight {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+}
+
+.getAppBtn {
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: #00b56a;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.getAppBtn:hover {
+  background: #00a862;
+}
+
+.profileBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.profileAvatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #2d6cff, #00d2a0);
+}
+
+.content {
+  padding: 22px 24px 56px;
+}
+
+.container {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+@media (min-width: 980px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+}
+
+.card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 900;
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.subtitle {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.banner {
+  margin-top: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 181, 106, 0.22);
+  background: rgba(0, 181, 106, 0.10);
+  padding: 10px 12px;
+}
+
+.bannerWarn {
+  border-color: rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.bannerInfo {
+  border-color: rgba(45, 108, 255, 0.25);
+  background: rgba(45, 108, 255, 0.10);
+}
+
+.bannerTitle {
+  font-weight: 850;
+  color: #0f172a;
+}
+
+.bannerSub {
+  margin-top: 2px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.form {
+  margin-top: 14px;
+  display: grid;
+  gap: 14px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 14px;
+  align-items: center;
+}
+
+@media (max-width: 720px) {
+  .row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    align-items: start;
+  }
+}
+
+.label {
+  font-weight: 750;
+  color: #0f172a;
+}
+
+.control {
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 0 12px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.control:focus {
+  outline: 2px solid rgba(45, 108, 255, 0.25);
+  outline-offset: 2px;
+}
+
+.durationWrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.roundBtn {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-size: 18px;
+  font-weight: 900;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.roundBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.durationText {
+  font-weight: 900;
+}
+
+.availability {
+  font-size: 13px;
+  color: #475569;
+  margin-top: -6px;
+}
+
+.availabilityOk {
+  color: #05603a;
+}
+
+.muted {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.availabilityWarn {
+  color: #7a5200;
+}
+
+.availabilityBad {
+  color: #7a1f1f;
+}
+
+.primaryBtn {
+  width: 100%;
+  height: 48px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: #00b56a;
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.primaryBtn:hover {
+  background: #00a862;
+}
+
+.primaryBtn:disabled {
+  background: #eef2f7;
+  color: #94a3b8;
+  cursor: not-allowed;
+  border-color: #e7eaf0;
+}
+
+.summaryEmpty {
+  height: 220px;
+  border-radius: 12px;
+  border: 1px dashed #e2e8f0;
+  display: grid;
+  place-items: center;
+  color: #64748b;
+  text-align: center;
+}
+
+.summaryIcon {
+  font-size: 44px;
+  opacity: 0.35;
+}
+
+.summaryList {
+  display: grid;
+  gap: 12px;
+}
+
+.bookingCard {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.bookingTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.muted {
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 850;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(0, 181, 106, 0.10);
+  border: 1px solid rgba(0, 181, 106, 0.22);
+  color: #05603a;
+}
+
+.pillPaid {
+  background: rgba(45, 108, 255, 0.10);
+  border-color: rgba(45, 108, 255, 0.22);
+  color: #0b2a7a;
+}
+
+.actions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.linkBtn {
+  border: none;
+  background: transparent;
+  color: var(--brand);
+  font-weight: 850;
+  cursor: pointer;
+  padding: 0;
+}
+
+.linkBtn:hover {
+  text-decoration: underline;
+}
+
+.finalBtn {
+  margin-top: 14px;
+  width: 100%;
+  height: 48px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: #0f172a;
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.secondaryBtn {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  color: #0f172a;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.secondaryBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.finalBtn:disabled {
+  background: #eef2f7;
+  color: #94a3b8;
+  border-color: #e7eaf0;
+  cursor: not-allowed;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #eef2f7 0%, #f6f7fb 45%, #eef2f7 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s ease-in-out infinite;
+  border-radius: 12px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}

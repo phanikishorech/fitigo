@@ -1,0 +1,534 @@
+
+> fitigo-frontend@0.1.0 dev
+> node ./node_modules/vite/bin/vite.js --port 5173 --strictPort --force --debug
+
+2026-08-23T19:06:20.256Z vite:config config file loaded in 56.29ms
+2026-08-23T19:06:20.258Z vite:env loading env files: [
+  'C:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/.env',
+  'C:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/.env.local',
+  'C:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/.env.development',
+  'C:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/.env.development.local'
+]
+2026-08-23T19:06:20.259Z vite:env env files loaded in 0.41ms
+2026-08-23T19:06:20.259Z vite:env using resolved env: {}
+2026-08-23T19:06:20.267Z vite:config using resolved config: {
+  root: 'C:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend',
+  plugins: [
+    'vite:optimized-deps',
+    'vite:watch-package-data',
+    'vite:pre-alias',
+    'alias',
+    'vite:react-babel',
+    'vite:react-refresh',
+    'vite:modulepreload-polyfill',
+    'vite:resolve',
+    'vite:html-inline-proxy',
+    'vite:css',
+    'vite:esbuild',
+    'vite:json',
+    'vite:wasm-helper',
+    'vite:worker',
+    'vite:asset',
+    'vite:react-virtual-preamble',
+    'vite:wasm-fallback',
+    'vite:define',
+    'vite:css-post',
+    'vite:worker-import-meta-url',
+    'vite:asset-import-meta-url',
+    'vite:dynamic-import-vars',
+    'vite:import-glob',
+    'vite:client-inject',
+    'vite:css-analysis',
+    'vite:import-analysis'
+  ],
+  resolve: {
+    externalConditions: [ 'node' ],
+    extensions: [
+      '.mjs',  '.js',
+      '.mts',  '.ts',
+      '.jsx',  '.tsx',
+      '.json'
+    ],
+    dedupe: [],
+    noExternal: [],
+    external: [],
+    preserveSymlinks: false,
+    alias: [
+      {
+        find: /^\/?@vite\/env/,
+        replacement: '/@fs/C:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/node_modules/vite/dist/client/env.mjs'
+      },
+      {
+        find: /^\/?@vite\/client/,
+        replacement: '/@fs/C:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/node_modules/vite/dist/client/client.mjs'
+      }
+    ],
+    mainFields: [ 'browser', 'module', 'jsnext:main', 'jsnext' ],
+    conditions: [ 'module', 'browser', 'development|production' ],
+    builtins: []
+  },
+  cacheDir: 'C:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/node_modules/.vite-fitigo',
+  server: {
+    port: 5173,
+    strictPort: true,
+    host: undefined,
+    allowedHosts: [],
+    https: undefined,
+    open: false,
+    proxy: {
+      '/api': { target: 'http://localhost:8000', changeOrigin: true },
+      '/uploads': { target: 'http://localhost:8000', changeOrigin: true }
+    },
+    cors: {
+      origin: /^https?:\/\/(?:(?:[^:]+\.)?localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/
+    },
+    headers: {},
+    warmup: { clientFiles: [], ssrFiles: [] },
+    middlewareMode: false,
+    fs: {
+      strict: true,
+      deny: [ '.env', '.env.*', '*.{crt,pem}', '**/.git/**' ],
+      allow: [ 'C:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend' ]
+    },
+    preTransformRequests: true,
+    perEnvironmentStartEndDuringDev: false,
+    sourcemapIgnoreList: [Function: isInNodeModules$1],
+    force: true
+  },
+  forceOptimizeDeps: true,
+  esbuild: { jsxDev: true, jsx: 'automatic', jsxImportSource: undefined },
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react/jsx-dev-runtime',
+      'react/jsx-runtime'
+    ],
+    exclude: [],
+    needsInterop: [],
+    extensions: [],
+    disabled: undefined,
+    holdUntilCrawlEnd: true,
+    force: true,
+    noDiscovery: false,
+    esbuildOptions: { preserveSymlinks: false, jsx: 'automatic' }
+  },
+  build: {
+    target: [ 'es2020', 'edge88', 'firefox78', 'chrome87', 'safari14' ],
+    polyfillModulePreload: true,
+    modulePreload: { polyfill: true },
+    outDir: 'dist',
+    assetsDir: 'assets',
+    assetsInlineLimit: 4096,
+    sourcemap: false,
+    terserOptions: {},
+    rollupOptions: { onwarn: [Function: onwarn] },
+    commonjsOptions: { include: [ /node_modules/ ], extensions: [ '.js', '.cjs' ] },
+    dynamicImportVarsOptions: { warnOnError: true, exclude: [ /node_modules/ ] },
+    write: true,
+    emptyOutDir: null,
+    copyPublicDir: true,
+    manifest: false,
+    lib: false,
+    ssrManifest: false,
+    ssrEmitAssets: false,
+    reportCompressedSize: true,
+    chunkSizeWarningLimit: 500,
+    watch: null,
+    cssCodeSplit: true,
+    minify: 'esbuild',
+    ssr: false,
+    emitAssets: false,
+    createEnvironment: [Function: createEnvironment],
+    cssTarget: [ 'es2020', 'edge88', 'firefox78', 'chrome87', 'safari14' ],
+    cssMinify: true
+  },
+  environments: {
+    client: {
+      define: undefined,
+      resolve: {
+        externalConditions: [ 'node' ],
+        extensions: [
+          '.mjs',  '.js',
+          '.mts',  '.ts',
+          '.jsx',  '.tsx',
+          '.json'
+        ],
+        dedupe: [],
+        noExternal: [],
+        external: [],
+        preserveSymlinks: false,
+        alias: [
+          {
+            find: /^\/?@vite\/env/,
+            replacement: '/@fs/C:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/node_modules/vite/dist/client/env.mjs'
+          },
+          {
+            find: /^\/?@vite\/client/,
+            replacement: '/@fs/C:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/node_modules/vite/dist/client/client.mjs'
+          }
+        ],
+        mainFields: [ 'browser', 'module', 'jsnext:main', 'jsnext' ],
+        conditions: [ 'module', 'browser', 'development|production' ],
+        builtins: []
+      },
+      keepProcessEnv: false,
+      consumer: 'client',
+      optimizeDeps: {
+        include: [
+          'react',
+          'react-dom',
+          'react/jsx-dev-runtime',
+          'react/jsx-runtime'
+        ],
+        exclude: [],
+        needsInterop: [],
+        extensions: [],
+        disabled: undefined,
+        holdUntilCrawlEnd: true,
+        force: true,
+        noDiscovery: false,
+        esbuildOptions: { preserveSymlinks: false, jsx: 'automatic' }
+      },
+      dev: {
+        warmup: [],
+        sourcemap: { js: true },
+        sourcemapIgnoreList: [Function: isInNodeModules$1],
+        preTransformRequests: true,
+        createEnvironment: [Function: defaultCreateClientDevEnvironment],
+        recoverable: true,
+        moduleRunnerTransform: false
+      },
+      build: {
+        target: [ 'es2020', 'edge88', 'firefox78', 'chrome87', 'safari14' ],
+        polyfillModulePreload: true,
+        modulePreload: { polyfill: true },
+        outDir: 'dist',
+        assetsDir: 'assets',
+        assetsInlineLimit: 4096,
+        sourcemap: false,
+        terserOptions: {},
+        rollupOptions: { onwarn: [Function: onwarn] },
+        commonjsOptions: { include: [ /node_modules/ ], extensions: [ '.js', '.cjs' ] },
+        dynamicImportVarsOptions: { warnOnError: true, exclude: [ /node_modules/ ] },
+        write: true,
+        emptyOutDir: null,
+        copyPublicDir: true,
+        manifest: false,
+        lib: false,
+        ssrManifest: false,
+        ssrEmitAssets: false,
+        reportCompressedSize: true,
+        chunkSizeWarningLimit: 500,
+        watch: null,
+        cssCodeSplit: true,
+        minify: 'esbuild',
+        ssr: false,
+        emitAssets: true,
+        createEnvironment: [Function: createEnvironment],
+        cssTarget: [ 'es2020', 'edge88', 'firefox78', 'chrome87', 'safari14' ],
+        cssMinify: true
+      }
+    },
+    ssr: {
+      define: undefined,
+      resolve: {
+        externalConditions: [ 'node' ],
+        extensions: [
+          '.mjs',  '.js',
+          '.mts',  '.ts',
+          '.jsx',  '.tsx',
+          '.json'
+        ],
+        dedupe: [],
+        noExternal: [],
+        external: [],
+        preserveSymlinks: false,
+        alias: [
+          {
+            find: /^\/?@vite\/env/,
+            replacement: '/@fs/C:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/node_modules/vite/dist/client/env.mjs'
+          },
+          {
+            find: /^\/?@vite\/client/,
+            replacement: '/@fs/C:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/node_modules/vite/dist/client/client.mjs'
+          }
+        ],
+        mainFields: [ 'module', 'jsnext:main', 'jsnext' ],
+        conditions: [ 'module', 'node', 'development|production' ],
+        builtins: [
+          '_http_agent',         '_http_client',        '_http_common',
+          '_http_incoming',      '_http_outgoing',      '_http_server',
+          '_stream_duplex',      '_stream_passthrough', '_stream_readable',
+          '_stream_transform',   '_stream_wrap',        '_stream_writable',
+          '_tls_common',         '_tls_wrap',           'assert',
+          'assert/strict',       'async_hooks',         'buffer',
+          'child_process',       'cluster',             'console',
+          'constants',           'crypto',              'dgram',
+          'diagnostics_channel', 'dns',                 'dns/promises',
+          'domain',              'events',              'fs',
+          'fs/promises',         'http',                'http2',
+          'https',               'inspector',           'inspector/promises',
+          'module',              'net',                 'os',
+          'path',                'path/posix',          'path/win32',
+          'perf_hooks',          'process',             'punycode',
+          'querystring',         'readline',            'readline/promises',
+          'repl',                'stream',              'stream/consumers',
+          'stream/promises',     'stream/web',          'string_decoder',
+          'sys',                 'timers',              'timers/promises',
+          'tls',                 'trace_events',        'tty',
+          'url',                 'util',                'util/types',
+          'v8',                  'vm',                  'wasi',
+          'worker_threads',      'zlib',                /^node:/,
+          /^npm:/,               /^bun:/
+        ]
+      },
+      keepProcessEnv: true,
+      consumer: 'server',
+      optimizeDeps: {
+        include: [],
+        exclude: [],
+        needsInterop: [],
+        extensions: [],
+        disabled: undefined,
+        holdUntilCrawlEnd: true,
+        force: true,
+        noDiscovery: true,
+        esbuildOptions: { preserveSymlinks: false }
+      },
+      dev: {
+        warmup: [],
+        sourcemap: { js: true },
+        sourcemapIgnoreList: [Function: isInNodeModules$1],
+        preTransformRequests: false,
+        createEnvironment: [Function: defaultCreateDevEnvironment],
+        recoverable: false,
+        moduleRunnerTransform: true
+      },
+      build: {
+        target: [ 'es2020', 'edge88', 'firefox78', 'chrome87', 'safari14' ],
+        polyfillModulePreload: true,
+        modulePreload: { polyfill: true },
+        outDir: 'dist',
+        assetsDir: 'assets',
+        assetsInlineLimit: 4096,
+        sourcemap: false,
+        terserOptions: {},
+        rollupOptions: { onwarn: [Function: onwarn] },
+        commonjsOptions: { include: [ /node_modules/ ], extensions: [ '.js', '.cjs' ] },
+        dynamicImportVarsOptions: { warnOnError: true, exclude: [ /node_modules/ ] },
+        write: true,
+        emptyOutDir: null,
+        copyPublicDir: true,
+        manifest: false,
+        lib: false,
+        ssrManifest: false,
+        ssrEmitAssets: false,
+        reportCompressedSize: true,
+        chunkSizeWarningLimit: 500,
+        watch: null,
+        cssCodeSplit: true,
+        minify: false,
+        ssr: true,
+        emitAssets: false,
+        createEnvironment: [Function: createEnvironment],
+        cssTarget: [ 'es2020', 'edge88', 'firefox78', 'chrome87', 'safari14' ],
+        cssMinify: 'esbuild'
+      }
+    }
+  },
+  configFile: 'C:/Users/ckishor/.cline/data/workspaces/chat/fitigo/frontend/vite.config.ts',
+  configFileDependencies: [
+    'C:/Users/ckishor/.cline/data/workspaces/chat/fitigo/frontend/vite.config.ts'
+  ],
+  inlineConfig: {
+    root: undefined,
+    base: undefined,
+    mode: undefined,
+    configFile: undefined,
+    configLoader: undefined,
+    logLevel: undefined,
+    clearScreen: undefined,
+    server: { port: 5173, host: undefined, strictPort: true, force: true },
+    forceOptimizeDeps: true
+  },
+  base: '/',
+  decodedBase: '/',
+  rawBase: '/',
+  publicDir: 'C:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/public',
+  command: 'serve',
+  mode: 'development',
+  isWorker: false,
+  mainConfig: null,
+  bundleChain: [],
+  isProduction: false,
+  css: {
+    transformer: 'postcss',
+    preprocessorMaxWorkers: 0,
+    devSourcemap: false
+  },
+  json: { namedExports: true, stringify: 'auto' },
+  builder: undefined,
+  preview: {
+    port: 4173,
+    strictPort: true,
+    host: undefined,
+    allowedHosts: [],
+    https: undefined,
+    open: false,
+    proxy: {
+      '/api': { target: 'http://localhost:8000', changeOrigin: true },
+      '/uploads': { target: 'http://localhost:8000', changeOrigin: true }
+    },
+    cors: {
+      origin: /^https?:\/\/(?:(?:[^:]+\.)?localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/
+    },
+    headers: {}
+  },
+  envDir: 'C:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend',
+  env: { BASE_URL: '/', MODE: 'development', DEV: true, PROD: false },
+  assetsInclude: [Function: assetsInclude],
+  logger: {
+    hasWarned: false,
+    info: [Function: info],
+    warn: [Function: warn],
+    warnOnce: [Function: warnOnce],
+    error: [Function: error],
+    clearScreen: [Function: clearScreen],
+    hasErrorLogged: [Function: hasErrorLogged]
+  },
+  packageCache: Map(1) {
+    'fnpd_C:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend' => {
+      dir: 'C:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend',
+      data: {
+        name: 'fitigo-frontend',
+        private: true,
+        version: '0.1.0',
+        type: 'module',
+        scripts: {
+          dev: 'node ./node_modules/vite/bin/vite.js --port 5173 --strictPort',
+          build: 'node ./node_modules/vite/bin/vite.js build',
+          preview: 'node ./node_modules/vite/bin/vite.js preview'
+        },
+        dependencies: { react: '^18.3.1', 'react-dom': '^18.3.1' },
+        devDependencies: {
+          '@rollup/rollup-win32-x64-msvc': '^4.62.5',
+          '@types/react': '^18.3.5',
+          '@types/react-dom': '^18.3.0',
+          '@vitejs/plugin-react': '^5.0.0',
+          typescript: '^5.5.4',
+          vite: '^6.0.0'
+        }
+      },
+      hasSideEffects: [Function: hasSideEffects],
+      setResolvedCache: [Function: setResolvedCache],
+      getResolvedCache: [Function: getResolvedCache]
+    },
+    set: [Function (anonymous)]
+  },
+  worker: { format: 'iife', plugins: '() => plugins', rollupOptions: {} },
+  appType: 'spa',
+  experimental: { importGlobRestoreExtension: false, hmrPartialAccept: false },
+  future: undefined,
+  ssr: {
+    target: 'node',
+    optimizeDeps: {
+      esbuildOptions: { preserveSymlinks: false },
+      include: [],
+      exclude: [],
+      needsInterop: [],
+      extensions: [],
+      holdUntilCrawlEnd: true,
+      force: true,
+      noDiscovery: true
+    },
+    external: [],
+    noExternal: [],
+    resolve: {
+      conditions: [ 'module', 'node', 'development|production' ],
+      externalConditions: [ 'node' ]
+    }
+  },
+  dev: {
+    warmup: [],
+    sourcemap: { js: true },
+    sourcemapIgnoreList: [Function: isInNodeModules$1],
+    preTransformRequests: false,
+    createEnvironment: [Function: defaultCreateDevEnvironment],
+    recoverable: false,
+    moduleRunnerTransform: false
+  },
+  webSocketToken: 'YBaH6kPtMcB-',
+  getSortedPlugins: [Function: getSortedPlugins],
+  getSortedPluginHooks: [Function: getSortedPluginHooks],
+  createResolver: [Function: createResolver],
+  fsDenyGlob: [Function: arrayMatcher],
+  safeModulePaths: Set(0) {},
+  additionalAllowedHosts: [],
+  Symbol(vite:resolved-config): true
+}
+[2m12:36:20 AM[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m Forced re-optimization of dependencies
+2026-08-23T19:06:20.298Z vite:deps (client) [32mremoving old cache dir C:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/node_modules/.vite-fitigo/deps[39m
+2026-08-23T19:06:20.310Z vite:resolve [32m1.37ms[39m [36mreact[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/node_modules/react/index.js[22m
+2026-08-23T19:06:20.311Z vite:resolve [32m0.75ms[39m [36mreact-dom[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/node_modules/react-dom/index.js[22m
+2026-08-23T19:06:20.311Z vite:resolve [32m0.38ms[39m [36mreact/jsx-dev-runtime[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/node_modules/react/jsx-dev-runtime.js[22m
+2026-08-23T19:06:20.312Z vite:resolve [32m0.28ms[39m [36mreact/jsx-runtime[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/node_modules/react/jsx-runtime.js[22m
+2026-08-23T19:06:20.313Z vite:deps [32mscanning for dependencies...[39m
+2026-08-23T19:06:20.320Z vite:hmr [file change] [2mdev-out.txt[22m
+2026-08-23T19:06:20.320Z vite:hmr (client) [no modules matched] [2mdev-out.txt[22m
+2026-08-23T19:06:20.320Z vite:hmr (ssr) [no modules matched] [2mdev-out.txt[22m
+
+  [32m[1mVITE[22m v6.4.3[39m  [2mready in [0m[1m355[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+[2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+2026-08-23T19:06:20.328Z vite:deps Crawling dependencies using entries: 
+  [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/index.html[22m
+2026-08-23T19:06:20.346Z vite:resolve [32m0.30ms[39m [36m/src/main.tsx[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/src/main.tsx[22m
+2026-08-23T19:06:20.362Z vite:deps [32m✨ static imports crawl ended[39m
+2026-08-23T19:06:20.364Z vite:resolve [32m1.13ms[39m [36mreact[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/node_modules/react/index.js[22m
+2026-08-23T19:06:20.366Z vite:resolve [32m0.61ms[39m [36mreact-dom/client[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/node_modules/react-dom/client.js[22m
+2026-08-23T19:06:20.368Z vite:resolve [32m0.35ms[39m [36m./App[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/src/App.tsx[22m
+2026-08-23T19:06:20.371Z vite:resolve [32m0.64ms[39m [36mreact/jsx-runtime[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/node_modules/react/jsx-runtime.js[22m
+2026-08-23T19:06:20.379Z vite:resolve [32m0.37ms[39m [36m./components/AuthModal/AuthModal[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/src/components/AuthModal/AuthModal.tsx[22m
+2026-08-23T19:06:20.379Z vite:resolve [32m0.31ms[39m [36m./screens/NearbyGyms/NearbyGymsPage[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/src/screens/NearbyGyms/NearbyGymsPage.tsx[22m
+2026-08-23T19:06:20.380Z vite:resolve [32m0.32ms[39m [36m./screens/GymDetails/GymDetailsPage[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/src/screens/GymDetails/GymDetailsPage.tsx[22m
+2026-08-23T19:06:20.381Z vite:resolve [32m0.32ms[39m [36m./screens/GymAccess/GymAccessPage[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/src/screens/GymAccess/GymAccessPage.tsx[22m
+2026-08-23T19:06:20.381Z vite:resolve [32m0.25ms[39m [36m./router[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/src/router.ts[22m
+2026-08-23T19:06:20.390Z vite:resolve [32m0.71ms[39m [36m./api[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/src/screens/GymDetails/api.ts[22m
+2026-08-23T19:06:20.390Z vite:resolve [32m0.75ms[39m [36m./masking[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/src/components/AuthModal/masking.ts[22m
+2026-08-23T19:06:20.390Z vite:resolve [32m0.26ms[39m [36m./api[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/src/screens/GymAccess/api.ts[22m
+2026-08-23T19:06:20.391Z vite:resolve [32m0.48ms[39m [36m../NearbyGyms/AppDownloadModal[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/src/screens/NearbyGyms/AppDownloadModal.tsx[22m
+2026-08-23T19:06:20.391Z vite:resolve [32m0.49ms[39m [36m./validation[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/src/components/AuthModal/validation.ts[22m
+2026-08-23T19:06:20.391Z vite:resolve [32m0.25ms[39m [36m../NearbyGyms/SupportWidget[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/src/screens/NearbyGyms/SupportWidget.tsx[22m
+2026-08-23T19:06:20.392Z vite:resolve [32m0.43ms[39m [36m./EmailOtpPanel[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/src/components/AuthModal/EmailOtpPanel.tsx[22m
+2026-08-23T19:06:20.392Z vite:resolve [32m0.43ms[39m [36m./api[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/src/screens/NearbyGyms/api.ts[22m
+2026-08-23T19:06:20.393Z vite:resolve [32m0.39ms[39m [36m../../router[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/src/router.ts[22m
+2026-08-23T19:06:20.393Z vite:resolve [32m0.41ms[39m [36m./OtpVerifyPanel[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/src/components/AuthModal/OtpVerifyPanel.tsx[22m
+2026-08-23T19:06:20.393Z vite:resolve [32m0.42ms[39m [36m./GymCard[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/src/screens/NearbyGyms/GymCard.tsx[22m
+2026-08-23T19:06:20.394Z vite:resolve [32m0.27ms[39m [36m./MobileOtpPanel[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/src/components/AuthModal/MobileOtpPanel.tsx[22m
+2026-08-23T19:06:20.394Z vite:resolve [32m0.24ms[39m [36m./SkeletonCard[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/src/screens/NearbyGyms/SkeletonCard.tsx[22m
+2026-08-23T19:06:20.395Z vite:resolve [32m0.24ms[39m [36m./SupportWidget[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/src/screens/NearbyGyms/SupportWidget.tsx[22m
+2026-08-23T19:06:20.395Z vite:resolve [32m0.24ms[39m [36m./LocationPickerModal[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/src/screens/NearbyGyms/LocationPickerModal.tsx[22m
+2026-08-23T19:06:20.396Z vite:resolve [32m0.25ms[39m [36m./AppDownloadModal[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/src/screens/NearbyGyms/AppDownloadModal.tsx[22m
+2026-08-23T19:06:20.396Z vite:resolve [32m0.25ms[39m [36m./LocationStore[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/src/screens/NearbyGyms/LocationStore.ts[22m
+2026-08-23T19:06:20.397Z vite:resolve [32m0.32ms[39m [36m./useDebouncedValue[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/src/screens/NearbyGyms/useDebouncedValue.ts[22m
+2026-08-23T19:06:20.404Z vite:deps Scan completed in 91.53ms: 
+  [36mreact[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/node_modules/react/index.js[22m
+  [36mreact-dom/client[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/node_modules/react-dom/client.js[22m
+  [36mreact/jsx-runtime[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/node_modules/react/jsx-runtime.js[22m
+2026-08-23T19:06:20.405Z vite:deps [32mcreating package.json in C:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/node_modules/.vite-fitigo/deps_temp_072ec4d6[39m
+2026-08-23T19:06:20.412Z vite:resolve [32m0.46ms[39m [36mreact-dom[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/node_modules/react-dom/index.js[22m
+2026-08-23T19:06:20.417Z vite:resolve [32m0.77ms[39m [36mreact[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/node_modules/react/index.js[22m
+2026-08-23T19:06:20.440Z vite:resolve [32m0.65ms[39m [36mscheduler[39m -> [2mC:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/node_modules/scheduler/index.js[22m
+2026-08-23T19:06:20.481Z vite:deps [32mremoving cache dir C:/Users/ckishor/PROJECT CODE/GIT Code/poc/Fitigo/frontend/node_modules/.vite-fitigo/deps_temp_072ec4d6[39m
+file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/Fitigo/frontend/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:15012
+            metadata.hash + depsInfo[id].file + JSON.stringify(output.imports)
+                                                                      ^
+
+TypeError: Cannot read properties of undefined (reading 'imports')
+    at file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/Fitigo/frontend/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:15012:71
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+
+Node.js v24.16.0

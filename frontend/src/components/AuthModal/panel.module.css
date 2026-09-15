@@ -1,0 +1,235 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px 2px 2px;
+  min-height: 0;
+}
+
+.label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4b5563;
+  margin-top: 8px;
+}
+
+.required {
+  color: #ef4444;
+  margin-left: 4px;
+}
+
+.input {
+  height: 50px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 0 14px;
+  outline: none;
+  transition: box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.input:focus {
+  border-color: rgba(45, 108, 255, 0.8);
+  box-shadow: var(--ring);
+}
+
+.errorText {
+  margin-top: -6px;
+  font-size: 13px;
+  color: #b91c1c;
+  min-height: 18px;
+}
+
+.primaryBtn {
+  height: 50px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: var(--brand);
+  color: #fff;
+  font-weight: 650;
+  cursor: pointer;
+  transition: transform 120ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.primaryBtn:hover { background: var(--brand-2); }
+.primaryBtn:active { transform: translateY(1px); }
+
+.primaryBtn:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.primaryBtn:disabled {
+  background: #eef2f7;
+  color: #9aa3b2;
+  cursor: not-allowed;
+}
+
+.orRow {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 0 8px;
+}
+
+.orLine { height: 1px; background: var(--line); }
+.orText { font-size: 13px; color: #9aa3b2; }
+
+.altMethods {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 42px;
+  padding-top: 6px;
+}
+
+.altMethodBtn {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.iconCircle {
+  width: 54px;
+  height: 54px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.06);
+  transition: transform 120ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.altMethodBtn:hover .iconCircle {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(2, 6, 23, 0.08);
+  border-color: rgba(45, 108, 255, 0.35);
+}
+
+.altMethodBtn:focus-visible {
+  outline: none;
+}
+
+.altMethodBtn:focus-visible .iconCircle {
+  box-shadow: var(--ring);
+  border-color: rgba(45, 108, 255, 0.5);
+}
+
+.altLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 10px;
+}
+
+.secondaryLink {
+  border: 0;
+  background: transparent;
+  color: var(--brand);
+  font-weight: 650;
+  cursor: pointer;
+  padding: 8px 0;
+  align-self: flex-start;
+}
+
+.secondaryLink:hover { text-decoration: underline; }
+
+.otpHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0 8px;
+}
+
+.otpTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.otpSub {
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.45;
+}
+
+.maskedTarget {
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.otpBoxes {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-start;
+  padding: 6px 0 4px;
+}
+
+.otpBox {
+  width: 46px;
+  height: 52px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+  outline: none;
+  transition: box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.otpBox:focus {
+  border-color: rgba(45, 108, 255, 0.85);
+  box-shadow: var(--ring);
+}
+
+.otpBoxError {
+  border-color: rgba(220, 38, 38, 0.65);
+}
+
+.resendRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding-top: 6px;
+}
+
+.resendText {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.resendBtn {
+  border: 0;
+  background: transparent;
+  color: var(--brand);
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+
+.resendBtn:disabled {
+  cursor: not-allowed;
+  color: #9aa3b2;
+}
+
+.footerSpacer {
+  flex: 1;
+}
+
+@media (max-width: 740px) {
+  .otpBoxes { gap: 8px; }
+  .otpBox { width: 42px; }
+}

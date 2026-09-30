@@ -6,6 +6,16 @@
   min-height: 0;
 }
 
+.signInModes { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border: 1px solid #e2e8e4; border-radius: 12px; background: #f4f7f4; margin-bottom: 16px; }
+.signInModes button { min-height: 44px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #64748b; font: inherit; font-weight: 600; cursor: pointer; }
+.signInModes button[aria-pressed="true"] { background: white; border-color: #cbded0; color: #15803d; }
+.signInModes button:disabled, .passwordToggle:disabled { cursor: not-allowed; opacity: .6; }
+.signInModes button:focus-visible, .passwordToggle:focus-visible { outline: 2px solid #15803d; outline-offset: 2px; }
+.helperText { margin: 0 0 8px; color: #64748b; font-size: 14px; line-height: 1.6; }
+.passwordField { position: relative; }
+.passwordField input { padding-right: 72px; }
+.passwordToggle { position: absolute; right: 4px; top: 3px; min-width: 60px; min-height: 44px; border: 0; border-radius: 8px; background: transparent; color: #15803d; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+
 .label {
   font-size: 14px;
   font-weight: 600;
@@ -19,6 +29,8 @@
 }
 
 .input {
+  min-width: 0;
+  width: 100%;
   height: 50px;
   border-radius: 10px;
   border: 1px solid var(--line);
@@ -129,7 +141,7 @@
 
 .row {
   display: grid;
-  grid-template-columns: 120px 1fr;
+  grid-template-columns: 90px minmax(0, 1fr);
   gap: 10px;
 }
 
@@ -172,12 +184,15 @@
 
 .otpBoxes {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   justify-content: flex-start;
   padding: 6px 0 4px;
 }
 
 .otpBox {
+  min-width: 0;
+  flex: 1;
+  max-width: 48px;
   width: 46px;
   height: 52px;
   border-radius: 12px;
@@ -212,6 +227,7 @@
 }
 
 .resendBtn {
+  min-height: 44px;
   border: 0;
   background: transparent;
   color: var(--brand);

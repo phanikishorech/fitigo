@@ -1,4 +1,4 @@
-import { authFetch } from '../../auth'
+import { request } from '../../services/client'
 
 export type OwnerDashboardSummary = {
   gyms: { total: number; approved: number; pending_approval: number; draft: number }
@@ -70,6 +70,9 @@ export type OwnerSlot = {
 
 export type StaffAssignment = { id: number; gym_id: number; user_id: number; role: string }
 
+export type SlotAvailability = OwnerSlot & { availability: { slot_date: string; status: string; capacity_total: number; booked_count: number; blocked_count: number; remaining_capacity: number } }
+export const listPublicSlotAvailability = (gymId: number, date: string) => request<SlotAvailability[]>(`/gyms/${gymId}/slots?date=${encodeURIComponent(date)}`)
+
 export type OwnerMembershipPlan = {
   id: number
   gym_id: number
@@ -84,6 +87,8 @@ export type OwnerMembershipPlan = {
 }
 
 export type OwnerBooking = {
+  allowed_actions?: ('MARK_ATTENDED' | 'MARK_NO_SHOW' | 'CANCEL')[]
+  cancellation_policy?: string
   id: number
   gym_id: number
   gym_slot_id: number
@@ -107,39 +112,34 @@ export type OwnerBooking = {
   payment: { id: number; provider: string; status: string; amount: string; currency: string; external_ref: string | null } | null
 }
 
-async function jsonOrThrow<T>(r: Response): Promise<T> {
-  const data = await r.json().catch(() => ({}))
-  if (!r.ok) throw new Error((data as any)?.detail ?? 'Request failed')
-  return data as T
-}
 
 export async function fetchMyRoles(): Promise<string[]> {
-  const r = await authFetch('/api/v1/users/me/roles')
-  return jsonOrThrow<string[]>(r)
+  const r = await request<unknown>('/users/me/roles')
+  return r as string[]
 }
 
 export async function fetchOwnerSummary(): Promise<OwnerDashboardSummary> {
-  const r = await authFetch('/api/v1/gym-owner/dashboard/summary')
-  return jsonOrThrow<OwnerDashboardSummary>(r)
+  const r = await request<unknown>('/gym-owner/dashboard/summary')
+  return r as OwnerDashboardSummary
 }
 
 export async function fetchOwnerGyms(): Promise<OwnerGymListItem[]> {
-  const r = await authFetch('/api/v1/gym-owner/gyms')
-  return jsonOrThrow<OwnerGymListItem[]>(r)
+  const r = await request<unknown>('/gym-owner/gyms')
+  return r as OwnerGymListItem[]
 }
 
 export async function fetchGymDetailsOwner(gymId: number): Promise<OwnerGymDetails> {
-  const r = await authFetch(`/api/v1/gym-owner/gyms/${gymId}`)
-  return jsonOrThrow<OwnerGymDetails>(r)
+  const r = await request<unknown>(`/gym-owner/gyms/${gymId}`)
+  return r as OwnerGymDetails
 }
 
 export async function updateGymOwner(gymId: number, patch: Partial<OwnerGymDetails>): Promise<OwnerGymDetails> {
-  const r = await authFetch(`/api/v1/gym-owner/gyms/${gymId}`, {
+  const r = await request<unknown>(`/gym-owner/gyms/${gymId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(patch)
   })
-  return jsonOrThrow<OwnerGymDetails>(r)
+  return r as OwnerGymDetails
 }
 
 export async function createGymOwner(payload: {
@@ -149,101 +149,92 @@ export async function createGymOwner(payload: {
   gym_price_per_person?: string
   has_classes?: boolean
 }): Promise<OwnerGymDetails> {
-  const r = await authFetch('/api/v1/gym-owner/gyms', {
+  const r = await request<unknown>('/gym-owner/gyms', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   })
-  return jsonOrThrow<OwnerGymDetails>(r)
+  return r as OwnerGymDetails
 }
 
 export async function submitGymForApproval(gymId: number): Promise<{ status: string; gym_id: number; new_status: string }> {
-  const r = await authFetch(`/api/v1/gym-owner/gyms/${gymId}/submit`, { method: 'POST' })
-  return jsonOrThrow(r)
+  return request(`/gym-owner/gyms/${gymId}/submit`, { method: 'POST' })
 }
 
 export async function fetchFacilities(): Promise<Facility[]> {
-  const r = await fetch('/api/v1/facilities')
-  const data = await r.json().catch(() => ([] as any))
-  if (!r.ok) throw new Error((data as any)?.detail ?? 'Failed to load facilities')
-  return data as Facility[]
+  return request<Facility[]>('/facilities')
 }
 
 export async function setGymFacilities(gymId: number, facilityIds: number[]): Promise<void> {
-  const r = await authFetch(`/api/v1/gym-owner/gyms/${gymId}/facilities`, {
+  const r = await request<unknown>(`/gym-owner/gyms/${gymId}/facilities`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ facility_ids: facilityIds })
   })
-  await jsonOrThrow(r)
+  void r
 }
 
 export async function setOperatingHours(gymId: number, items: OperatingHourItem[]): Promise<void> {
-  const r = await authFetch(`/api/v1/gym-owner/gyms/${gymId}/operating-hours`, {
+  const r = await request<unknown>(`/gym-owner/gyms/${gymId}/operating-hours`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ items })
   })
-  await jsonOrThrow(r)
+  void r
 }
 
 export async function uploadGymImage(gymId: number, file: File, isCover: boolean): Promise<{ status: string; image_id: number; file_path: string; url: string }> {
   const fd = new FormData()
   fd.append('file', file)
-  const r = await authFetch(`/api/v1/gym-owner/gyms/${gymId}/images?is_cover=${encodeURIComponent(String(isCover))}`, {
+  return request(`/gym-owner/gyms/${gymId}/images?is_cover=${encodeURIComponent(String(isCover))}`, {
     method: 'POST',
     body: fd
   })
-  return jsonOrThrow(r)
 }
 
 export async function setCoverImage(gymId: number, imageId: number): Promise<void> {
-  const r = await authFetch(`/api/v1/gym-owner/gyms/${gymId}/images/${imageId}/set-cover`, { method: 'PUT' })
-  await jsonOrThrow(r)
+  const r = await request<unknown>(`/gym-owner/gyms/${gymId}/images/${imageId}/set-cover`, { method: 'PUT' })
+  void r
 }
 
 export async function listOwnerSlots(gymId: number): Promise<OwnerSlot[]> {
-  const r = await authFetch(`/api/v1/gym-owner/gyms/${gymId}/slots`)
-  return jsonOrThrow(r)
+  return request(`/gym-owner/gyms/${gymId}/slots`)
 }
 
 export async function listOwnerMembershipPlans(gymId: number): Promise<OwnerMembershipPlan[]> {
-  const r = await authFetch(`/api/v1/gym-owner/gyms/${gymId}/membership-plans`)
-  return jsonOrThrow(r)
+  return request(`/gym-owner/gyms/${gymId}/membership-plans`)
 }
 
 export async function createOwnerMembershipPlan(
   gymId: number,
   payload: { name: string; description?: string | null; duration_days: number; price: string; currency?: string }
 ): Promise<OwnerMembershipPlan> {
-  const r = await authFetch(`/api/v1/gym-owner/gyms/${gymId}/membership-plans`, {
+  return request(`/gym-owner/gyms/${gymId}/membership-plans`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   })
-  return jsonOrThrow(r)
 }
 
 export async function updateOwnerMembershipPlan(
   planId: number,
   patch: { name?: string; description?: string | null; duration_days?: number; price?: string; currency?: string; is_active?: boolean }
 ): Promise<OwnerMembershipPlan> {
-  const r = await authFetch(`/api/v1/gym-owner/membership-plans/${planId}`, {
+  return request(`/gym-owner/membership-plans/${planId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(patch)
   })
-  return jsonOrThrow(r)
 }
 
 export async function deactivateOwnerMembershipPlan(planId: number): Promise<void> {
-  const r = await authFetch(`/api/v1/gym-owner/membership-plans/${planId}`, { method: 'DELETE' })
-  await jsonOrThrow(r)
+  const r = await request<unknown>(`/gym-owner/membership-plans/${planId}`, { method: 'DELETE' })
+  void r
 }
 
 export async function activateOwnerMembershipPlan(planId: number): Promise<void> {
-  const r = await authFetch(`/api/v1/gym-owner/membership-plans/${planId}/activate`, { method: 'POST' })
-  await jsonOrThrow(r)
+  const r = await request<unknown>(`/gym-owner/membership-plans/${planId}/activate`, { method: 'POST' })
+  void r
 }
 
 export async function createOwnerSlot(
@@ -258,79 +249,78 @@ export async function createOwnerSlot(
     repeat_days?: number[]
   }
 ): Promise<void> {
-  const r = await authFetch(`/api/v1/gym-owner/gyms/${gymId}/slots`, {
+  const r = await request<unknown>(`/gym-owner/gyms/${gymId}/slots`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   })
-  await jsonOrThrow(r)
+  void r
 }
 
 export async function updateOwnerSlot(slotId: number, patch: { name?: string; start_time?: string; end_time?: string; capacity?: number; price?: string; is_active?: boolean }): Promise<void> {
-  const r = await authFetch(`/api/v1/gym-owner/slots/${slotId}`, {
+  const r = await request<unknown>(`/gym-owner/slots/${slotId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(patch)
   })
-  await jsonOrThrow(r)
+  void r
 }
 
 export async function deactivateOwnerSlot(slotId: number): Promise<void> {
-  const r = await authFetch(`/api/v1/gym-owner/slots/${slotId}`, { method: 'DELETE' })
-  await jsonOrThrow(r)
+  const r = await request<unknown>(`/gym-owner/slots/${slotId}`, { method: 'DELETE' })
+  void r
 }
 
 export async function listStaff(gymId: number): Promise<StaffAssignment[]> {
-  const r = await authFetch(`/api/v1/gym-owner/gyms/${gymId}/staff`)
-  return jsonOrThrow(r)
+  return request(`/gym-owner/gyms/${gymId}/staff`)
 }
 
 export async function inviteStaff(gymId: number, payload: { email: string; first_name?: string | null; last_name?: string | null }): Promise<{ status: string; assignment_id: number; staff_user_id: number; temp_password: string | null }> {
-  const r = await authFetch(`/api/v1/gym-owner/gyms/${gymId}/staff/invite`, {
+  return request(`/gym-owner/gyms/${gymId}/staff/invite`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   })
-  return jsonOrThrow(r)
 }
 
 export async function removeStaff(gymId: number, userId: number): Promise<void> {
-  const r = await authFetch(`/api/v1/gym-owner/gyms/${gymId}/staff/${userId}`, { method: 'DELETE' })
-  await jsonOrThrow(r)
+  const r = await request<unknown>(`/gym-owner/gyms/${gymId}/staff/${userId}`, { method: 'DELETE' })
+  void r
 }
 
-export async function listBookings(gymId: number, params?: { date?: string; status?: string }): Promise<OwnerBooking[]> {
+export async function listBookings(gymId: number, params?: { date?: string; status?: string; limit?: number; offset?: number }): Promise<OwnerBooking[]> {
   const qs = new URLSearchParams()
   if (params?.date) qs.set('date', params.date)
   if (params?.status) qs.set('status', params.status)
+  if (params?.limit) qs.set('limit', String(params.limit))
+  if (params?.offset) qs.set('offset', String(params.offset))
   const suffix = qs.toString() ? `?${qs.toString()}` : ''
-  const r = await authFetch(`/api/v1/gym-owner/gyms/${gymId}/bookings${suffix}`)
-  return jsonOrThrow(r)
+  return request(`/gym-owner/gyms/${gymId}/bookings${suffix}`)
 }
 
 export async function bookingCancel(bookingId: number, reason?: string): Promise<void> {
-  const r = await authFetch(`/api/v1/gym-owner/bookings/${bookingId}/cancel`, {
+  const r = await request<unknown>(`/gym-owner/bookings/${bookingId}/cancel`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ reason: reason ?? 'Owner cancelled' })
   })
-  await jsonOrThrow(r)
+  void r
 }
 
 export async function bookingMarkAttended(bookingId: number, note?: string): Promise<void> {
-  const r = await authFetch(`/api/v1/gym-owner/bookings/${bookingId}/mark-attended`, {
+  const r = await request<unknown>(`/gym-owner/bookings/${bookingId}/mark-attended`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ note: note ?? null })
   })
-  await jsonOrThrow(r)
+  void r
 }
 
 export async function bookingMarkNoShow(bookingId: number, note?: string): Promise<void> {
-  const r = await authFetch(`/api/v1/gym-owner/bookings/${bookingId}/mark-no-show`, {
+  const r = await request<unknown>(`/gym-owner/bookings/${bookingId}/mark-no-show`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ note: note ?? null })
   })
-  await jsonOrThrow(r)
+  void r
 }

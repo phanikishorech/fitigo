@@ -60,7 +60,9 @@ Open:
 
 ## Frontend (customer UI)
 
-Frontend has been intentionally removed for now. We'll rebuild the customer/user UI screen-by-screen.
+The customer frontend is implemented with React, TypeScript, and Vite. Run `npm run dev` from `C:\Users\ckishor\.cline\data\workspaces\chat\fitigo\frontend` after starting the backend. Existing owner/admin pages remain available.
+
+See `C:\Users\ckishor\.cline\data\workspaces\chat\fitigo\frontend\README.md` for development/deployment instructions and `C:\Users\ckishor\.cline\data\workspaces\chat\fitigo\frontend\IMPLEMENTATION.md` for the verified API mapping, test results, remaining gaps, and production release blockers. Wallet recharge and membership purchase currently use backend MVP payment behavior, not a real gateway.
 
 ## One-command start/stop (Windows PowerShell)
 

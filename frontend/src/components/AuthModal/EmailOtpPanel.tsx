@@ -7,10 +7,9 @@ type Props = {
   onEmailChange: (v: string) => void
   onSendOtp: () => Promise<void>
   onPickMobile: () => void
-  onPickGoogle: () => Promise<void>
 }
 
-export function EmailOtpPanel({ email, onEmailChange, onSendOtp, onPickMobile, onPickGoogle }: Props) {
+export function EmailOtpPanel({ email, onEmailChange, onSendOtp, onPickMobile }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [touched, setTouched] = useState(false)
@@ -90,27 +89,6 @@ export function EmailOtpPanel({ email, onEmailChange, onSendOtp, onPickMobile, o
           <div className={panel.altLabel}>Mobile</div>
         </button>
 
-        <button
-          type="button"
-          className={panel.altMethodBtn}
-          onClick={async () => {
-            setLoading(true)
-            setError(null)
-            try {
-              await onPickGoogle()
-            } catch (e) {
-              setError(e instanceof Error ? e.message : 'Google login failed')
-            } finally {
-              setLoading(false)
-            }
-          }}
-          aria-label="Continue with Google"
-        >
-          <div className={panel.iconCircle} aria-hidden="true">
-            <div style={{ fontWeight: 800, fontSize: 18, color: '#111827' }}>G</div>
-          </div>
-          <div className={panel.altLabel}>Google</div>
-        </button>
       </div>
 
       <div className={panel.footerSpacer} />

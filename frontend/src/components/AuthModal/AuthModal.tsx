@@ -5,6 +5,9 @@ import { isValidEmail } from './validation'
 import { EmailOtpPanel } from './EmailOtpPanel'
 import { OtpVerifyPanel } from './OtpVerifyPanel'
 import { MobileOtpPanel } from './MobileOtpPanel'
+import { authService } from '../../services/authService'
+import { PasswordPanel } from './PasswordPanel'
+import panel from './panel.module.css'
 
 export type AuthUser = {
   id: number
@@ -16,17 +19,18 @@ export type AuthUser = {
   created_at: string
 }
 
-export type AuthResult = {
+export type AuthTokens = {
   access_token: string
   refresh_token: string
   token_type: 'bearer'
-  user: AuthUser
 }
+
+export type AuthResult = AuthTokens & { user: AuthUser }
 
 type Props = {
   open: boolean
   onClose: () => void
-  onAuthed: (result: AuthResult) => void
+  onAuthed: (result: AuthTokens) => void
   intent?: string | null
 }
 
@@ -42,6 +46,8 @@ export default function AuthModal({ open, onClose, onAuthed }: Props) {
   const [closing, setClosing] = useState(false)
 
   const [method, setMethod] = useState<Method>('email')
+  const [signInMode, setSignInMode] = useState<'otp' | 'password'>('otp')
+  const [passwordBusy, setPasswordBusy] = useState(false)
   const [step, setStep] = useState<Step>('enter')
   const [email, setEmail] = useState('')
   const [mobile, setMobile] = useState({ countryCode: '+1', number: '' })
@@ -52,6 +58,10 @@ export default function AuthModal({ open, onClose, onAuthed }: Props) {
   >(null)
 
   const maskedEmail = useMemo(() => maskEmail(email), [email])
+
+  useEffect(() => {
+    if (open) { setStep('enter'); setOtpTarget(null); setPasswordBusy(false) }
+  }, [open])
 
   useEffect(() => {
     if (open) {
@@ -85,7 +95,7 @@ export default function AuthModal({ open, onClose, onAuthed }: Props) {
   useEffect(() => {
     if (!open) return
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape' && !passwordBusy) onClose()
 
       if (e.key === 'Tab' && modalRef.current) {
         const focusables = Array.from(
@@ -114,7 +124,7 @@ export default function AuthModal({ open, onClose, onAuthed }: Props) {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [open, onClose])
+  }, [open, onClose, passwordBusy])
 
   // Reset state when closed.
   useEffect(() => {
@@ -133,7 +143,7 @@ export default function AuthModal({ open, onClose, onAuthed }: Props) {
       el?.focus?.()
     }, 0)
     return () => window.clearTimeout(t)
-  }, [open, method, step])
+  }, [open, method, step, signInMode])
 
   if (!mounted) return null
 
@@ -145,7 +155,7 @@ export default function AuthModal({ open, onClose, onAuthed }: Props) {
         if (closing) return
         // Click outside closes (matches reference). We only close when the overlay itself
         // is the click target to avoid interfering with form interactions.
-        if (e.target === e.currentTarget) onClose()
+        if (e.target === e.currentTarget && !passwordBusy) onClose()
       }}
     >
       <div
@@ -206,11 +216,12 @@ export default function AuthModal({ open, onClose, onAuthed }: Props) {
         <div className={styles.rightPanel}>
           <div className={styles.headerRow}>
             <div className={styles.title} id="auth-modal-title">
-              Login / Sign Up
+              Welcome to FitiGo
             </div>
             <button
               type="button"
               className={styles.closeBtn}
+              disabled={passwordBusy}
               onClick={onClose}
               aria-label="Close authentication modal"
             >
@@ -220,6 +231,17 @@ export default function AuthModal({ open, onClose, onAuthed }: Props) {
 
           <div className={styles.divider} />
 
+          <div className={panel.signInModes} role="group" aria-label="Sign-in method">
+            {(['otp', 'password'] as const).map(mode => <button key={mode} type="button"
+              aria-pressed={signInMode === mode} disabled={passwordBusy}
+              onClick={() => { setSignInMode(mode); setStep('enter'); setOtpTarget(null) }}>
+              {mode === 'otp' ? 'OTP' : 'Password'}
+            </button>)}
+          </div>
+          {signInMode === 'password' && open && <PasswordPanel email={email} onEmailChange={setEmail} onAuthed={onAuthed} onBusyChange={setPasswordBusy} />}
+          {signInMode === 'otp' && <>
+          {import.meta.env.DEV && <p className={panel.helperText}>OTP delivery is not configured for local development. Use Password to sign in with an existing account.</p>}
+
           {step === 'enter' && method === 'email' && (
             <EmailOtpPanel
               email={email}
@@ -228,16 +250,7 @@ export default function AuthModal({ open, onClose, onAuthed }: Props) {
                 const clean = email.trim().toLowerCase()
                 if (!isValidEmail(clean)) return
 
-                await fetch('/api/v1/auth/email/send-otp', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ email: clean })
-                }).then(async (r) => {
-                  if (!r.ok) {
-                    const data = await r.json().catch(() => ({}))
-                    throw new Error(data?.detail ?? 'Failed to send OTP')
-                  }
-                })
+                await authService.sendEmail(clean)
 
                 setOtpTarget({ kind: 'email', email: clean })
                 setStep('otp')
@@ -245,9 +258,6 @@ export default function AuthModal({ open, onClose, onAuthed }: Props) {
               onPickMobile={() => {
                 setMethod('mobile')
                 setStep('enter')
-              }}
-              onPickGoogle={async () => {
-                window.alert('Google login is not wired yet. (Next: OAuth)')
               }}
             />
           )}
@@ -265,16 +275,7 @@ export default function AuthModal({ open, onClose, onAuthed }: Props) {
                 const num = mobile.number.replace(/\s+/g, '')
                 if (!cc || !num) return
 
-                await fetch('/api/v1/auth/mobile/send-otp', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ country_code: cc, mobile_number: num })
-                }).then(async (r) => {
-                  if (!r.ok) {
-                    const data = await r.json().catch(() => ({}))
-                    throw new Error(data?.detail ?? 'Failed to send OTP')
-                  }
-                })
+                await authService.sendMobile(cc, num)
 
                 setOtpTarget({ kind: 'mobile', countryCode: cc, number: num })
                 setStep('otp')
@@ -292,27 +293,10 @@ export default function AuthModal({ open, onClose, onAuthed }: Props) {
                 setOtpTarget(null)
               }}
               onResend={async () => {
-                await fetch('/api/v1/auth/email/send-otp', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ email: otpTarget.email })
-                }).then(async (r) => {
-                  if (!r.ok) {
-                    const data = await r.json().catch(() => ({}))
-                    throw new Error(data?.detail ?? 'Failed to resend OTP')
-                  }
-                })
+                await authService.sendEmail(otpTarget.email)
               }}
               onVerify={async (otp) => {
-                const result = await fetch('/api/v1/auth/email/verify-otp', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ email: otpTarget.email, otp })
-                }).then(async (r) => {
-                  const data = await r.json().catch(() => ({}))
-                  if (!r.ok) throw new Error(data?.detail ?? 'OTP verification failed')
-                  return data as AuthResult
-                })
+                const result = await authService.verifyEmail(otpTarget.email, otp)
                 onAuthed(result)
               }}
             />
@@ -328,38 +312,15 @@ export default function AuthModal({ open, onClose, onAuthed }: Props) {
                 setOtpTarget(null)
               }}
               onResend={async () => {
-                await fetch('/api/v1/auth/mobile/send-otp', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    country_code: otpTarget.countryCode,
-                    mobile_number: otpTarget.number
-                  })
-                }).then(async (r) => {
-                  if (!r.ok) {
-                    const data = await r.json().catch(() => ({}))
-                    throw new Error(data?.detail ?? 'Failed to resend OTP')
-                  }
-                })
+                await authService.sendMobile(otpTarget.countryCode, otpTarget.number)
               }}
               onVerify={async (otp) => {
-                const result = await fetch('/api/v1/auth/mobile/verify-otp', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    country_code: otpTarget.countryCode,
-                    mobile_number: otpTarget.number,
-                    otp
-                  })
-                }).then(async (r) => {
-                  const data = await r.json().catch(() => ({}))
-                  if (!r.ok) throw new Error(data?.detail ?? 'OTP verification failed')
-                  return data as AuthResult
-                })
+                const result = await authService.verifyMobile(otpTarget.countryCode, otpTarget.number, otp)
                 onAuthed(result)
               }}
             />
           )}
+          </>}
         </div>
       </div>
     </div>

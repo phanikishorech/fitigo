@@ -17,6 +17,8 @@ export function OtpVerifyPanel({ title, subtitle, maskedTarget, onChangeTarget, 
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [resendIn, setResendIn] = useState(30)
+  const [resending, setResending] = useState(false)
+  const resendLock = useRef(false)
   const inputsRef = useRef<Array<HTMLInputElement | null>>([])
 
   const otp = useMemo(() => digits.join(''), [digits])
@@ -131,19 +133,24 @@ export function OtpVerifyPanel({ title, subtitle, maskedTarget, onChangeTarget, 
         <button
           type="button"
           className={panel.resendBtn}
-          disabled={resendIn > 0}
+          disabled={resendIn > 0 || resending || submitting}
           onClick={async () => {
-            if (resendIn > 0) return
+            if (resendIn > 0 || resendLock.current) return
+            resendLock.current = true
+            setResending(true)
             setError(null)
             try {
               await onResend()
               setResendIn(30)
             } catch (e) {
               setError(e instanceof Error ? e.message : 'Failed to resend OTP')
+            } finally {
+              resendLock.current = false
+              setResending(false)
             }
           }}
         >
-          Resend OTP{resendIn > 0 ? ` (${resendIn}s)` : ''}
+          {resending ? 'Sending…' : 'Resend code'}{resendIn > 0 ? ` in 00:${String(resendIn).padStart(2, '0')}` : ''}
         </button>
       </div>
 

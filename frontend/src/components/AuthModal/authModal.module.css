@@ -1,4 +1,7 @@
 .overlay {
+  --brand: #15803d;
+  --brand-2: #11682f;
+  --ring: 0 0 0 4px #15803d26;
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.62);
@@ -15,14 +18,15 @@
 }
 
 .modal {
-  width: min(980px, calc(100vw - 48px));
-  height: min(780px, calc(100vh - 48px));
+  width: min(480px, calc(100vw - 32px));
+  height: auto;
+  max-height: calc(100dvh - 32px);
   background: var(--panel);
   border-radius: var(--radius);
   overflow: hidden;
   box-shadow: var(--shadow);
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   transform-origin: center;
   animation: modalIn 200ms ease-out;
 }
@@ -52,6 +56,7 @@
 }
 
 .leftPanel {
+  display: none;
   position: relative;
   background: #eef1f5;
 }
@@ -210,8 +215,8 @@
 
 @media (max-width: 900px) {
   .modal {
-    width: min(920px, calc(100vw - 32px));
-    height: min(760px, calc(100vh - 32px));
+    width: min(480px, calc(100vw - 32px));
+    height: auto;
   }
 }
 
@@ -219,7 +224,7 @@
   .modal {
     grid-template-columns: 1fr;
     width: min(560px, calc(100vw - 24px));
-    height: min(760px, calc(100vh - 24px));
+    height: auto;
   }
 
   .leftPanel {
@@ -241,15 +246,21 @@
 @media (max-width: 520px) {
   .overlay {
     padding: 0;
+    align-items: flex-end;
   }
 
   .modal {
     width: 100vw;
-    height: 100vh;
-    border-radius: 0;
+    height: auto;
+    max-height: 90dvh;
+    border-radius: 20px 20px 0 0;
   }
 
   .leftPanel {
     height: 190px;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay, .overlayClosing, .modal, .modalClosing { animation: none; }
 }

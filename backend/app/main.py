@@ -20,6 +20,8 @@ from app.routers.meta import router as meta_router
 from app.routers.profile import router as profile_router
 from app.routers.cart import router as cart_router
 from app.routers.wallet import router as wallet_router
+from app.routers.customer_access import router as customer_access_router
+from app.routers.checkins import router as checkins_router
 
 
 def create_app() -> FastAPI:
@@ -54,6 +56,8 @@ def create_app() -> FastAPI:
     app.include_router(profile_router, prefix=settings.api_v1_prefix, tags=["Profile"])
     app.include_router(cart_router, prefix=settings.api_v1_prefix, tags=["Cart"])
     app.include_router(wallet_router, prefix=settings.api_v1_prefix, tags=["Wallet"])
+    app.include_router(customer_access_router, prefix=settings.api_v1_prefix, tags=["Customer Access"])
+    app.include_router(checkins_router, prefix=settings.api_v1_prefix, tags=["Check-ins"])
 
     # Serve local uploads in development.
     backend_dir = Path(__file__).resolve().parents[1]

@@ -1,20 +1,23 @@
 from __future__ import annotations
 
 from collections import Counter
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from jose import jwt
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.dependencies import get_optional_user
+from app.core.dependencies import get_optional_user, require_role
+from app.core.roles import ROLE_CUSTOMER
+from app.core.time import utc_today
+from app.services.access_service import AccessService
+from app.models.access import Checkin
 from app.database.session import get_db
 from app.models.auth import User
 from app.models.booking import Booking, BookingStatus
 from app.models.gym import Gym
-from app.models.membership import GymMembershipPlan, MembershipStatus, UserMembership
+from app.models.membership import GymMembershipPlan, MembershipDailyAccess, MembershipStatus, UserMembership
 from app.models.slot import GymSlot
 from app.schemas.profile import (
     BookingItemResponse,
@@ -24,9 +27,95 @@ from app.schemas.profile import (
     ProfileActivityResponse,
     ProfileResponse,
 )
+from app.schemas.membership_access import MembershipCalendarResponse, MembershipDailyQRResponse
 
 
 router = APIRouter(prefix="/profile")
+
+
+def _month_bounds(yyyymm: str) -> tuple[date, date]:
+    """Return inclusive month start/end (date) for a YYYY-MM string."""
+
+    parts = (yyyymm or "").split("-")
+    if len(parts) != 2:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid month format; expected YYYY-MM")
+    try:
+        y, m = int(parts[0]), int(parts[1])
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid month format; expected YYYY-MM")
+    if not 2000 <= y <= 2100 or not 1 <= m <= 12:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid month format; expected YYYY-MM")
+    start = date(y, m, 1)
+    # compute last day
+    if m == 12:
+        end = date(y + 1, 1, 1) - timedelta(days=1)
+    else:
+        end = date(y, m + 1, 1) - timedelta(days=1)
+    return start, end
+
+
+@router.get("/membership/calendar", response_model=MembershipCalendarResponse, deprecated=True)
+def get_membership_calendar(
+    gym_id: int = Query(..., ge=1),
+    month: str | None = Query(default=None, max_length=7, description="YYYY-MM"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role({ROLE_CUSTOMER})),
+):
+    uid = _require_user_id(db, current_user)
+    now = datetime.utcnow()
+
+    m = (
+        db.execute(
+            select(UserMembership).where(
+                UserMembership.user_id == uid,
+                UserMembership.gym_id == gym_id,
+                UserMembership.status == MembershipStatus.ACTIVE.value,
+                UserMembership.end_at > now,
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if not m:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active membership for this gym")
+
+    # default month = current month (UTC)
+    month_val = month or f"{now.year:04d}-{now.month:02d}"
+    month_start, month_end = _month_bounds(month_val)
+
+    calendar = AccessService(db).calendar_month(user_id=uid, year=month_start.year, month=month_start.month)
+    accessed_dates = [day["date"] for day in calendar["days"] if day.get("qr_status") == "USED" and day.get("gym_id") == gym_id]
+
+    return MembershipCalendarResponse(
+        gym_id=int(gym_id),
+        membership_start=m.start_at,
+        membership_end=m.end_at,
+        month=month_val,
+        month_start=month_start,
+        month_end=month_end,
+        accessed_dates=accessed_dates,
+    )
+
+
+@router.get("/membership/daily-qr", response_model=MembershipDailyQRResponse, deprecated=True)
+def get_membership_daily_qr(
+    response: Response,
+    gym_id: int = Query(..., ge=1),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role({ROLE_CUSTOMER})),
+):
+    """Compatibility adapter. Only the central access service issues credentials."""
+    response.headers["Cache-Control"] = "no-store"
+    svc = AccessService(db)
+    ctx = svc._resolve_today_access_context(user_id=current_user.id)
+    if ctx.get("gym_id") is not None and ctx["gym_id"] != gym_id:
+        raise HTTPException(status_code=403, detail="No active membership for this gym")
+    result = svc.get_today_access(user_id=current_user.id)
+    return MembershipDailyQRResponse(
+        gym_id=gym_id, access_date=utc_today(), status=result["status"],
+        scanned=result["status"] == "USED", scanned_at=result.get("used_at"),
+        qr_payload=result.get("qr_token"), expires_at=result.get("expires_at"),
+    )
 
 
 def _get_dev_customer_id(db: Session) -> int | None:
@@ -330,6 +419,75 @@ def list_profile_bookings(
             )
         )
 
+    # Include membership QR scans as visit items (shown under Past/All).
+    # NOTE: These are not "bookings" in the bookings table, but they represent
+    # an actual gym access via membership daily QR.
+    if status_filter in {"past", "all", None, ""}:
+        scan_stmt = (
+            select(MembershipDailyAccess, Gym)
+            .join(Gym, Gym.id == MembershipDailyAccess.gym_id)
+            .where(
+                MembershipDailyAccess.user_id == uid,
+                MembershipDailyAccess.status == "SCANNED",
+            )
+        )
+        if status_filter == "past":
+            scan_stmt = scan_stmt.where(MembershipDailyAccess.access_date <= today)
+
+        scan_rows = list(db.execute(scan_stmt).all())
+        for rec, g in scan_rows:
+            loc_parts = [g.address_line_1, g.city]
+            gym_location = ", ".join([p for p in loc_parts if p])
+            scanned_at = rec.scanned_at or rec.created_at
+            if scanned_at:
+                dt = scanned_at
+                if dt.tzinfo is not None:
+                    dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+                t = dt.time().replace(tzinfo=None)
+            else:
+                t = time(0, 0, 0)
+
+            # Use negative IDs to avoid colliding with real booking IDs.
+            # Frontend can treat booking_id < 0 as a membership-scan visit.
+            items.append(
+                BookingItemResponse(
+                    booking_id=-2 * int(rec.id),
+                    booking_status="COMPLETED",
+                    attendance_status="ATTENDED",
+                    gym_id=int(g.id),
+                    gym_name=g.name,
+                    gym_location=gym_location,
+                    access_type="Membership Scan",
+                    class_name=None,
+                    visit_date=rec.access_date,
+                    start_time=t,
+                    end_time=t,
+                    membership_covered=True,
+                    amount_paid=None,
+                    currency="INR",
+                    booking_created_at=scanned_at,
+                    cancelled_at=None,
+                )
+            )
+
+    if status_filter in {"past", "all", None, ""}:
+        rows = db.execute(select(Checkin, Gym).join(Gym, Gym.id == Checkin.gym_id).where(
+            Checkin.user_id == uid, Checkin.status == "SUCCESS",
+        )).all()
+        for checkin, gym in rows:
+            dt = checkin.checkin_time
+            items.append(BookingItemResponse(
+                booking_id=-(2 * int(checkin.id) + 1), booking_status="COMPLETED",
+                attendance_status="ATTENDED", gym_id=int(gym.id), gym_name=gym.name,
+                gym_location=", ".join(p for p in [gym.address_line_1, gym.city] if p),
+                access_type="Membership Scan", class_name=None, visit_date=dt.date(),
+                start_time=dt.time(), end_time=dt.time(), membership_covered=True,
+                amount_paid=None, currency="INR", booking_created_at=dt, cancelled_at=None,
+            ))
+
+    # Keep newest first.
+    items.sort(key=lambda x: (x.visit_date, x.start_time, x.booking_id), reverse=True)
+
     return items
 
 
@@ -502,13 +660,8 @@ def get_membership_pass(
                 or 0
             )
 
-    # Create a short-lived, opaque QR payload.
-    exp = datetime.now(timezone.utc) + timedelta(minutes=5)
-    qr_payload = jwt.encode(
-        {"sub": str(uid), "type": "member_pass", "exp": exp, "membership_id": int(m.id) if m else None},
-        settings.jwt_secret,
-        algorithm=settings.jwt_algorithm,
-    )
+    # Pass metadata is not a credential; daily QR issuance has one authority.
+    qr_payload = None
 
     return MembershipPassResponse(
         member_id=f"MBR-{uid:05d}",

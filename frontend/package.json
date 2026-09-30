@@ -4,6 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "test": "node --test scripts/*.test.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "dev": "node ./scripts/vite.mjs --port 5173 --strictPort",
     "build": "node ./scripts/vite.mjs build",
     "preview": "node ./scripts/vite.mjs preview"

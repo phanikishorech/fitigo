@@ -3,7 +3,9 @@ from __future__ import annotations
 import enum
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Index, Integer, Numeric, String, Text
+from datetime import date
+
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
@@ -62,3 +64,31 @@ class UserMembership(Base):
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class MembershipDailyAccess(Base):
+    """Daily access mark for a membership holder at a specific gym.
+
+    This is created when the QR is scanned at the gym and used by the Profile
+    calendar UI to show which dates have already been accessed.
+    """
+
+    __tablename__ = "membership_daily_accesses"
+    __table_args__ = (
+        UniqueConstraint("user_id", "gym_id", "access_date"),
+        Index("ix_membership_daily_accesses_user_id", "user_id"),
+        Index("ix_membership_daily_accesses_gym_id", "gym_id"),
+        Index("ix_membership_daily_accesses_access_date", "access_date"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
+    gym_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("gyms.id"), nullable=False)
+    access_date: Mapped[date] = mapped_column(Date, nullable=False)
+
+    # SCANNED (future: REVOKED, etc.)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="SCANNED")
+    scanned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=datetime.utcnow, onupdate=datetime.utcnow)

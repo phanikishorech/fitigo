@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -13,13 +13,48 @@ from app.database.session import get_db
 from app.models.auth import User
 from app.models.booking import Booking
 from app.models.gym import Gym
+from app.models.membership import MembershipDailyAccess, MembershipStatus, UserMembership
 from app.models.slot import GymSlot
 from app.schemas.booking_owner import OwnerBookingActionRequest, OwnerBookingCustomer, OwnerBookingPayment, OwnerBookingResponse, OwnerBookingSlot
+from app.schemas.membership_access import ScanMembershipQRRequest, ScanMembershipQRResponse
 from app.services.booking_service import BookingService
 from app.services.staff_service import StaffService
+from app.services.access_service import AccessService
+from app.models.access import AccessQrToken, CustomerDailyAccess
+import hashlib
 
 
 router = APIRouter(prefix="/gym-staff")
+
+
+@router.post("/scan-membership-qr", response_model=ScanMembershipQRResponse, deprecated=True)
+def scan_membership_qr(
+    payload: ScanMembershipQRRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role({ROLE_GYM_STAFF})),
+):
+    """Legacy transport, shared validation and one-time-use transaction.
+
+    Existing JWT credentials are deliberately rejected. Customers must refresh
+    their pass to obtain an opaque token from the unified issuer.
+    """
+    assigned = set(StaffService(db).staff_gym_ids(staff_user_id=current_user.id))
+    gym_id = payload.gym_id
+    if gym_id is None:
+        if len(assigned) != 1:
+            raise HTTPException(status_code=400, detail="Select a scanning gym using gym_id")
+        gym_id = next(iter(assigned))
+    if gym_id not in assigned:
+        raise HTTPException(status_code=404, detail="Gym not found")
+    result = AccessService(db).validate_checkin(gym_id=gym_id, qr_token=payload.qr_payload)
+    token_hash = hashlib.sha256(payload.qr_payload.removeprefix("GYMACCESS:").encode()).hexdigest()
+    daily = db.execute(select(CustomerDailyAccess).join(
+        AccessQrToken, AccessQrToken.daily_access_id == CustomerDailyAccess.id,
+    ).where(AccessQrToken.token_hash == token_hash)).scalar_one()
+    return ScanMembershipQRResponse(
+        gym_id=gym_id, user_id=daily.user_id, access_date=daily.access_date,
+        status="SCANNED", scanned_at=result["checkin_time"],
+    )
 
 
 @router.get("/gyms", response_model=list[dict])

@@ -38,7 +38,8 @@ type PurchaseMembershipResponse = {
 }
 
 type AsyncState<T> =
-  | { status: 'idle' | 'loading' }
+  | { status: 'idle' }
+  | { status: 'loading' }
   | { status: 'ready'; data: T }
   | { status: 'error'; message: string }
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import styles from './profile.module.css'
+import AccessPanel from './AccessPanel'
 import { navigate } from '../../router'
 import { authFetch, clearTokens } from '../../auth'
 
@@ -70,7 +71,7 @@ type MembershipPass = {
   plan_name: string | null
   status: string | null
   valid_until: string | null
-  qr_payload: string
+  qr_payload: string | null
   gym_access_count: number
 
   membership_scope?: string | null
@@ -105,6 +106,26 @@ function formatTime(t: string) {
   const ampm = h >= 12 ? 'PM' : 'AM'
   const h12 = h % 12 === 0 ? 12 : h % 12
   return `${h12}:${mm} ${ampm}`
+}
+
+function isoMonth(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+function isoDate(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function startOfMonth(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), 1)
+}
+
+function addMonths(d: Date, months: number) {
+  return new Date(d.getFullYear(), d.getMonth() + months, 1)
+}
+
+function daysInMonth(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
 }
 
 function groupByMonth(items: BookingItem[]) {
@@ -206,9 +227,11 @@ export default function UserProfilePage() {
   const [activity, setActivity] = useState<LoadState<Activity>>({ status: 'loading' })
   const [favorites, setFavorites] = useState<LoadState<Favorites>>({ status: 'loading' })
   const [bookings, setBookings] = useState<LoadState<BookingItem[]>>({ status: 'loading' })
+  const [sidebarVisits, setSidebarVisits] = useState<LoadState<BookingItem[]>>({ status: 'loading' })
   const [pass, setPass] = useState<LoadState<MembershipPass>>({ status: 'loading' })
 
   const [wallet, setWallet] = useState<LoadState<{ balance: string; currency: string; transactions: any[] }>>({ status: 'loading' })
+
   const [walletTopupAmt, setWalletTopupAmt] = useState<number>(500)
   const [walletTopupBusy, setWalletTopupBusy] = useState(false)
 
@@ -269,6 +292,26 @@ export default function UserProfilePage() {
     return () => {
       cancelled = true
     }
+  }, [])
+
+  const reloadSidebarVisits = async () => {
+    setSidebarVisits({ status: 'loading' })
+    try {
+      const r = await authFetch('/api/v1/profile/bookings?status=past')
+      if (!r.ok) {
+        const data = await r.json().catch(() => ({}))
+        throw new Error(data?.detail ?? 'Failed to load visits')
+      }
+      setSidebarVisits({ status: 'ready', data: (await r.json()) as BookingItem[] })
+    } catch (e: any) {
+      setSidebarVisits({ status: 'error', message: e?.message ?? 'Failed to load visits' })
+    }
+  }
+
+  // Load sidebar timeline (past visits + membership scans)
+  useEffect(() => {
+    void reloadSidebarVisits()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const reloadWallet = async () => {
@@ -380,7 +423,8 @@ export default function UserProfilePage() {
 
   const canRate = (b: BookingItem) => {
     // Only if attendance is ATTENDED and not cancelled.
-    return b.attendance_status === 'ATTENDED' && b.booking_status !== 'CANCELLED'
+    // Also: membership-scan visits are not backed by a Booking record, so don't allow rating yet.
+    return b.booking_id > 0 && b.attendance_status === 'ATTENDED' && b.booking_status !== 'CANCELLED'
   }
 
   const openRating = (b: BookingItem) => {
@@ -597,6 +641,59 @@ export default function UserProfilePage() {
                   </div>
                 </div>
               )}
+            </section>
+
+            {/* Access calendar + combined visit timeline (bookings + membership scans) */}
+            <section className={styles.card}>
+              <div className={styles.cardHeaderRow}>
+                <div>
+                  <div className={styles.cardTitle}>Access Calendar</div>
+                  <div className={styles.mutedSmall} style={{ marginTop: 2 }}>
+                    Membership calendar + recent check-ins
+                  </div>
+                </div>
+              </div>
+
+              <AccessPanel onCheckin={() => void reloadSidebarVisits()} />
+                  <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                    <div style={{ fontWeight: 900 }}>Recent Visits</div>
+                    <button type="button" className={styles.secondaryBtn} onClick={() => void reloadSidebarVisits()}>
+                      Refresh
+                    </button>
+                  </div>
+
+                  {sidebarVisits.status === 'loading' ? (
+                    <div className={styles.mutedSmall}>Loading visits…</div>
+                  ) : sidebarVisits.status === 'error' ? (
+                    <div className={styles.mutedSmall}>{sidebarVisits.message}</div>
+                  ) : sidebarVisits.data.length === 0 ? (
+                    <div className={styles.mutedSmall}>No visits yet.</div>
+                  ) : (
+                    <div className={styles.sidebarVisitList}>
+                      {sidebarVisits.data.slice(0, 8).map((v) => {
+                        const dt = new Date(`${v.visit_date}T00:00:00`)
+                        return (
+                          <div key={`${v.booking_id}-${v.visit_date}-${v.start_time}`} className={styles.sidebarVisitItem}>
+                            <div className={styles.sidebarVisitTop}>
+                              <div className={styles.sidebarVisitGym} title={v.gym_name}>
+                                {v.gym_name}
+                              </div>
+                              <div className={styles.sidebarVisitTime}>
+                                {dt.toLocaleDateString()} • {formatTime(v.start_time)}
+                              </div>
+                            </div>
+                            <div className={styles.sidebarVisitMeta}>
+                              <span className={styles.chip}>{v.access_type}</span>
+                              <span className={styles.mutedSmall}>
+                                {v.booking_id < 0 ? 'QR Scan' : 'Booking'}
+                              </span>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+
             </section>
 
             <section className={styles.card}>
@@ -962,46 +1059,13 @@ export default function UserProfilePage() {
                   ) : (
                     <>
                       <div className={styles.passCard}>
-                        <div className={styles.passKicker}>MULTI-GYM MEMBERSHIP</div>
+                        <div className={styles.passKicker}>MEMBERSHIP PASS</div>
                         <div className={styles.passPlan}>{pass.data.plan_name ?? 'Membership'}</div>
+
                         <div className={styles.passName}>{pass.data.full_name}</div>
-                        <div className={styles.passMeta}>Member ID: {pass.data.member_id}</div>
-                        <div className={styles.passMeta}>
-                          Valid Until: {pass.data.valid_until ? new Date(pass.data.valid_until).toLocaleDateString() : '—'}
-                        </div>
-                        <div className={styles.qrBlock}>
-                          <div className={styles.qrPlaceholder} aria-label="Membership QR">
-                            <div className={styles.qrInner}>QR</div>
-                          </div>
-                          <div className={styles.qrText} title={pass.data.qr_payload}>
-                            {pass.data.qr_payload}
-                          </div>
-                        </div>
-                      </div>
+                        <p>Your live calendar and one-time QR are in the Access Calendar panel.</p>
 
-                      <div className={styles.passInfoGrid}>
-                        <div className={styles.infoRow}>
-                          <div className={styles.infoLabel}>Status</div>
-                          <div className={styles.infoValue}>
-                            <Badge tone={membershipTone}>{pass.data.status ?? '—'}</Badge>
 
-                        {pass.data.visits_booked != null || pass.data.visits_completed != null ? (
-                          <div className={styles.infoRow}>
-                            <div className={styles.infoLabel}>Visits</div>
-                            <div className={styles.infoValue}>
-                              {pass.data.visits_completed ?? 0} completed / {pass.data.visits_booked ?? 0} booked
-                            </div>
-                          </div>
-                        ) : null}
-
-                        {pass.data.pause_days_remaining != null ? (
-                          <div className={styles.infoRow}>
-                            <div className={styles.infoLabel}>Pause Days</div>
-                            <div className={styles.infoValue}>{pass.data.pause_days_remaining} remaining (max 60)</div>
-                          </div>
-                        ) : null}
-                          </div>
-                        </div>
                         <div className={styles.infoRow}>
                           <div className={styles.infoLabel}>Gym Access</div>
                           <div className={styles.infoValue}>{pass.data.gym_access_count} partner gyms</div>

@@ -93,7 +93,7 @@ class MembershipPassResponse(BaseModel):
     plan_name: str | None = None
     status: str | None = None
     valid_until: datetime | None = None
-    qr_payload: str
+    qr_payload: str | None = None
     gym_access_count: int = 0
 
     # Extra context for UI

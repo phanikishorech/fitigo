@@ -58,6 +58,7 @@ class Gym(Base):
 
     status: Mapped[str] = mapped_column(String(50), nullable=False, default=GymStatus.DRAFT.value)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    multi_gym_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     # Pricing / features
     # NOTE: Use Numeric for money. SQLAlchemy returns Decimal-like values; we keep type as float for consistency

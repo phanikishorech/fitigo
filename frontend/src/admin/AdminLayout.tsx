@@ -11,6 +11,7 @@ const navigation: { label: string; path: string; icon: IconName }[] = [
   { label: 'Users', path: '/admin/users', icon: 'user' },
   { label: 'Gyms', path: '/admin/gyms', icon: 'gym' },
   { label: 'Bookings', path: '/admin/bookings', icon: 'ticket' },
+  { label: 'Membership Plans', path: '/admin/membership-plans', icon: 'bag' },
   { label: 'Reports', path: '/admin/reports', icon: 'chart' }
 ]
 export function Logo() { return <Link to="/admin/dashboard" className="ad-logo"><span className="fg-logo-mark"><Icon name="gym" size={23} /></span><span>Fiti<span>Go</span></span><small>ADMIN</small></Link> }

@@ -14,6 +14,7 @@ from app.routers.gyms_public import router as gyms_public_router
 from app.routers.bookings import router as bookings_router
 from app.routers.gym_staff import router as gym_staff_router
 from app.routers.memberships import router as memberships_router
+from app.routers.platform_memberships import router as platform_memberships_router
 from app.routers.users import router as users_router
 from app.routers.notifications import router as notifications_router
 from app.routers.meta import router as meta_router
@@ -51,6 +52,7 @@ def create_app() -> FastAPI:
     app.include_router(bookings_router, prefix=settings.api_v1_prefix, tags=["Bookings"])
     app.include_router(gym_staff_router, prefix=settings.api_v1_prefix, tags=["Gym Staff"])
     app.include_router(memberships_router, prefix=settings.api_v1_prefix, tags=["Memberships"])
+    app.include_router(platform_memberships_router, prefix=settings.api_v1_prefix, tags=["Multi-Gym Memberships"])
     app.include_router(notifications_router, prefix=settings.api_v1_prefix, tags=["Notifications"])
     app.include_router(meta_router, prefix=settings.api_v1_prefix, tags=["Meta"])
     app.include_router(profile_router, prefix=settings.api_v1_prefix, tags=["Profile"])

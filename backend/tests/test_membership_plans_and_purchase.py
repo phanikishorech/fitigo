@@ -1,71 +1,26 @@
-from __future__ import annotations
-
-import uuid
-
-from fastapi.testclient import TestClient
-
-from app.core.roles import ROLE_CUSTOMER, ROLE_GYM_OWNER
-from app.core.security import create_access_token
-from app.database.session import SessionLocal
-from app.main import app
-from app.services.auth_service import AuthService
-from app.services.gym_service import GymService
+"""Owner plan + customer wallet purchase regression, isolated from application DB."""
+from decimal import Decimal
+from sqlalchemy.orm import Session
+from test_membership_wallet_mvp import funded
+from test_platform_memberships import api
+from app.models.wallet import WalletAccount
 
 
-client = TestClient(app)
-
-
-def test_owner_can_create_plan_and_customer_can_purchase_and_list_memberships():
-    if SessionLocal is None:
-        return
-
-    db = SessionLocal()
-    try:
-        auth = AuthService(db)
-        owner = auth.register_user(
-            first_name="O",
-            last_name="Owner",
-            email=f"m_owner_{uuid.uuid4().hex[:8]}@example.com",
-            phone=None,
-            password="password1234",
-            role_name=ROLE_GYM_OWNER,
-        )
-        customer = auth.register_user(
-            first_name="C",
-            last_name="Customer",
-            email=f"m_customer_{uuid.uuid4().hex[:8]}@example.com",
-            phone=None,
-            password="password1234",
-            role_name=ROLE_CUSTOMER,
-        )
-
-        gym_svc = GymService(db)
-        gym = gym_svc.create_gym(owner_user_id=owner.id, data={"name": "MemGym", "city": "X"})
-        gym.status = "APPROVED"
-        db.commit()
-
-        owner_token = create_access_token(str(owner.id))
-        rp = client.post(
-            f"/api/v1/memberships/gyms/{gym.id}/plans",
-            json={"name": "Monthly", "duration_days": 30, "price": "999.00", "currency": "INR"},
-            headers={"Authorization": f"Bearer {owner_token}"},
-        )
-        assert rp.status_code == 200
-        plan_id = rp.json()["id"]
-
-        rcust = create_access_token(str(customer.id))
-        rbuy = client.post(
-            f"/api/v1/memberships/gyms/{gym.id}/purchase",
-            json={"plan_id": plan_id},
-            headers={"Authorization": f"Bearer {rcust}"},
-        )
-        assert rbuy.status_code == 200
-
-        rlist = client.get(
-            "/api/v1/memberships/me",
-            headers={"Authorization": f"Bearer {rcust}"},
-        )
-        assert rlist.status_code == 200
-        assert len(rlist.json()) >= 1
-    finally:
-        db.close()
+def test_owner_can_create_plan_and_customer_can_purchase_and_list_memberships(funded):
+    client, headers, engine = funded
+    created = client.post('/api/v1/memberships/gyms/1/plans', headers=headers[2], json={
+        'name':'Owner created plan', 'duration_days':30, 'price':'999.00', 'currency':'INR',
+    })
+    assert created.status_code == 200, created.text
+    plan_id = created.json()['id']
+    quote = client.get(f'/api/v1/memberships/gyms/1/plans/{plan_id}/wallet-quote',headers=headers[1]).json()
+    purchase = client.post('/api/v1/memberships/gyms/1/purchase', headers={**headers[1], 'Idempotency-Key':'owner-plan-wallet-001'}, json={
+        'plan_id':plan_id, 'accepted_quote':quote['quote_token'],
+    })
+    assert purchase.status_code == 200, purchase.text
+    assert purchase.json()['payment_provider'] == 'WALLET'
+    assert purchase.json()['wallet_transaction_id'] is not None
+    listed = client.get('/api/v1/memberships/me',headers=headers[1])
+    assert listed.status_code == 200 and len(listed.json()) == 1
+    with Session(engine) as db:
+        assert db.get(WalletAccount,1).balance == Decimal('4001.00')

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Header, Response
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import require_role
@@ -14,9 +14,22 @@ from app.schemas.membership import (
     UserMembershipResponse,
 )
 from app.services.membership_service import MembershipService
+from app.services.membership_wallet_service import single_terms, quote_key, wallet_enabled, buy_single
+from app.models.wallet import WalletAccount
+from sqlalchemy import select
 
 
 router = APIRouter(prefix="/memberships")
+
+
+@router.get("/gyms/{gym_id}/plans/{plan_id}/wallet-quote")
+def wallet_quote(gym_id: int, plan_id: int, response: Response, db: Session = Depends(get_db), current_user: User = Depends(require_role({ROLE_CUSTOMER}))):
+    response.headers["Cache-Control"] = "no-store"
+    terms = single_terms(db, gym_id, plan_id)
+    wallet = db.scalars(select(WalletAccount).where(WalletAccount.user_id == current_user.id)).first()
+    return {"plan": terms, "quote_token": quote_key(terms), "payment_available": wallet_enabled(),
+            "wallet_balance": str(wallet.balance) if wallet else "0.00", "wallet_currency": wallet.currency if wallet else terms["currency"],
+            "payment_mode": "WALLET_TEST_CREDIT" if wallet_enabled() else "DISABLED"}
 
 
 @router.post("/gyms/{gym_id}/plans", response_model=MembershipPlanResponse)
@@ -70,11 +83,12 @@ def list_public_plans(
 def purchase_membership(
     gym_id: int,
     payload: PurchaseMembershipRequest,
+    idempotency_key: str = Header(..., alias="Idempotency-Key", min_length=8, max_length=64, pattern=r"^[A-Za-z0-9_-]+$"),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role({ROLE_CUSTOMER})),
 ):
     svc = MembershipService(db)
-    m = svc.purchase_membership(user_id=current_user.id, gym_id=gym_id, plan_id=payload.plan_id)
+    m = buy_single(db, user_id=current_user.id, gym_id=gym_id, plan_id=payload.plan_id, accepted_quote=payload.accepted_quote, key=idempotency_key)
     return UserMembershipResponse(
         id=m.id,
         user_id=m.user_id,
@@ -87,6 +101,7 @@ def purchase_membership(
         paid_amount=str(m.paid_amount),
         currency=m.currency,
         payment_provider=m.payment_provider,
+        membership_type=m.membership_type, platform_plan_id=m.platform_plan_id, terms_snapshot=m.terms_snapshot, wallet_transaction_id=m.wallet_transaction_id,
         payment_status=m.payment_status,
         external_ref=m.external_ref,
         created_at=m.created_at,
@@ -114,6 +129,7 @@ def list_my_memberships(
             paid_amount=str(m.paid_amount),
             currency=m.currency,
             payment_provider=m.payment_provider,
+            membership_type=m.membership_type, platform_plan_id=m.platform_plan_id, terms_snapshot=m.terms_snapshot, wallet_transaction_id=m.wallet_transaction_id,
             payment_status=m.payment_status,
             external_ref=m.external_ref,
             created_at=m.created_at,
@@ -143,6 +159,7 @@ def cancel_membership(
         paid_amount=str(m.paid_amount),
         currency=m.currency,
         payment_provider=m.payment_provider,
+        membership_type=m.membership_type, platform_plan_id=m.platform_plan_id, terms_snapshot=m.terms_snapshot, wallet_transaction_id=m.wallet_transaction_id,
         payment_status=m.payment_status,
         external_ref=m.external_ref,
         created_at=m.created_at,

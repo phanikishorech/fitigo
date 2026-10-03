@@ -4,6 +4,7 @@ import { walletService } from '../../services/accountService'
 import { dateLabel, money } from '../../services/client'
 import { Alert, Badge, Button, EmptyState, ErrorState, Heading, Link, Modal, Skeleton } from '../../components/common/UI'
 import Icon from '../../components/common/Icon'
+import { safeReturnTo } from '../../customerRoutes'
 
 export default function WalletPage({ recharge = false }: { recharge?: boolean }) {
   const result = useResource(walletService.transactions, 'wallet')
@@ -11,7 +12,8 @@ export default function WalletPage({ recharge = false }: { recharge?: boolean })
   const [confirm, setConfirm] = useState(false)
   const [success, setSuccess] = useState('')
   const mutation = useMutation()
-  const returnTo = new URLSearchParams(window.location.search).get('returnTo') === '/checkout' ? '/checkout' : '/wallet'
+  const requestedReturn = safeReturnTo(new URLSearchParams(window.location.search).get('returnTo'))
+  const returnTo = requestedReturn.startsWith('/membership/checkout?') || requestedReturn === '/checkout' ? requestedReturn : '/wallet'
   if (result.loading) return <Skeleton cards={2} />
   if (result.error) return <ErrorState message={result.error} retry={result.retry} />
   const wallet = result.data!

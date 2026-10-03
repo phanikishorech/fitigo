@@ -1,7 +1,41 @@
 import { authFetch, clearTokens, getAccessToken } from '../auth'
 
 export class ApiError extends Error {
-  constructor(message: string, public status: number) { super(message); this.name = 'ApiError' }
+  constructor(message: string, public status: number, public code?: string) { super(message); this.name = 'ApiError' }
+}
+
+// Only recognized public business codes are exposed; never retain raw error payloads.
+export const accessErrorMessages: Record<string, string> = {
+  DAILY_ACCESS_ALREADY_CONSUMED: 'You have already used your FitiGo access today.',
+  DAILY_ACCESS_ALREADY_USED: 'You have already used your FitiGo access today.',
+  MEMBERSHIP_PAUSED: 'Your membership access is paused. Gym access is unavailable during a pause.',
+  MEMBERSHIP_EXPIRED: 'Your membership has expired. View plans to continue.',
+  GYM_NOT_ELIGIBLE: 'This gym is not available with your membership.',
+  INVALID_QR: 'This access QR is no longer valid. Request a new QR to check your access.',
+  QR_EXPIRED: 'This access QR has expired. Request a new QR to check your access.',
+  PAUSE_LIMIT_REACHED: 'You have used your pause allowance for this plan.',
+  PAUSE_PAST_DATE: 'You can only pause future dates.',
+  PAUSE_OVER_LIMIT: 'Selected period exceeds your remaining pause allowance.',
+  PLAN_UNAVAILABLE: 'This membership plan is no longer available. Refresh plans to continue.',
+  PAYMENT_NOT_CONFIGURED: 'Payments are not available yet. No money has been taken.',
+  ORDER_NOT_FOUND: 'This order is not available on your account.',
+  IDEMPOTENCY_CONFLICT: 'This request has already been used for a different plan. Return to plans and try again.',
+  PLAN_VERSION_CHANGED: 'This plan has changed. Refresh its details before trying again.',
+  PLAN_CODE_EXISTS: 'A plan with this code already exists.',
+  ACCOUNT_UNAVAILABLE: 'Your account is not available for this action.',
+  WALLET_MVP_DISABLED: 'Test-credit membership checkout is only available in the controlled development environment.',
+  INSUFFICIENT_WALLET_BALANCE: 'Your wallet does not have enough test credits. Add test credits and refresh checkout.',
+  WALLET_CURRENCY_MISMATCH: 'Your wallet currency does not match this plan.',
+  MEMBERSHIP_PRICE_CHANGED: 'The price or plan terms changed. Refresh checkout and review the latest price before paying.',
+  MEMBERSHIP_ALREADY_ACTIVE: 'You already have an active membership covering this purchase. View your membership instead.',
+  NO_ELIGIBLE_PARTNER_GYMS: 'No Multi-Gym partners are enabled yet. Please try again after a partner gym is available.'
+}
+function publicBusinessCode(data: unknown): string | undefined {
+  if (!data || typeof data !== 'object') return undefined
+  const value = data as Record<string, unknown>
+  const detail = value.detail && typeof value.detail === 'object' ? value.detail as Record<string, unknown> : null
+  const candidates = [value.code, value.status, value.detail, detail?.code, detail?.status]
+  return candidates.find((code): code is string => typeof code === 'string' && Object.hasOwn(accessErrorMessages, code))
 }
 
 export function safeError(status: number, detail?: unknown): string {
@@ -51,7 +85,8 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const data: unknown = response.status === 204 ? null : await response.json().catch(() => null)
   if (!response.ok) {
     if (response.status === 401) clearTokens()
-    throw new ApiError(safeError(response.status, data && typeof data === 'object' && 'detail' in data ? data.detail : undefined), response.status)
+    const code = response.status !== 401 && response.status < 500 ? publicBusinessCode(data) : undefined
+    throw new ApiError(code ? accessErrorMessages[code] : safeError(response.status, data && typeof data === 'object' && 'detail' in data ? data.detail : undefined), response.status, code)
   }
   if (data === null && response.status !== 204) throw new ApiError('The server returned an unexpected response. Please try again.', response.status)
   return data as T

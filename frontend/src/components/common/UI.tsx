@@ -26,7 +26,7 @@ export function Image({ src, alt, className = '' }: { src?: string | null; alt: 
   const safeSrc = src && (/^\/(?!\/)/.test(src) || /^https?:\/\//i.test(src)) ? src : null
   return safeSrc && !failed ? <img src={safeSrc} alt={alt} className={className} loading="lazy" decoding="async" onError={() => setFailed(true)} /> : <div className={`fg-image-fallback ${className}`} role="img" aria-label={`${alt} — photo unavailable`}><Icon name="gym" size={42} /><span>FitiGo partner gym</span></div>
 }
-export function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
+export function Modal({ title, children, onClose, showCloseButton = true, className = '', describedBy }: { title: string; children: ReactNode; onClose: () => void; showCloseButton?: boolean; className?: string; describedBy?: string }) {
   const dialog = useRef<HTMLDialogElement>(null)
   const id = useId()
   useEffect(() => {
@@ -35,5 +35,5 @@ export function Modal({ title, children, onClose }: { title: string; children: R
     document.body.style.overflow = 'hidden'; dialog.current?.showModal()
     return () => { document.body.style.overflow = overflow; previous?.focus() }
   }, [])
-  return <dialog ref={dialog} className="fg-dialog" aria-labelledby={id} onCancel={e => { e.preventDefault(); onClose() }} onClick={e => { if (e.target === dialog.current) onClose() }}><div className="fg-dialog-inner"><div className="fg-section-heading"><h2 id={id}>{title}</h2><Button variant="text" aria-label="Close dialog" onClick={onClose}><Icon name="close" /></Button></div>{children}</div></dialog>
+  return <dialog ref={dialog} className={`fg-dialog ${className}`} aria-labelledby={id} aria-describedby={describedBy} onCancel={e => { e.preventDefault(); onClose() }} onClick={e => { if (e.target === dialog.current) onClose() }}><div className="fg-dialog-inner"><div className="fg-section-heading"><h2 id={id}>{title}</h2>{showCloseButton && <Button variant="text" aria-label="Close dialog" onClick={onClose}><Icon name="close" /></Button>}</div>{children}</div></dialog>
 }

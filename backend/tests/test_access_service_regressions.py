@@ -11,6 +11,8 @@ from app.models.access import AccessPauseDay, AccessQrToken, Checkin, CustomerDa
 from app.models.auth import User
 from app.models.gym import Gym
 from app.models.membership import GymMembershipPlan, MembershipDailyAccess, UserMembership
+from app.models.platform_membership import PlatformMembershipPlan
+from app.models.wallet import WalletAccount, WalletTransaction
 from app.services import access_service
 from app.services.access_service import AccessService, _utc
 from app.schemas.access import TodayAccessResponse
@@ -30,6 +32,7 @@ def access(monkeypatch):
         "customer_daily_accesses", "access_qr_tokens", "checkins",
         "access_pause_days", "gym_operating_hours", "gym_special_hours",
         "membership_daily_accesses",
+        "platform_membership_plans", "wallet_accounts", "wallet_transactions",
     ):
         table = Base.metadata.tables[name].to_metadata(metadata)
         table.c.id.type = Integer()

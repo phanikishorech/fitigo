@@ -113,54 +113,8 @@ class MembershipService:
         return plan
 
     def purchase_membership(self, *, user_id: int, gym_id: int, plan_id: int) -> UserMembership:
-        plan = self.db.execute(select(GymMembershipPlan).where(GymMembershipPlan.id == plan_id)).scalars().first()
-        if not plan or int(plan.gym_id) != int(gym_id) or not plan.is_active:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plan not found")
-
-        gym = self.db.execute(select(Gym).where(Gym.id == gym_id, Gym.status == "APPROVED", Gym.is_active.is_(True))).scalars().first()
-        if not gym:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gym not found")
-
-        now = datetime.utcnow()
-
-        # Prevent duplicate active memberships for the same gym.
-        existing_active = (
-            self.db.execute(
-                select(UserMembership).where(
-                    UserMembership.user_id == user_id,
-                    UserMembership.gym_id == gym_id,
-                    UserMembership.status == MembershipStatus.ACTIVE.value,
-                    UserMembership.end_at > now,
-                )
-            )
-            .scalars()
-            .first()
-        )
-        if existing_active:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="You already have an active membership for this gym.",
-            )
-
-        end = now + timedelta(days=int(plan.duration_days))
-        membership = UserMembership(
-            user_id=user_id,
-            gym_id=gym_id,
-            plan_id=plan_id,
-            status=MembershipStatus.ACTIVE.value,
-            start_at=now,
-            end_at=end,
-            cancelled_at=None,
-            paid_amount=plan.price,
-            currency=plan.currency,
-            payment_provider="DUMMY",
-            payment_status="PAID",
-            external_ref=None,
-        )
-        self.db.add(membership)
-        self.db.commit()
-        self.db.refresh(membership)
-        return membership
+        # Legacy internal callers must not bypass wallet acceptance/debit.
+        raise HTTPException(status_code=409, detail={"code": "MEMBERSHIP_PRICE_CHANGED"})
 
     def list_my_memberships(self, *, user_id: int) -> list[UserMembership]:
         return list(

@@ -1,0 +1,42 @@
+[
+  {
+    "code": "fitigo-multi-monthly",
+    "name": "FitiGo Multi-Gym Monthly",
+    "duration_value": 1,
+    "duration_unit": "MONTH",
+    "base_price": "2199.00",
+    "currency": "INR",
+    "display_order": 10,
+    "is_active": true
+  },
+  {
+    "code": "fitigo-multi-quarterly",
+    "name": "FitiGo Multi-Gym Quarterly",
+    "duration_value": 3,
+    "duration_unit": "MONTH",
+    "base_price": "5499.00",
+    "currency": "INR",
+    "display_order": 20,
+    "is_active": true
+  },
+  {
+    "code": "fitigo-multi-half-yearly",
+    "name": "FitiGo Multi-Gym Half Yearly",
+    "duration_value": 6,
+    "duration_unit": "MONTH",
+    "base_price": "8999.00",
+    "currency": "INR",
+    "display_order": 30,
+    "is_active": true
+  },
+  {
+    "code": "fitigo-multi-yearly",
+    "name": "FitiGo Multi-Gym Yearly",
+    "duration_value": 12,
+    "duration_unit": "MONTH",
+    "base_price": "14999.00",
+    "currency": "INR",
+    "display_order": 40,
+    "is_active": true
+  }
+]

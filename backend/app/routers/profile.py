@@ -12,6 +12,7 @@ from app.core.dependencies import get_optional_user, require_role
 from app.core.roles import ROLE_CUSTOMER
 from app.core.time import utc_today
 from app.services.access_service import AccessService
+from app.services.membership_entitlement import membership_name, included_ids, scope, active_memberships as resolve_memberships, covers
 from app.models.access import Checkin
 from app.database.session import get_db
 from app.models.auth import User
@@ -64,18 +65,8 @@ def get_membership_calendar(
     uid = _require_user_id(db, current_user)
     now = datetime.utcnow()
 
-    m = (
-        db.execute(
-            select(UserMembership).where(
-                UserMembership.user_id == uid,
-                UserMembership.gym_id == gym_id,
-                UserMembership.status == MembershipStatus.ACTIVE.value,
-                UserMembership.end_at > now,
-            )
-        )
-        .scalars()
-        .first()
-    )
+    gym = db.get(Gym, gym_id)
+    m = next((item for item in resolve_memberships(db, uid, now) if gym and covers([item], gym)), None)
     if not m:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active membership for this gym")
 
@@ -108,6 +99,9 @@ def get_membership_daily_qr(
     response.headers["Cache-Control"] = "no-store"
     svc = AccessService(db)
     ctx = svc._resolve_today_access_context(user_id=current_user.id)
+    gym = db.get(Gym, gym_id)
+    if not gym or not covers(resolve_memberships(db, current_user.id, datetime.utcnow()), gym):
+        raise HTTPException(status_code=403, detail={"code": "GYM_NOT_ELIGIBLE"})
     if ctx.get("gym_id") is not None and ctx["gym_id"] != gym_id:
         raise HTTPException(status_code=403, detail="No active membership for this gym")
     result = svc.get_today_access(user_id=current_user.id)
@@ -225,20 +219,7 @@ def get_membership_summary(
     uid = _require_user_id(db, current_user)
     now = datetime.utcnow()
 
-    # Active memberships (we treat multiple active gym memberships as "multi-gym" access in UI)
-    active_memberships = list(
-        db.execute(
-            select(UserMembership)
-            .where(
-                UserMembership.user_id == uid,
-                UserMembership.status == MembershipStatus.ACTIVE.value,
-                UserMembership.end_at > now,
-            )
-            .order_by(UserMembership.end_at.desc())
-        )
-        .scalars()
-        .all()
-    )
+    active_memberships = resolve_memberships(db, uid, now)
 
     m = active_memberships[0] if active_memberships else (
         db.execute(select(UserMembership).where(UserMembership.user_id == uid).order_by(UserMembership.end_at.desc())).scalars().first()
@@ -246,18 +227,13 @@ def get_membership_summary(
 
     plan_name = None
     if m:
-        plan = db.execute(select(GymMembershipPlan).where(GymMembershipPlan.id == m.plan_id)).scalars().first()
-        plan_name = plan.name if plan else None
+        plan_name = membership_name(db, m)
 
-    gym_access_count = len({int(x.gym_id) for x in active_memberships})
-    membership_scope = None
-    if gym_access_count == 1:
-        membership_scope = "SINGLE_GYM"
-    elif gym_access_count > 1:
-        membership_scope = "MULTI_GYM"
+    membership_scope = scope(active_memberships)
 
     # Gym details for active memberships
-    active_gym_ids = [int(x.gym_id) for x in active_memberships]
+    active_gym_ids = sorted(included_ids(db, uid, now))
+    gym_access_count = len(active_gym_ids)
     active_gyms: list[dict] = []
     if active_gym_ids:
         gyms = list(db.execute(select(Gym).where(Gym.id.in_(active_gym_ids))).scalars().all())
@@ -313,14 +289,14 @@ def get_membership_summary(
             visits_completed = completed
 
     # Pause policy constants (MVP)
-    pause_days_max = 60
+    pause_days_max = 0
     pause_days_used = 0
     pause_days_remaining = pause_days_max
 
     return MembershipSummaryResponse(
         membership_id=int(m.id) if m else None,
         plan_name=plan_name,
-        status=(m.status if m else None),
+        status=("EXPIRED" if m and m.status == "ACTIVE" and m.end_at <= now else m.status if m else None),
         start_date=(m.start_at if m else None),
         end_date=(m.end_at if m else None),
         membership_scope=membership_scope,
@@ -584,30 +560,14 @@ def get_membership_pass(
     valid_until = None
     status_val = None
     if m:
-        plan = db.execute(select(GymMembershipPlan).where(GymMembershipPlan.id == m.plan_id)).scalars().first()
-        plan_name = plan.name if plan else None
+        plan_name = membership_name(db, m)
         valid_until = m.end_at
         status_val = m.status
 
-    active_memberships = list(
-        db.execute(
-            select(UserMembership).where(
-                UserMembership.user_id == uid,
-                UserMembership.status == MembershipStatus.ACTIVE.value,
-                UserMembership.end_at > now,
-            )
-        )
-        .scalars()
-        .all()
-    )
-    active_gym_ids = [int(x.gym_id) for x in active_memberships]
-    gym_access_count = len({int(x.gym_id) for x in active_memberships})
-
-    membership_scope = None
-    if gym_access_count == 1:
-        membership_scope = "SINGLE_GYM"
-    elif gym_access_count > 1:
-        membership_scope = "MULTI_GYM"
+    active_memberships = resolve_memberships(db, uid, now)
+    active_gym_ids = sorted(included_ids(db, uid, now))
+    gym_access_count = len(active_gym_ids)
+    membership_scope = scope(active_memberships)
 
     active_gyms: list[dict] = []
     if active_gym_ids:
@@ -676,5 +636,5 @@ def get_membership_pass(
         visits_booked=visits_booked,
         visits_completed=visits_completed,
         pause_days_used=0,
-        pause_days_remaining=60,
+        pause_days_remaining=0,
     )

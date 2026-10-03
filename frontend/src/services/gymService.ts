@@ -20,6 +20,11 @@ export function discoveryQuery(params: DiscoverParams) {
 export const gymService = {
   discover: (params: DiscoverParams) => request<GymDiscoverResponse>(`/gyms/discover?${discoveryQuery(params)}`),
   details: (id: number) => cachedRead(`gym:${id}`, () => request<GymDetailsResponse>(`/gyms/${id}/details`)),
+  accessDetails: async (id: number) => {
+    // Strict identity first: public detail endpoints otherwise accept anonymous fallback.
+    await request('/users/me', { cache: 'no-store' })
+    return request<GymDetailsResponse>(`/gyms/${id}/details`, { cache: 'no-store' })
+  },
   types: () => cachedRead('gym-types', () => request<string[]>('/meta/gym-types'), 300000),
   facilities: () => cachedRead('facilities', () => request<GymFacility[]>('/facilities'), 300000),
   locations: (search = '') => request<(LocationContext & { gym_count: number })[]>(`/meta/locations?limit=40&search=${encodeURIComponent(search)}`)

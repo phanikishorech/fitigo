@@ -23,6 +23,7 @@ function fixture(url, method) {
   if (path === '/api/v1/users/me') return user
   if (path === '/api/v1/users/me/roles') return identityRoles
   if (path === '/api/v1/admin/ping') return { status: 'ok', user_id: 1 }
+  if (/\/admin\/gyms\/\d+\/multi-gym-participation$/.test(path)) return { gym_id:Number(path.split('/')[5]), enabled:false }
   if (path === '/api/v1/admin/dashboard/summary') return { users: { total: 3, customers: 1, gym_owners: 1 }, gyms: { total: 3, pending_approval: 1 }, bookings: { today: 1, upcoming: 1 }, revenue: { last_30d: '600.00', currency: 'INR' } }
   if (path === '/api/v1/admin/users') return query.has('q') ? [] : [user]
   if (/\/api\/v1\/admin\/users\/\d+$/.test(path)) return user

@@ -1,36 +1,38 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { getAccessToken } from '../../auth'
 import { openAuthModal } from '../../authUi'
-import { useMutation, useResource } from '../../hooks/useResource'
+import { useResource } from '../../hooks/useResource'
 import { membershipService } from '../../services/accountService'
 import { gymService } from '../../services/gymService'
-import { dateLabel, money } from '../../services/client'
+import { money } from '../../services/client'
 import { navigate } from '../../router'
-import { Alert, Badge, Button, EmptyState, ErrorState, Heading, Link, Skeleton } from '../../components/common/UI'
+import { Button, EmptyState, ErrorState, Heading, Link, Skeleton } from '../../components/common/UI'
 import Icon from '../../components/common/Icon'
+import WalletMembershipPayment from '../../components/membership/WalletMembershipPayment'
 
 export function MembershipPlansPage({ gymId, checkout = false }: { gymId: number; checkout?: boolean }) {
   const result = useResource(async () => { const [gym, plans] = await Promise.all([gymService.details(gymId), membershipService.plans(gymId)]); return { gym, plans: plans.filter(p => p.is_active) } }, String(gymId))
   const [selected, setSelected] = useState(() => Number(new URLSearchParams(window.location.search).get('planId')) || 0)
-  const mutation = useMutation()
   if (result.loading) return <Skeleton cards={3} />
   if (result.error) return <ErrorState message={result.error} retry={result.retry} />
   const { gym, plans } = result.data!
   const plan = plans.find(item => item.id === selected)
   const next = () => { if (!plan) return; const to = `/membership/checkout?gymId=${gymId}&planId=${plan.id}`; if (!getAccessToken()) openAuthModal(to); else navigate(to) }
-  return <><Link to={`/gyms/${gymId}`} className="fg-inline-link"><Icon name="back" />{gym.gym_name}</Link><Heading eyebrow="YOUR ROUTINE STARTS HERE" title={checkout ? 'Your membership, ready to go' : 'Choose your membership'} subtitle={`Make ${gym.gym_name} part of your everyday.`} />{!plans.length ? <EmptyState title="No memberships available" description="You can still explore day visits at this gym." action={<Link to={`/gyms/${gymId}/book/access`} className="fg-button fg-button--primary">Book a visit</Link>} /> : <div className="fg-two-column"><div className="fg-stack">{(checkout && plan ? [plan] : plans).map(item => <button type="button" key={item.id} className={`fg-plan ${selected === item.id ? 'is-active' : ''}`} aria-pressed={selected === item.id} onClick={() => setSelected(item.id)}><div className="fg-row"><h2>{item.name}</h2>{selected === item.id && <Icon name="check" />}</div><p className="fg-muted">{item.duration_days} days of membership</p><p className="fg-price">{money(item.price, item.currency)}</p>{item.description && <p className="fg-prose">{item.description}</p>}</button>)}</div><aside className="fg-panel fg-stack"><h3>{gym.gym_name}</h3>{plan ? <><p>{plan.name} · {plan.duration_days} days</p><div className="fg-total-row"><strong>Total</strong><strong className="fg-price">{money(plan.price, plan.currency)}</strong></div></> : <p className="fg-muted">Choose a plan to continue.</p>}{checkout ? <><Badge tone="warning">Payment method: MVP</Badge><p className="fg-muted">The current backend activates memberships with a dummy payment. It does not charge a bank account or your wallet.</p>{!import.meta.env.DEV && <Alert>Membership payments are not available in production yet.</Alert>}<Button disabled={!plan || !import.meta.env.DEV} loading={mutation.pending} onClick={() => mutation.run(async () => { if (!plan) return; const membership = await membershipService.purchase(gymId, plan.id); navigate(`/membership/success?id=${membership.id}`) })}>Confirm MVP purchase</Button><Link to={`/gyms/${gymId}/membership`} className="fg-inline-link">Choose another plan</Link></> : <Button disabled={!plan} onClick={next}>Select plan <Icon name="arrow" size={18} /></Button>}{mutation.error && <Alert>{mutation.error}<Link to="/profile/membership" className="fg-inline-link">View your memberships</Link></Alert>}<small className="fg-muted">Only the benefits listed by the gym are included. Review gym access rules before purchasing.</small></aside></div>}</>
+  return <><Link to={`/gyms/${gymId}`} className="fg-inline-link"><Icon name="back" />{gym.gym_name}</Link><Heading eyebrow="YOUR ROUTINE STARTS HERE" title={checkout ? 'Your membership, ready to go' : 'Choose your membership'} subtitle={`Make ${gym.gym_name} part of your everyday.`} />
+    {!plans.length ? <EmptyState title="No memberships available" action={<Link to={`/gyms/${gymId}/book/access`}>Book a visit</Link>} /> : checkout && plan ? <SingleWalletCheckout gymId={gymId} planId={plan.id} /> : <div className="fg-two-column"><div className="fg-stack">
+      {plans.map(item => <button type="button" key={item.id} className={`fg-plan ${selected === item.id ? 'is-active' : ''}`} aria-pressed={selected === item.id} onClick={() => setSelected(item.id)}><h2>{item.name}</h2><p>{item.duration_days} days of membership</p><p className="fg-price">{money(item.price, item.currency)}</p>{item.description && <p>{item.description}</p>}</button>)}
+    </div><aside className="fg-panel fg-stack"><h3>{gym.gym_name}</h3><p>{plan ? plan.name : 'Choose a plan to continue.'}</p><Button disabled={!plan} onClick={next}>Continue</Button></aside></div>}
+  </>
 }
-
-export default function MyMembershipPage({ success = false }: { success?: boolean }) {
-  const result = useResource(async () => { const [memberships, summary] = await Promise.all([membershipService.mine(), membershipService.summary()]); return { memberships, summary } }, 'memberships')
+function SingleWalletCheckout({ gymId, planId }: { gymId: number; planId: number }) {
+  const result = useResource(() => membershipService.quote(gymId, planId), `single-wallet:${gymId}:${planId}`)
+  const key = useRef(crypto.randomUUID())
   if (result.loading) return <Skeleton cards={2} />
   if (result.error) return <ErrorState message={result.error} retry={result.retry} />
-  const { memberships, summary } = result.data!
-  const id = Number(new URLSearchParams(window.location.search).get('id'))
-  const purchased = memberships.find(m => m.id === id)
-  return <>{success && purchased?.status === 'ACTIVE' && <div className="fg-center"><div className="fg-success-mark"><Icon name="check" size={36} /></div><h1>Membership activated</h1><p className="fg-muted">A new routine starts today.</p></div>}<Heading eyebrow="SHOW UP. FEEL GOOD. REPEAT." title="Your memberships" subtitle="Your spaces, your plans, your next chapter." action={<Link to="/explore" className="fg-inline-link">Explore gyms <Icon name="arrow" size={16} /></Link>} />{!memberships.length ? <EmptyState title="You don’t have an active membership" description="Find a place you’ll love coming back to." action={<Link to="/explore" className="fg-button fg-button--primary">Explore memberships</Link>} /> : <div className="fg-two-column">{memberships.map(membership => <MembershipItem key={membership.id} membership={membership} />)}</div>}{summary.membership_features.length > 0 && <div className="fg-panel fg-stack" style={{ marginTop: 24 }}><h3>Your membership benefits</h3>{summary.membership_features.map(feature => <p key={feature}><Icon name="check" size={17} /> {feature}</p>)}</div>}<div className="fg-row" style={{ marginTop: 24 }}><Link to="/profile/access" className="fg-inline-link">View access calendar</Link><Link to="/access/qr" className="fg-button fg-button--primary">View today’s access</Link></div></>
+  const quote = result.data!
+  return <div className="fg-two-column"><section className="fg-panel fg-stack"><h2>{quote.plan.name}</h2><p>{quote.plan.duration_value} days · This gym only</p><strong className="fg-price">{money(quote.plan.final_price, quote.plan.currency)}</strong><p>Current price supplied by FitiGo.</p></section><aside className="fg-panel"><WalletMembershipPayment amount={quote.plan.final_price} currency={quote.plan.currency} balance={quote.wallet_balance} walletCurrency={quote.wallet_currency} available={quote.payment_available} refresh={result.retry} pay={async () => {
+    const membership = await membershipService.purchase(gymId, planId, quote.quote_token, key.current)
+    navigate(`/membership/success?id=${membership.id}`)
+  }} /></aside></div>
 }
-function MembershipItem({ membership }: { membership: Awaited<ReturnType<typeof membershipService.mine>>[number] }) {
-  const details = useResource(async () => { const [gym, plans] = await Promise.all([gymService.details(membership.gym_id), membershipService.plans(membership.gym_id)]); return { gym, plan: plans.find(plan => plan.id === membership.plan_id) } }, String(membership.id))
-  return <article className="fg-panel fg-stack"><div className="fg-row"><h3>{details.data?.gym.gym_name ?? `Gym membership #${membership.id}`}</h3><Badge tone={membership.status === 'ACTIVE' ? 'success' : 'neutral'}>{membership.status.toLowerCase()}</Badge></div>{details.error && <Alert>{details.error}<Button variant="text" onClick={details.retry}>Retry gym details</Button></Alert>}<p>{details.data?.plan?.name ?? `Plan #${membership.plan_id}`}</p><p className="fg-muted">{dateLabel(membership.start_at)} – {dateLabel(membership.end_at)}</p><p>{money(membership.paid_amount, membership.currency)}</p>{membership.payment_provider === 'DUMMY' && <Badge tone="warning">MVP payment</Badge>}{membership.status === 'ACTIVE' ? <Link to="/access/qr" className="fg-inline-link">Today’s access <Icon name="qr" size={18} /></Link> : <Link to={`/gyms/${membership.gym_id}/membership`} className="fg-inline-link">Explore renewal plans <Icon name="arrow" size={18} /></Link>}</article>
-}
+export { default } from './MembershipOverview'

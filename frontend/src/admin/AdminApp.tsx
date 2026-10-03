@@ -16,6 +16,7 @@ const Users = lazy(() => import('./Users'))
 const Gyms = lazy(() => import('./Gyms'))
 const Bookings = lazy(() => import('./Bookings'))
 const Account = lazy(() => import('./Account'))
+const MembershipPlans = lazy(() => import('./MembershipPlans'))
 export default function AdminApp({ path }: { path: string }) {
   const route = adminRoute(path)
   const [token, setToken] = useState(getAccessToken)
@@ -44,6 +45,7 @@ function Authenticated({ path, route }: { path: string; route: AdminRoute }) {
   else if (route.page === 'users' || route.page === 'user') content = <Users id={route.id} />
   else if (['gyms', 'gym', 'review'].includes(route.page)) content = <Gyms id={route.id} review={route.page === 'review'} />
   else if (route.page === 'bookings' || route.page === 'booking') content = <Bookings id={route.id} />
+  else if (['membership-plans', 'plan-new', 'plan-edit', 'plan-offer'].includes(route.page)) content = <MembershipPlans id={route.id} create={route.page === 'plan-new'} offer={route.page === 'plan-offer'} />
   else content = <Account page={route.page} user={user} roles={roles} />
   return <AdminLayout path={path} user={user} roles={roles}><Suspense fallback={<Skeleton />}><div key={`${route.page}:${route.id || ''}`}>{content}</div></Suspense></AdminLayout>
 }

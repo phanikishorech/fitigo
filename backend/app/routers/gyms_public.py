@@ -43,6 +43,7 @@ from app.models.auth import User
 from app.schemas.slot import GymSlotPublicResponse
 from app.services.slot_service import SlotService
 from app.models.membership import GymMembershipPlan, MembershipStatus, UserMembership
+from app.services.membership_entitlement import active_memberships, covers, included_ids as membership_gym_ids, membership_name
 from app.models.review import GymReview, ReviewStatus
 from app.models.slot import GymSlot, SlotAvailability
 from app.models.booking import Payment
@@ -188,16 +189,8 @@ def _has_active_membership(db: Session, *, user_id: int, gym_id: int) -> bool:
     from datetime import datetime
 
     now = datetime.utcnow()
-    return bool(
-        db.execute(
-            select(UserMembership.id).where(
-                UserMembership.user_id == user_id,
-                UserMembership.gym_id == gym_id,
-                UserMembership.status == MembershipStatus.ACTIVE.value,
-                UserMembership.end_at > now,
-            )
-        ).first()
-    )
+    gym = db.get(Gym, gym_id)
+    return bool(gym and covers(active_memberships(db, user_id, now), gym))
 
 
 def _compute_membership_banner(status: str) -> dict:
@@ -569,18 +562,7 @@ def discover_gyms(
     # Membership access (MVP): included if user has an active membership for this gym.
     included_gym_ids: set[int] = set()
     if current_user is not None:
-        included_gym_ids = set(
-            int(gid)
-            for (gid,) in db.execute(
-                select(UserMembership.gym_id)
-                .where(
-                    UserMembership.user_id == current_user.id,
-                    UserMembership.status == MembershipStatus.ACTIVE.value,
-                    UserMembership.end_at > now,
-                )
-                .distinct()
-            ).all()
-        )
+        included_gym_ids = membership_gym_ids(db, current_user.id, now)
 
     import math
 
@@ -872,24 +854,10 @@ def get_gym_details(
     included = False
     current_plan_name: str | None = None
     if current_user is not None:
-        active_m = (
-            db.execute(
-                select(UserMembership)
-                .where(
-                    UserMembership.user_id == current_user.id,
-                    UserMembership.gym_id == gym.id,
-                    UserMembership.status == MembershipStatus.ACTIVE.value,
-                    UserMembership.end_at > now,
-                )
-                .order_by(UserMembership.end_at.desc())
-            )
-            .scalars()
-            .first()
-        )
+        active_m = next((m for m in active_memberships(db, current_user.id, now) if covers([m], gym)), None)
         included = bool(active_m)
         if active_m is not None:
-            plan = db.execute(select(GymMembershipPlan).where(GymMembershipPlan.id == active_m.plan_id)).scalars().first()
-            current_plan_name = plan.name if plan else None
+            current_plan_name = membership_name(db, active_m)
     access_status = "INCLUDED" if included else "NO_ACTIVE_MEMBERSHIP"
     membership_access = GymMembershipAccess(
         status=access_status,
@@ -1061,19 +1029,7 @@ def get_gym_details(
 
         included_ids: set[int] = set()
         if current_user is not None and rel_ids:
-            included_ids = set(
-                int(r[0])
-                for r in db.execute(
-                    select(UserMembership.gym_id)
-                    .where(
-                        UserMembership.user_id == current_user.id,
-                        UserMembership.status == MembershipStatus.ACTIVE.value,
-                        UserMembership.end_at > now,
-                        UserMembership.gym_id.in_(rel_ids),
-                    )
-                    .distinct()
-                ).all()
-            )
+            included_ids = membership_gym_ids(db, current_user.id, now).intersection(rel_ids)
 
         for rg, cover_path in rel_rows:
             if not rg.latitude or not rg.longitude:

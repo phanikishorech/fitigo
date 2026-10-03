@@ -22,6 +22,7 @@ from app.models.access import (
 from app.models.auth import User, UserStatus
 from app.models.gym import Gym
 from app.models.membership import MembershipDailyAccess, MembershipStatus, UserMembership
+from app.services.membership_entitlement import active_memberships, covers, scope
 
 
 def _sha256_hex(s: str) -> str:
@@ -107,8 +108,8 @@ class AccessService:
             return {"status": "NO_ACCESS", "today": today, "now": now}
 
         # Determine access type based on number of active gyms.
-        gym_ids = sorted({int(m.gym_id) for m in memberships})
-        access_type = "SINGLE_GYM" if len(gym_ids) == 1 else "MULTI_GYM"
+        gym_ids = sorted({int(m.gym_id) for m in memberships if m.gym_id is not None})
+        access_type = scope(memberships)
 
         # Choose a stable membership_id for uniqueness/audit.
         # SINGLE_GYM: the only membership.
@@ -358,6 +359,9 @@ class AccessService:
             ).scalars().first()
             if not user or user.status != UserStatus.ACTIVE.value:
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Customer is not active")
+            gym = self.db.scalars(select(Gym).where(Gym.id == gym_id).with_for_update().execution_options(populate_existing=True)).first()
+            if not gym or gym.status != "APPROVED" or not gym.is_active:
+                raise HTTPException(status_code=403, detail={"code": "GYM_NOT_ELIGIBLE"})
             token_row = (
                 self.db.execute(select(AccessQrToken).where(AccessQrToken.token_hash == token_hash).with_for_update().execution_options(populate_existing=True))
                 .scalars()
@@ -431,10 +435,9 @@ class AccessService:
                     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"This access is valid only at {assigned_name}.")
 
             elif daily.access_type == "MULTI_GYM":
-                # Recheck the existing MVP entitlement rule at scan time too.
-                memberships = self._active_memberships_for_date(user_id=int(daily.user_id), at=now)
-                if len({membership.gym_id for membership in memberships}) < 2:
-                    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Multi-gym access is no longer active")
+                memberships = active_memberships(self.db, int(daily.user_id), now, lock=True)
+                if not covers(memberships, gym):
+                    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail={"code": "GYM_NOT_ELIGIBLE"})
             else:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid access")
 

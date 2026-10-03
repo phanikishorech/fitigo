@@ -15,6 +15,7 @@ from app.models import slot  # noqa: F401
 from app.models import booking  # noqa: F401
 from app.models import staff  # noqa: F401
 from app.models import membership  # noqa: F401
+from app.models import platform_membership  # noqa: F401
 from app.models import review  # noqa: F401
 from app.models import notification  # noqa: F401
 from app.models import class_booking  # noqa: F401

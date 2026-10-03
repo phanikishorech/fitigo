@@ -1,5 +1,9 @@
 # FitiGo Admin Portal
 
+## Controlled wallet MVP update
+
+Gym details now include **Multi-Gym participation** with admin-only opt-in/disable confirmation. Only approved active gyms can be enabled. Backend eligibility and QR validation respect that setting; disabling participation blocks subsequent scans. No existing gym was automatically enrolled. Membership Plans notices now describe development test-credit checkout, not universally disabled membership payment. External payments and pause configuration remain unavailable. See `C:\Users\ckishor\.cline\data\workspaces\chat\fitigo\backend\MEMBERSHIP_WALLET_MVP.md`.
+
 ## Entry points and scope
 
 - Login: `/admin/login`
@@ -7,6 +11,7 @@
 - Users: `/admin/users`, `/admin/users/:id`
 - Gyms: `/admin/gyms`, `/admin/gyms/:id`, `/admin/gyms/:id/review`
 - Bookings: `/admin/bookings`, `/admin/bookings/:id`
+- Multi-Gym plans: `/admin/membership-plans`, `/admin/membership-plans/new`, `/admin/membership-plans/:id`, `/admin/membership-plans/:id/offer`
 - Daily reports: `/admin/reports`
 - Account events: `/admin/notifications`
 - Read-only identity: `/admin/profile`
@@ -14,9 +19,21 @@
 - Unknown admin routes render a 404 inside the authenticated workspace.
 
 Record statuses are backend-driven states of detail pages, not separate routes.
-No backend code, database schema, authorization rule or business workflow was changed.
+The original portal did not change the backend. The subsequent membership-plan screens use the authorized catalog APIs and add an admin-only offer configuration read endpoint. No additional database migration or payment behavior change is required for these screens.
 No production mock data, invented metrics or new dependencies were added.
 Legacy admin page components remain in the repository but are no longer routed or bundled.
+
+## Membership Plans management
+
+Open **Membership Plans** in the sidebar or mobile navigation. ADMIN and SUPER_ADMIN can create plans (inactive by default), edit base prices, durations, names, codes, descriptions, benefits, badges and display order, and show/hide plans in the customer catalog. Existing memberships are not changed.
+
+Manage Offer configures percentage/fixed discounts, title, enabled state and schedule. The editor loads scheduled, expired and disabled offers, not just effective promotions. Times are explicitly UTC, with India offset guidance. Offers can be disabled with confirmation; no stacking or delete action is introduced. Pause configuration and payment activation remain unavailable.
+
+Forms require confirmation and prevent duplicate pending submissions. Version conflicts retain form edits and require a fresh read; reloading prompts before discarding edits. Currently saved prices are backend values, not a frontend prediction of unsaved discounts. Reads and mutations use the existing admin resource hooks, shared API client and UI components.
+
+The new `GET /api/v1/admin/membership-plans/{plan_id}` returns plan, offer_configuration, backend-evaluated offer state and server_time. It requires existing admin authorization, adds no database fields and exposes no private configuration in customer responses.
+
+Validation: 192 frontend tests, 33 isolated backend/access tests, TypeScript and production build passed. New browser fixtures covered creation, pricing, scheduled/disabled offers, conflict reload, duplicate prevention, role denial, loading/empty/errors and eight viewport widths. Existing admin browser regressions passed. Live read-only checks verified endpoint registration, anonymous rejection, customer catalog health and disabled payments. Live prices and offers were not changed during testing.
 
 ## Architecture
 

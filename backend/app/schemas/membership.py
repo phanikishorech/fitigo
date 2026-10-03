@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class MembershipPlanCreateRequest(BaseModel):
@@ -36,14 +36,20 @@ class MembershipPlanResponse(BaseModel):
 
 
 class PurchaseMembershipRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     plan_id: int
+    accepted_quote: str = Field(pattern=r"^[a-f0-9]{64}$")
 
 
 class UserMembershipResponse(BaseModel):
     id: int
     user_id: int
-    gym_id: int
-    plan_id: int
+    gym_id: int | None
+    plan_id: int | None
+    membership_type: str = "SINGLE_GYM"
+    platform_plan_id: int | None = None
+    terms_snapshot: dict | None = None
+    wallet_transaction_id: int | None = None
     status: str
     start_at: datetime
     end_at: datetime

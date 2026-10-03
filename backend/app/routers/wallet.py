@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.dependencies import get_optional_user
+from app.core.dependencies import get_optional_user, get_current_user
 from app.database.session import get_db
 from app.models.auth import User
 from app.models.wallet import WalletAccount, WalletTransaction, WalletTxnDirection, WalletTxnType
@@ -53,7 +53,7 @@ def _get_dev_customer_id(db: Session) -> int | None:
 
 
 def _require_user_id(db: Session, current_user: User | None) -> int:
-    uid = int(current_user.id) if current_user else _get_dev_customer_id(db)
+    uid = int(current_user.id) if current_user else None
     if uid is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
     return uid
@@ -131,9 +131,11 @@ def list_transactions(
 def topup_wallet(
     payload: WalletTopupRequest,
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_optional_user),
+    current_user: User = Depends(get_current_user),
 ):
     try:
+        if settings.environment != "development":
+            raise HTTPException(status_code=403, detail={"code": "WALLET_MVP_DISABLED"})
         uid = _require_user_id(db, current_user)
 
         # Lock account row for safe increment

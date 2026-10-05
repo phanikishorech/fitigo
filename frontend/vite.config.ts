@@ -25,6 +25,9 @@ export default defineConfig(() => ({
   server: {
     port: 5173,
     strictPort: true,
+    allowedHosts: [
+      'functioning-ensure-vanilla-lessons.trycloudflare.com'
+    ],    
     proxy: {
       '/api': {
         target: 'http://localhost:8000',

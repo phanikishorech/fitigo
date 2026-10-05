@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from uuid import uuid4
 
 from jose import jwt
 from passlib.context import CryptContext
@@ -32,7 +33,7 @@ def create_access_token(subject: str, additional_claims: dict[str, Any] | None =
 
 def create_refresh_token(subject: str, additional_claims: dict[str, Any] | None = None) -> tuple[str, datetime]:
     expire = datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_expire_days)
-    to_encode: dict[str, Any] = {"sub": subject, "type": "refresh", "exp": expire}
+    to_encode: dict[str, Any] = {"sub": subject, "type": "refresh", "exp": expire, "jti": uuid4().hex}
     if additional_claims:
         to_encode.update(additional_claims)
     token = jwt.encode(to_encode, settings.jwt_secret, algorithm=settings.jwt_algorithm)

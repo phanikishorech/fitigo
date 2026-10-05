@@ -8,6 +8,8 @@ import { MobileOtpPanel } from './MobileOtpPanel'
 import { authService } from '../../services/authService'
 import { PasswordPanel } from './PasswordPanel'
 import panel from './panel.module.css'
+import RegisterPanel from './RegisterPanel'
+import { ForgotPassword } from './PasswordRecovery'
 
 export type AuthUser = {
   id: number
@@ -48,6 +50,8 @@ export default function AuthModal({ open, onClose, onAuthed }: Props) {
   const [method, setMethod] = useState<Method>('email')
   const [signInMode, setSignInMode] = useState<'otp' | 'password'>('otp')
   const [passwordBusy, setPasswordBusy] = useState(false)
+  const [view, setView] = useState<'signin' | 'register' | 'forgot'>('signin')
+  const [registered, setRegistered] = useState(false)
   const [step, setStep] = useState<Step>('enter')
   const [email, setEmail] = useState('')
   const [mobile, setMobile] = useState({ countryCode: '+1', number: '' })
@@ -60,7 +64,7 @@ export default function AuthModal({ open, onClose, onAuthed }: Props) {
   const maskedEmail = useMemo(() => maskEmail(email), [email])
 
   useEffect(() => {
-    if (open) { setStep('enter'); setOtpTarget(null); setPasswordBusy(false) }
+    if (open) { setStep('enter'); setOtpTarget(null); setPasswordBusy(false); setView('signin'); setRegistered(false) }
   }, [open])
 
   useEffect(() => {
@@ -143,7 +147,7 @@ export default function AuthModal({ open, onClose, onAuthed }: Props) {
       el?.focus?.()
     }, 0)
     return () => window.clearTimeout(t)
-  }, [open, method, step, signInMode])
+  }, [open, method, step, signInMode, view])
 
   if (!mounted) return null
 
@@ -216,7 +220,7 @@ export default function AuthModal({ open, onClose, onAuthed }: Props) {
         <div className={styles.rightPanel}>
           <div className={styles.headerRow}>
             <div className={styles.title} id="auth-modal-title">
-              Welcome to FitiGo
+              {view === 'register' ? 'Create your account' : view === 'forgot' ? 'Forgot password' : 'Welcome to FitiGo'}
             </div>
             <button
               type="button"
@@ -231,6 +235,11 @@ export default function AuthModal({ open, onClose, onAuthed }: Props) {
 
           <div className={styles.divider} />
 
+          {view === 'register' && open && <RegisterPanel email={email} onEmailChange={setEmail} onBusyChange={setPasswordBusy} onRegistered={() => { setRegistered(true); setView('signin'); setSignInMode('password') }} />}
+          {view === 'forgot' && open && <ForgotPassword onBusyChange={setPasswordBusy} />}
+          {view !== 'signin' && <button className={panel.secondaryLink} disabled={passwordBusy} onClick={() => setView('signin')}>Back to sign in</button>}
+          {view === 'signin' && <>
+          {registered && <p className={panel.helperText} role="status">Account created. Sign in with your email and password to continue.</p>}
           <div className={panel.signInModes} role="group" aria-label="Sign-in method">
             {(['otp', 'password'] as const).map(mode => <button key={mode} type="button"
               aria-pressed={signInMode === mode} disabled={passwordBusy}
@@ -320,6 +329,11 @@ export default function AuthModal({ open, onClose, onAuthed }: Props) {
               }}
             />
           )}
+          </>}
+          <div className={panel.panel}>
+            <button className={panel.secondaryLink} type="button" disabled={passwordBusy} onClick={() => setView('forgot')}>Forgot password?</button>
+            <p className={panel.helperText}>New to FitiGo? <button className={panel.secondaryLink} type="button" disabled={passwordBusy} onClick={() => { setView('register'); setRegistered(false) }}>Create account</button></p>
+          </div>
           </>}
         </div>
       </div>

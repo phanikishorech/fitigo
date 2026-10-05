@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from fastapi import HTTPException, status
 from jose import JWTError
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.roles import (
@@ -64,14 +65,14 @@ class AuthService:
         return user
 
     def login(self, *, email: str, password: str):
-        user = self.repo.get_by_email(email)
+        user = self.db.scalars(select(User).where(User.email == email).with_for_update()).first()
         if not user or not verify_password(password, user.password_hash):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
         if user.status != "ACTIVE":
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is not active")
 
-        access_token = create_access_token(str(user.id))
-        refresh_token, refresh_exp = create_refresh_token(str(user.id))
+        access_token = create_access_token(str(user.id), {"version": user.token_version})
+        refresh_token, refresh_exp = create_refresh_token(str(user.id), {"version": user.token_version})
 
         rt = RefreshToken(
             user_id=user.id,
@@ -96,7 +97,10 @@ class AuthService:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired refresh token")
 
         token_hash = _sha256_hex(refresh_token)
-        stored = self.repo.get_refresh_token_by_hash(token_hash)
+        user = self.db.scalars(select(User).where(User.id == int(sub)).with_for_update()).first()
+        if not user or user.status != 'ACTIVE' or payload.get('version', 0) != user.token_version:
+            raise HTTPException(status_code=401, detail="Session expired. Sign in again.")
+        stored = self.db.scalars(select(RefreshToken).where(RefreshToken.token_hash == token_hash).with_for_update()).first()
         if not stored:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token revoked")
         if stored.revoked_at is not None:
@@ -107,8 +111,8 @@ class AuthService:
         # rotate
         stored.revoked_at = datetime.now(timezone.utc)
 
-        access_token = create_access_token(str(sub))
-        new_refresh_token, new_exp = create_refresh_token(str(sub))
+        access_token = create_access_token(str(sub), {"version": user.token_version})
+        new_refresh_token, new_exp = create_refresh_token(str(sub), {"version": user.token_version})
 
         rt = RefreshToken(
             user_id=int(sub),

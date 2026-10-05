@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, Request
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
@@ -21,9 +21,37 @@ from app.schemas.otp_auth import (
     MobileVerifyOtpRequest,
 )
 from app.services.otp_service import OtpService, user_to_public_dict
+from app.core.dependencies import get_current_user
+from app.models.auth import User
+from app.schemas.auth import ForgotPasswordRequest, ResetPasswordRequest, ChangePasswordRequest
+from app.services.password_service import PasswordService, email_ready, deliver_password_reset
 
 
 router = APIRouter(prefix="/auth")
+
+
+@router.get('/password-reset/options')
+def password_reset_options():
+    return {'email_available': email_ready()}
+
+
+@router.post('/forgot-password')
+def forgot_password(payload: ForgotPasswordRequest, request: Request, tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    PasswordService(db).request_reset(str(payload.email).lower(), request.client.host if request.client else 'unknown')
+    tasks.add_task(deliver_password_reset, db.get_bind(), str(payload.email).lower())
+    return {'message': 'If an active account exists for this email, you will receive a password reset link.'}
+
+
+@router.post('/reset-password')
+def reset_password(payload: ResetPasswordRequest, request: Request, db: Session = Depends(get_db)):
+    PasswordService(db).reset(payload.token, payload.new_password, request.client.host if request.client else 'unknown')
+    return {'status': 'ok'}
+
+
+@router.post('/change-password')
+def change_password(payload: ChangePasswordRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    PasswordService(db).change(current_user.id, payload.current_password, payload.new_password, current_user.token_version)
+    return {'status': 'ok'}
 
 
 @router.post("/register/customer", response_model=dict)

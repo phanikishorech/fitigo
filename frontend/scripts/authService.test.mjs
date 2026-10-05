@@ -4,9 +4,10 @@ import test from 'node:test'
 import ts from 'typescript'
 
 const source = readFileSync(new URL('../src/services/authService.ts', import.meta.url), 'utf8')
-  .replace("import { ApiError, post } from './client'", `
+  .replace("import { ApiError, post, request } from './client'", `
     class ApiError extends Error { constructor(message, status) { super(message); this.status = status } }
     const post = (path, body) => globalThis.__authTestPost(path, body, ApiError);
+    const request = (path, options) => globalThis.__authTestRequest(path, options);
   `)
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText
 const { authService } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`)
@@ -39,4 +40,18 @@ test('email and mobile OTP endpoints are unchanged', async () => {
   await authService.verifyMobile('+91', '9000000000', '123456')
   assert.deepEqual(calls.map(call => call.path), ['/auth/email/send-otp', '/auth/email/verify-otp', '/auth/mobile/send-otp', '/auth/mobile/verify-otp'])
   assert.deepEqual(calls[3].body, { country_code: '+91', mobile_number: '9000000000', otp: '123456' })
+})
+
+test('customer registration and password actions use the central auth service', async () => {
+  const calls=[]; globalThis.__authTestPost=async(path,body)=>{calls.push({path,body});return{}}
+  await authService.registerCustomer({first_name:'New',last_name:'Member',email:' NEW@Example.com ',phone:null,password:' Original Password '})
+  await authService.forgotPassword(' NEW@Example.com ')
+  await authService.resetPassword('opaque-token',' New Password ')
+  await authService.changePassword(' Original Password ',' New Password ')
+  assert.deepEqual(calls.map(x=>x.path),['/auth/register/customer','/auth/forgot-password','/auth/reset-password','/auth/change-password'])
+  assert.equal(calls[0].body.email,'new@example.com');assert.equal(calls[0].body.password,' Original Password ')
+  assert.deepEqual(calls[3].body,{current_password:' Original Password ',new_password:' New Password '})
+  assert.equal(calls[0].body.role,undefined)
+  globalThis.__authTestRequest=async(path,options)=>{assert.equal(path,'/auth/password-reset/options');assert.equal(options.cache,'no-store');return{email_available:false}}
+  assert.deepEqual(await authService.resetOptions(),{email_available:false})
 })

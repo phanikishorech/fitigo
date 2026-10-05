@@ -113,8 +113,10 @@ class OtpService:
         else:
             user.is_email_verified = True
 
-        access_token = create_access_token(str(user.id))
-        refresh_token, refresh_exp = create_refresh_token(str(user.id))
+        if user.status != 'ACTIVE':
+            raise HTTPException(status_code=403, detail='User is not active')
+        access_token = create_access_token(str(user.id), {'version': user.token_version or 0})
+        refresh_token, refresh_exp = create_refresh_token(str(user.id), {'version': user.token_version or 0})
         rt = RefreshToken(
             user_id=user.id,
             token_hash=_sha256_hex(refresh_token),
@@ -183,8 +185,10 @@ class OtpService:
         else:
             user.is_phone_verified = True
 
-        access_token = create_access_token(str(user.id))
-        refresh_token, refresh_exp = create_refresh_token(str(user.id))
+        if user.status != 'ACTIVE':
+            raise HTTPException(status_code=403, detail='User is not active')
+        access_token = create_access_token(str(user.id), {'version': user.token_version or 0})
+        refresh_token, refresh_exp = create_refresh_token(str(user.id), {'version': user.token_version or 0})
         rt = RefreshToken(
             user_id=user.id,
             token_hash=_sha256_hex(refresh_token),

@@ -42,6 +42,15 @@ class Settings(BaseSettings):
 
     allowed_origins: str = "http://localhost:5173"
 
+    # Server-only SMTP credentials. Recovery never returns or logs reset tokens.
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_from: str | None = None
+    smtp_security: str = "starttls"  # starttls or ssl; no plaintext delivery
+    password_reset_frontend_url: str = "http://localhost:5173/auth/reset-password"
+
     @property
     def allowed_origins_list(self) -> list[str]:
         return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]

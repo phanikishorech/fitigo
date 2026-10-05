@@ -1,4 +1,8 @@
 .panel {
+  --brand: #15803d;
+  --brand-2: #11682f;
+  --line: #e2e8f0;
+  --ring: 0 0 0 4px #15803d26;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -156,6 +160,7 @@
 }
 
 .secondaryLink:hover { text-decoration: underline; }
+.secondaryLink { min-height: 44px; }
 
 .otpHeader {
   display: flex;

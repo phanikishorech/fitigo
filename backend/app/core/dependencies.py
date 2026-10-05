@@ -34,6 +34,8 @@ def get_current_user(
     user = repo.get_by_id(int(sub))
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    if payload.get("version", 0) != user.token_version:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expired. Sign in again.")
     if user.status != "ACTIVE":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is not active")
     return user
@@ -43,18 +45,14 @@ def get_optional_user(
     token: str | None = Depends(oauth2_scheme_optional),
     db: Session = Depends(get_db),
 ) -> User | None:
-    """Best-effort user loader.
+    """Anonymous only when no credentials are supplied.
 
-    If no/invalid token is present, returns None.
-    Useful for public endpoints that can optionally tailor responses for logged-in users.
+    Invalid/revoked credentials must not become an anonymous/dev-fallback session.
     """
 
     if not token:
         return None
-    try:
-        return get_current_user(token=token, db=db)
-    except HTTPException:
-        return None
+    return get_current_user(token=token, db=db)
 
 
 def require_role(required_roles: set[str]):

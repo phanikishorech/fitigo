@@ -31,6 +31,8 @@ export type Facility = { id: number; name: string; description: string | null; i
 export type OperatingHourItem = { day_of_week: number; open_time: string | null; close_time: string | null; is_closed: boolean }
 
 export type OwnerGymDetails = {
+  rejection_reason?: string | null
+  can_submit_for_approval?: boolean
   id: number
   owner_user_id: number
   name: string

@@ -9,7 +9,9 @@ from app.core.dependencies import require_role
 from app.models.auth import User
 from app.core.roles import ROLE_ADMIN, ROLE_SUPER_ADMIN
 from app.database.session import get_db
-from app.schemas.admin_gym import RejectGymRequest, SuspendGymRequest
+from app.schemas.admin_gym import RejectGymRequest, SuspendGymRequest, AdminGymDetails, GymReviewHistoryItem
+from app.services.gym_details_service import get_gym_submission
+from app.models.gym import GymStatusHistory
 from app.schemas.gym import GymListItem
 from app.schemas.admin_booking import (
     AdminBookingCustomer,
@@ -226,6 +228,25 @@ def list_gyms(
         )
         for g in gyms
     ]
+
+
+@router.get("/gyms/{gym_id}", response_model=AdminGymDetails)
+def gym_submission_details(
+    gym_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role({ROLE_ADMIN, ROLE_SUPER_ADMIN})),
+):
+    gym = get_gym_submission(db, gym_id)
+    history = db.scalars(select(GymStatusHistory).where(GymStatusHistory.gym_id == gym_id)
+                        .order_by(GymStatusHistory.created_at.desc(), GymStatusHistory.id.desc())).all()
+    return AdminGymDetails(
+        **gym.model_dump(),
+        allowed_actions=['APPROVE', 'REJECT'] if gym.status == 'PENDING_APPROVAL' else [],
+        review_history=[GymReviewHistoryItem(
+            id=item.id, old_status=item.old_status, new_status=item.new_status,
+            reason=item.reason, created_at=item.created_at,
+        ) for item in history],
+    )
 
 
 @router.post("/gyms/{gym_id}/approve", response_model=dict)

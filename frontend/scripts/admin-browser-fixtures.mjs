@@ -23,6 +23,10 @@ function fixture(url, method) {
   if (path === '/api/v1/users/me') return user
   if (path === '/api/v1/users/me/roles') return identityRoles
   if (path === '/api/v1/admin/ping') return { status: 'ok', user_id: 1 }
+  if (/^\/api\/v1\/admin\/gyms\/\d+$/.test(path)) {
+    const gym = gyms.find(g => g.id === Number(path.split('/').at(-1)))
+    return { ...gym, description:'Submitted fitness space', updated_at:created, phone:'1234567890', email:'gym@example.test', address_line_1:'42 Fixture Road', state:'Test State', country:'India', postal_code:'500001', latitude:'17.4', longitude:'78.4', gym_price_per_person:'129.00', has_classes:true, images:[{id:1,file_path:'fixture-photo.webp',original_filename:'Training floor',is_cover:true}], facilities:[{id:1,name:'Parking',description:null}], operating_hours:[{day_of_week:0,open_time:'06:00:00',close_time:'22:00:00',is_closed:false},{day_of_week:6,is_closed:true}], rejection_reason:gym.status==='REJECTED'?'Missing information':null, review_history:[], allowed_actions:gym.status==='PENDING_APPROVAL'?['APPROVE','REJECT']:[] }
+  }
   if (/\/admin\/gyms\/\d+\/multi-gym-participation$/.test(path)) return { gym_id:Number(path.split('/')[5]), enabled:false }
   if (path === '/api/v1/admin/dashboard/summary') return { users: { total: 3, customers: 1, gym_owners: 1 }, gyms: { total: 3, pending_approval: 1 }, bookings: { today: 1, upcoming: 1 }, revenue: { last_30d: '600.00', currency: 'INR' } }
   if (path === '/api/v1/admin/users') return query.has('q') ? [] : [user]
@@ -51,7 +55,12 @@ ws.onmessage = async event => {
       return
     }
     try { const result = fixture(request.url, request.method); await command('Fetch.fulfillRequest', { requestId, responseCode: 200, responseHeaders: [{ name: 'Content-Type', value: 'application/json' }], body: Buffer.from(JSON.stringify(result)).toString('base64') }) }
-    catch (error) { failures.push(error.message); await command('Fetch.fulfillRequest', { requestId, responseCode: 500, body: Buffer.from('{}').toString('base64') }) }
+    catch (error) {
+      // Navigation/AbortSignal can cancel an intercepted detail read before fulfillment.
+      if (error.message.includes('Invalid InterceptionId')) return
+      failures.push(error.message)
+      await command('Fetch.fulfillRequest', { requestId, responseCode: 500, body: Buffer.from('{}').toString('base64') }).catch(() => {})
+    }
   }
 }
 try {
@@ -66,7 +75,16 @@ try {
   async function click(text, selector = 'button') { await evaluate(`Array.from(document.querySelectorAll(${JSON.stringify(selector)})).find(el=>el.textContent.trim()===${JSON.stringify(text)}).click()`); await wait(80) }
   await evaluate(`localStorage.setItem('fitigo:access_token','test-only-admin-token')`)
   await visit('/admin/gyms/3/review', 'Gym information')
+  for (const text of ['Submitted photos','Submitted fitness space','42 Fixture Road','Parking','06:00 – 22:00','Closed','129.00']) assert.equal(await evaluate(`document.querySelector('main').innerText.includes(${JSON.stringify(text)})`),true,text)
+  for (const width of [360,390,768,1024,1440]) {
+    await command('Emulation.setDeviceMetricsOverride', {width,height:1000,deviceScaleFactor:1,mobile:width<640})
+    assert.equal(await evaluate(`document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1`),true,`Submission overflow at ${width}`)
+  }
+  await evaluate(`document.querySelector('button[aria-label="Preview Training floor"]').click()`); await until(`!!document.querySelector('dialog[open]')`)
+  await command('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27}); await command('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape',windowsVirtualKeyCode:27}); await until(`!document.querySelector('dialog[open]')`)
   await click('Approve Gym'); await click('Approve Gym','dialog button'); await until(`!document.querySelector('dialog[open]')`); await until(`document.querySelector('main')?.innerText.includes('This approved gym is enabled')`)
+  assert.equal(await evaluate(`Array.from(document.querySelectorAll('main button')).some(b=>b.textContent==='Approve Gym')`),false)
+  gyms[0].status='PENDING_APPROVAL'
   await visit('/admin/gyms/3', 'Gym information'); await click('Reject Gym'); await until(`!!document.querySelector('dialog[open]')`)
   await evaluate(`(() => {const el=document.querySelector('textarea');Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(el,'Missing information');el.dispatchEvent(new Event('input',{bubbles:true}));})()`)
   await click('Reject Gym','dialog button'); await until(`!document.querySelector('dialog[open]')`); await until(`document.querySelector('main')?.innerText.includes('This gym is rejected')`)

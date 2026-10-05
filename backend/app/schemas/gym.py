@@ -83,6 +83,15 @@ class GymResponse(BaseModel):
     operating_hours: list[GymOperatingHoursItem] = []
 
 
+class GymSubmissionResponse(GymResponse):
+    # Private review information; never part of the public gym response.
+    rejection_reason: str | None = None
+
+
+class OwnerGymResponse(GymSubmissionResponse):
+    can_submit_for_approval: bool = False
+
+
 class GymListItem(BaseModel):
     id: int
     name: str

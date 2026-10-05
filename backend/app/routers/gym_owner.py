@@ -14,12 +14,13 @@ from app.repositories.gym_repository import GymRepository
 from app.schemas.gym import (
     GymCreateRequest,
     GymListItem,
-    GymResponse,
+    OwnerGymResponse,
     GymUpdateRequest,
     SetGymFacilitiesRequest,
     SetGymOperatingHoursRequest,
 )
 from app.services.gym_service import GymService
+from app.services.gym_details_service import get_gym_submission
 from app.services.slot_service import SlotService
 from app.services.booking_service import BookingService
 from app.services.staff_service import StaffService
@@ -64,7 +65,7 @@ def _validate_image(upload: UploadFile, max_bytes: int = 5 * 1024 * 1024) -> Non
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File too large")
 
 
-@router.post("/gyms", response_model=GymResponse)
+@router.post("/gyms", response_model=OwnerGymResponse)
 def create_gym(
     payload: GymCreateRequest,
     db: Session = Depends(get_db),
@@ -110,7 +111,7 @@ def list_my_gyms(
     ]
 
 
-@router.get("/gyms/{gym_id}", response_model=GymResponse)
+@router.get("/gyms/{gym_id}", response_model=OwnerGymResponse)
 def get_my_gym(
     gym_id: int,
     db: Session = Depends(get_db),
@@ -166,7 +167,7 @@ def owner_dashboard_summary(
     return svc.summary(owner_user_id=current_user.id)
 
 
-@router.put("/gyms/{gym_id}", response_model=GymResponse)
+@router.put("/gyms/{gym_id}", response_model=OwnerGymResponse)
 def update_gym(
     gym_id: int,
     payload: GymUpdateRequest,
@@ -178,88 +179,12 @@ def update_gym(
     return _to_gym_response(db, gym.id)
 
 
-def _to_gym_response(db: Session, gym_id: int) -> GymResponse:
-    gym = GymRepository(db).get_gym_by_id(gym_id)
-    if not gym:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gym not found")
-
-    images = list(db.execute(select(GymImage).where(GymImage.gym_id == gym_id).order_by(GymImage.id.asc())).scalars().all())
-
-    # Facilities
-    facs = (
-        db.execute(
-            select(GymFacility)
-            .join(GymFacilityMapping, GymFacilityMapping.facility_id == GymFacility.id)
-            .where(GymFacilityMapping.gym_id == gym_id)
-            .order_by(GymFacility.name.asc())
-        )
-        .scalars()
-        .all()
+def _to_gym_response(db: Session, gym_id: int) -> OwnerGymResponse:
+    submission = get_gym_submission(db, gym_id)
+    return OwnerGymResponse(
+        **submission.model_dump(),
+        can_submit_for_approval=GymService.can_submit_for_approval(submission),
     )
-
-    hours = list(
-        db.execute(
-            select(GymOperatingHours)
-            .where(GymOperatingHours.gym_id == gym_id)
-            .order_by(GymOperatingHours.day_of_week.asc())
-        )
-        .scalars()
-        .all()
-    )
-
-    return GymResponse(
-        id=gym.id,
-        owner_user_id=gym.owner_user_id,
-        name=gym.name,
-        description=gym.description,
-        phone=gym.phone,
-        email=gym.email,
-        address_line_1=gym.address_line_1,
-        address_line_2=gym.address_line_2,
-        city=gym.city,
-        state=gym.state,
-        country=gym.country,
-        postal_code=gym.postal_code,
-        latitude=gym.latitude,
-        longitude=gym.longitude,
-        status=gym.status,
-        is_active=gym.is_active,
-        gym_price_per_person=str(getattr(gym, "gym_price_per_person", 0) or 0),
-        has_classes=bool(getattr(gym, "has_classes", False)),
-        created_at=gym.created_at,
-        updated_at=gym.updated_at,
-        images=[
-            {
-                "id": i.id,
-                "file_path": i.file_path,
-                "original_filename": i.original_filename,
-                "image_type": i.image_type,
-                "display_order": i.display_order,
-                "is_cover": i.is_cover,
-                "created_at": i.created_at,
-            }
-            for i in images
-        ],
-        facilities=[
-            {
-                "id": f.id,
-                "name": f.name,
-                "description": f.description,
-                "icon": f.icon,
-            }
-            for f in facs
-        ],
-        operating_hours=[
-            {
-                "day_of_week": h.day_of_week,
-                "open_time": h.open_time,
-                "close_time": h.close_time,
-                "is_closed": h.is_closed,
-            }
-            for h in hours
-        ],
-    )
-
 
 @router.post("/gyms/{gym_id}/submit", response_model=dict)
 def submit_gym(

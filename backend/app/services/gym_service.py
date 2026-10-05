@@ -6,7 +6,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import select, update
 
-from app.models.gym import Gym, GymImage, GymOperatingHours
+from app.models.gym import Gym, GymImage, GymOperatingHours, GymStatusHistory
 from app.repositories.gym_repository import GymRepository
 
 
@@ -40,14 +40,36 @@ class GymService:
         self.db.refresh(gym)
         return gym
 
+    @staticmethod
+    def can_submit_for_approval(gym: Gym) -> bool:
+        return gym.status in {"DRAFT", "REJECTED"}
+
     def submit_for_approval(self, *, owner_user_id: int, gym_id: int) -> Gym:
         gym = self.repo.get_owner_gym_by_id(owner_user_id=owner_user_id, gym_id=gym_id)
         if not gym:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gym not found")
-        if gym.status != "DRAFT":
+        if not self.can_submit_for_approval(gym):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Gym cannot be submitted")
 
-        gym.status = "PENDING_APPROVAL"
+        old_status = gym.status
+        # Compare-and-set prevents concurrent/repeated submissions from creating
+        # duplicate transitions. Approval remains an administrator action.
+        changed = self.db.execute(
+            update(Gym)
+            .where(Gym.id == gym_id, Gym.owner_user_id == owner_user_id, Gym.status == old_status)
+            .values(status="PENDING_APPROVAL", is_active=False)
+            .execution_options(synchronize_session=False)
+        )
+        if changed.rowcount != 1:
+            self.db.rollback()
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Gym status changed. Refresh and try again.")
+        self.db.add(GymStatusHistory(
+            gym_id=gym_id,
+            old_status=old_status,
+            new_status="PENDING_APPROVAL",
+            changed_by_user_id=owner_user_id,
+            reason=None,
+        ))
         self.db.commit()
         self.db.refresh(gym)
         return gym

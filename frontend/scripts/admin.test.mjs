@@ -53,8 +53,9 @@ test('dashboard labels do not misrepresent backend metrics', () => {
   assert.match(source, /Total gyms/); assert.match(source, /Revenue · last 30 days/)
   assert.doesNotMatch(source, /Today's revenue|title="Active gyms"/)
 })
-test('gym review does not bypass ownership or invent a detail endpoint', () => {
+test('gym review uses the protected admin submission endpoint, never owner or public endpoints', () => {
   const source = readFileSync(new URL('../src/admin/services.ts', import.meta.url), 'utf8')
-  assert.doesNotMatch(source, /\/gym-owner\/|request.*\/admin\/gyms\/\$\{id\}/)
-  assert.match(source, /signal\?\.aborted/)
+  assert.doesNotMatch(source, /\/gym-owner\/|publicPreview|fetchAdminGyms/)
+  assert.match(source, /request<AdminGymDetails>\(`\/admin\/gyms\/\$\{id\}`/)
+  assert.match(source, /signal, cache: 'no-store'/)
 })

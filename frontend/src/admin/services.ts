@@ -3,7 +3,7 @@ import { profileService } from '../services/accountService'
 import { authService } from '../services/authService'
 import { clearTokens } from '../auth'
 import { clearReadCache } from '../services/readCache'
-import { adminPing, fetchAdminGyms, query } from '../screens/Admin/api'
+import { adminPing, query } from '../screens/Admin/api'
 import type { OwnerGymDetails } from '../screens/GymOwner/api'
 
 export const adminAuthService = {
@@ -24,18 +24,12 @@ export const adminAuthService = {
 export type DailyReport = { day: string; total_bookings: number; confirmed_bookings: number; cancelled_bookings: number; expired_bookings: number; paid_amount_total: string }
 export type ReportFilters = { date_from?: string; date_to?: string; gym_id?: number; limit?: number }
 export const dashboardService = { daily: (params: ReportFilters) => request<DailyReport[]>(`/admin/reports/bookings/daily${query(params)}`) }
+export type AdminGymDetails = Omit<OwnerGymDetails, 'can_submit_for_approval'> & {
+  allowed_actions: ('APPROVE' | 'REJECT')[]
+  review_history: { id: number; old_status: string; new_status: string; reason: string | null; created_at: string }[]
+}
 export const gymService = {
-  // No admin detail endpoint exists. Paginate summaries without bypassing owner authorization.
-  summary: async (id: number, signal?: AbortSignal) => {
-    for (let offset = 0; ; offset += 200) {
-      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
-      const rows = await fetchAdminGyms({ limit: 200, offset })
-      const gym = rows.find(row => row.id === id)
-      if (gym) return gym
-      if (rows.length < 200 || rows[rows.length - 1].id < id) throw new ApiError('This gym is no longer available.', 404)
-    }
-  },
-  publicPreview: (id: number) => request<OwnerGymDetails>(`/gyms/${id}`)
+  details: (id: number, signal?: AbortSignal) => request<AdminGymDetails>(`/admin/gyms/${id}`, { signal, cache: 'no-store' })
 }
 export type AdminNotification = { id: number; event_type: string; status: string; created_at: string }
 export const notificationService = { list: (offset: number) => request<AdminNotification[]>(`/notifications/me?limit=21&offset=${offset}`) }

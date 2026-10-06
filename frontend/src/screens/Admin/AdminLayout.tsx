@@ -1,32 +1,12 @@
-import { ReactNode, useEffect, useState } from 'react'
+import { logoutSession } from '../../session/store'
+import { ReactNode } from 'react'
 import styles from './admin.module.css'
 import { navigate } from '../../router'
-import { clearTokens, getAccessToken } from '../../auth'
-import { authFetch } from '../../auth'
+import { useIdentity } from '../../session/SessionGuard'
 
-async function fetchMyRoles(): Promise<string[]> {
-  const r = await authFetch('/api/v1/users/me/roles')
-  const data = await r.json().catch(() => ([] as any))
-  if (!r.ok) throw new Error((data as any)?.detail ?? 'Failed to load roles')
-  return data as string[]
-}
 
 export default function AdminLayout({ title, children, active }: { title: string; children: ReactNode; active: 'dashboard' | 'users' | 'gyms' | 'bookings' }) {
-  const [roles, setRoles] = useState<{ status: 'loading' } | { status: 'ready'; roles: string[] } | { status: 'error'; message: string }>({ status: 'loading' })
-
-  useEffect(() => {
-    const token = getAccessToken()
-    if (!token) {
-      navigate('/admin/login')
-      return
-    }
-
-    fetchMyRoles()
-      .then((r) => setRoles({ status: 'ready', roles: r }))
-      .catch((e) => setRoles({ status: 'error', message: e?.message ?? 'Failed to load roles' }))
-  }, [])
-
-  const hasAdminRole = roles.status === 'ready' ? roles.roles.includes('ADMIN') || roles.roles.includes('SUPER_ADMIN') : false
+  useIdentity() // Central route guard owns session and portal permissions.
 
   return (
     <div className={styles.pageRoot}>
@@ -58,8 +38,7 @@ export default function AdminLayout({ title, children, active }: { title: string
             type="button"
             className={styles.navBtn}
             onClick={() => {
-              clearTokens()
-              navigate('/admin/login')
+              void logoutSession()
             }}
           >
             Logout
@@ -79,18 +58,7 @@ export default function AdminLayout({ title, children, active }: { title: string
           </button>
         </div>
 
-        {roles.status === 'loading' ? (
-          <div className={styles.panel}>Loading…</div>
-        ) : roles.status === 'error' ? (
-          <div className={styles.panel}>Error: {roles.message}</div>
-        ) : !hasAdminRole ? (
-          <div className={styles.panel}>
-            <div className={styles.panelTitle}>Access denied</div>
-            <div className={styles.subtle}>Your account does not have Admin permissions.</div>
-          </div>
-        ) : (
-          children
-        )}
+        {children}
       </main>
     </div>
   )

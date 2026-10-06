@@ -4,14 +4,18 @@ from sqlalchemy import select, or_
 from sqlalchemy.orm import Session
 from app.models.membership import UserMembership, GymMembershipPlan
 from app.models.gym import Gym
+from app.models.membership import MembershipPause
 
 
-def active_memberships(db: Session, user_id: int, at: datetime, *, lock: bool = False) -> list[UserMembership]:
+def active_memberships(db: Session, user_id: int, at: datetime, *, lock: bool = False, include_paused: bool = False) -> list[UserMembership]:
     now = at.astimezone(timezone.utc).replace(tzinfo=None) if at.tzinfo else at
     query = select(UserMembership).where(
         UserMembership.user_id == user_id, UserMembership.status == "ACTIVE",
         UserMembership.payment_status == "PAID", UserMembership.start_at <= now, UserMembership.end_at > now,
     ).order_by(UserMembership.end_at.desc(), UserMembership.id.desc())
+    if not include_paused:
+        query = query.where(~select(MembershipPause.id).where(MembershipPause.membership_id == UserMembership.id,
+            MembershipPause.start_date <= now.date(), MembershipPause.end_date >= now.date()).exists())
     if lock:
         query = query.with_for_update().execution_options(populate_existing=True)
     return list(db.scalars(query))

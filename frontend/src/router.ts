@@ -89,10 +89,11 @@ export function scrollToId(id: string) {
   el.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-export function navigate(to: string) {
+export function navigate(to: string, replace = false) {
   const cur = `${window.location.pathname}${window.location.search}${window.location.hash}`
   if (cur === to) return
-  window.history.pushState({}, '', to)
+  if (replace) window.history.replaceState({}, '', to)
+  else window.history.pushState({}, '', to)
   window.dispatchEvent(new CustomEvent(NAV_EVENT, { detail: { to } }))
 }
 
@@ -101,8 +102,10 @@ export function subscribeNavigation(handler: () => void) {
   const onPop = () => handler()
   window.addEventListener(NAV_EVENT, onNav as EventListener)
   window.addEventListener('popstate', onPop)
+  window.addEventListener('hashchange', onPop)
   return () => {
     window.removeEventListener(NAV_EVENT, onNav as EventListener)
     window.removeEventListener('popstate', onPop)
+    window.removeEventListener('hashchange', onPop)
   }
 }

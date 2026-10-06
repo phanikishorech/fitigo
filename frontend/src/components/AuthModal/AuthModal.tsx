@@ -25,6 +25,8 @@ export type AuthTokens = {
   access_token: string
   refresh_token: string
   token_type: 'bearer'
+  user?: AuthUser
+  roles?: string[]
 }
 
 export type AuthResult = AuthTokens & { user: AuthUser }

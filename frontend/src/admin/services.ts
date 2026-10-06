@@ -1,25 +1,12 @@
-import { ApiError, post, request } from '../services/client'
-import { profileService } from '../services/accountService'
+import { logoutSession } from '../session/store'
+import { ApiError, request } from '../services/client'
 import { authService } from '../services/authService'
-import { clearTokens } from '../auth'
-import { clearReadCache } from '../services/readCache'
-import { adminPing, query } from '../screens/Admin/api'
+import { query } from '../screens/Admin/api'
 import type { OwnerGymDetails } from '../screens/GymOwner/api'
 
 export const adminAuthService = {
   login: authService.loginWithPassword,
-  identity: async () => {
-    const [user, roles] = await Promise.all([profileService.me(), request<string[]>('/users/me/roles')])
-    if (!roles.some(role => role === 'ADMIN' || role === 'SUPER_ADMIN')) throw new ApiError('Access denied.', 403)
-    await adminPing()
-    return { user, roles }
-  },
-  logout: async () => {
-    try {
-      const refresh = window.localStorage.getItem('fitigo:refresh_token')
-      if (refresh) await post('/auth/logout', { refresh_token: refresh })
-    } finally { clearTokens(); clearReadCache() }
-  }
+  logout: logoutSession
 }
 export type DailyReport = { day: string; total_bookings: number; confirmed_bookings: number; cancelled_bookings: number; expired_bookings: number; paid_amount_total: string }
 export type ReportFilters = { date_from?: string; date_to?: string; gym_id?: number; limit?: number }

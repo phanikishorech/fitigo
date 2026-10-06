@@ -3,6 +3,7 @@ from decimal import Decimal
 from typing import Annotated, Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
+from app.schemas.membership_pause import PausePolicy
 
 
 Money = Annotated[Decimal, Field(ge=0, max_digits=12, decimal_places=2, allow_inf_nan=False)]
@@ -13,6 +14,7 @@ class StrictRequest(BaseModel):
 
 
 class PlatformPlanCreate(StrictRequest):
+    pause_rule: PausePolicy = Field(default_factory=PausePolicy)
     code: str = Field(min_length=2, max_length=80, pattern=r"^[a-z0-9][a-z0-9-]+$")
     name: str = Field(min_length=2, max_length=120)
     description: str | None = Field(default=None, max_length=2000)
@@ -81,7 +83,7 @@ class PlatformPlanResponse(BaseModel):
     is_active: bool
     version: int
     access_rule: AccessRule = Field(default_factory=AccessRule)
-    pause_rule: None = None
+    pause_rule: PausePolicy | None = None
     purchase_available: bool = False
 
 

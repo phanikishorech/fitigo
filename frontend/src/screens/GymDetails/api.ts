@@ -2,6 +2,7 @@ import type { GymDetailsResponse } from './types'
 import { authFetch } from '../../auth'
 
 export type GymMembershipPlan = {
+  pause_policy?: { allowed: boolean; max_pause_days: number }
   id: number
   gym_id: number
   name: string

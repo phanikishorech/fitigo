@@ -23,6 +23,8 @@ class PlatformMembershipPlan(Base):
     badge: Mapped[str | None] = mapped_column(String(60))
     display_order: Mapped[int] = mapped_column(Integer, default=0)
     is_active: Mapped[bool] = mapped_column(Boolean, default=False)
+    pause_allowed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
+    max_pause_days: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     version: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

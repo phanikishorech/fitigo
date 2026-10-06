@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { authService } from '../services/authService'
 import { ownerService } from './services'
-import { setTokens } from '../auth'
+import { completeLogin } from '../session/store'
 import { navigate } from '../router'
 import { useMutation } from '../hooks/useResource'
 import { Button, Input, Link, Notice } from './UI'
@@ -23,7 +23,7 @@ export default function AuthPage({ page }: { page: string }) {
       if (register) { const address = String(form.get('email')).trim().toLowerCase(); await ownerService.register({ first_name: String(form.get('first_name')).trim(), last_name: String(form.get('last_name')).trim(), email: address, phone: String(form.get('phone')).trim() || null, password: String(form.get('password')) }); try { sessionStorage.setItem('fitigo:owner:verify-email', address) } catch { /* email can be re-entered */ } navigate('/owner/verify'); return }
       if (verify && !sent) { await send(); return }
       const tokens = verify ? await authService.verifyEmail(email.trim().toLowerCase(), otp) : await authService.loginWithPassword(String(form.get('email')), String(form.get('password')))
-      setTokens(tokens.access_token, tokens.refresh_token); try { sessionStorage.removeItem('fitigo:owner:verify-email') } catch { /* optional persistence */ } navigate('/owner/dashboard')
+      try { sessionStorage.removeItem('fitigo:owner:verify-email') } catch { /* optional persistence */ } await completeLogin(tokens)
     }) }}>
       {register && <div className="ow-form-grid"><Input label="First name" name="first_name" autoComplete="given-name" required maxLength={100} /><Input label="Last name" name="last_name" autoComplete="family-name" required maxLength={100} /></div>}
       <Input label="Email address" name="email" type="email" autoComplete="email" required value={email} disabled={verify && sent} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" />

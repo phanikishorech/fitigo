@@ -23,7 +23,7 @@ export const walletService = {
 export const membershipService = {
   plans: (gymId: number) => request<GymMembershipPlan[]>(`/memberships/gyms/${gymId}/plans`),
   mine: () => request<Membership[]>('/memberships/me'),
-  summary: () => request<MembershipSummary>('/profile/membership'),
+  summary: () => request<MembershipSummary>('/profile/membership', { cache: 'no-store' }),
   quote: (gymId: number, planId: number) => request<MembershipWalletQuote>(`/memberships/gyms/${gymId}/plans/${planId}/wallet-quote`, { cache: 'no-store' }),
   purchase: (gymId: number, planId: number, quote: string, key: string) => request<Membership>(`/memberships/gyms/${gymId}/purchase`, {
     method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify({ plan_id: planId, accepted_quote: quote }),

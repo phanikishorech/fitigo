@@ -34,7 +34,7 @@ function PlanDetail({ id, offer }: { id: number; offer: boolean }) {
   const resource = useAdminResource(signal => adminMembershipPlans.detail(id, signal), `admin-plan:${id}`)
   return <Resource resource={resource}>{detail => offer ? <OfferEditor key={`${id}:${detail.plan.version}`} detail={detail} reload={resource.retry} /> : <PlanEditor key={`${id}:${detail.plan.version}`} detail={detail} reload={resource.retry} />}</Resource>
 }
-function PaymentNotice() { return <Alert>Controlled MVP: membership checkout uses wallet test credits in development only. External payments remain disabled. Configure eligible partner gyms from Gym details. Pause allowances are not available.</Alert> }
+function PaymentNotice() { return <Alert>Controlled MVP: membership checkout uses wallet test credits in development only. External payments remain disabled. Configure eligible partner gyms from Gym details. Pause policy changes apply to future requests; accepted pauses remain honored.</Alert> }
 function PlanPrice({ plan }: { plan: PlatformPlan }) {
   return <div className="ad-plan-price">{plan.offer && <del>{money(plan.base_price, plan.currency)}</del>}<strong>{money(plan.final_price, plan.currency)}</strong><small>Current backend price{plan.offer && ` · ${plan.discount_percentage !== null ? `${Number(plan.discount_percentage)}% off` : `Save ${money(plan.discount_amount, plan.currency)}`}`}</small></div>
 }
@@ -77,7 +77,11 @@ function PlanEditor({ detail, reload }: { detail?: AdminPlanDetail; reload?: () 
         <Field label="Promotional badge (optional)"><input name="badge" maxLength={60} value={form.badge || ''} onChange={e => change('badge', e.target.value || null)} /></Field>
       </fieldset>
       <Field label="Description (optional)"><textarea name="description" rows={3} maxLength={2000} value={form.description || ''} onChange={e => change('description', e.target.value || null)} /></Field>
-      <Field label="Benefits (one per line)"><textarea name="benefits" rows={4} maxLength={5020} value={benefits} onChange={e => setBenefits(e.target.value)} /><small>Only describe supported benefits. Do not promise pause allowances before pause enforcement is available.</small></Field>
+      <Field label="Benefits (one per line)"><textarea name="benefits" rows={4} maxLength={5020} value={benefits} onChange={e => setBenefits(e.target.value)} /><small>Only describe supported benefits.</small></Field>
+      <fieldset className="ad-plan-fields"><legend>Pause policy</legend>
+        <label className="ad-plan-checkbox"><input name="pause_allowed" type="checkbox" checked={form.pause_rule?.allowed ?? false} onChange={e => change('pause_rule', { allowed: e.target.checked, max_pause_days: e.target.checked ? form.pause_rule?.max_pause_days || 0 : 0 })} /><span>Allow Pause</span></label>
+        <Field label="Maximum pause days"><input name="max_pause_days" type="number" min={1} step={1} required={form.pause_rule?.allowed} disabled={!form.pause_rule?.allowed} value={form.pause_rule?.max_pause_days || ''} onChange={e => change('pause_rule', { allowed: true, max_pause_days: Number(e.target.value) })} /></Field>
+      </fieldset>
       <label className="ad-plan-checkbox"><input name="is_active" type="checkbox" checked={form.is_active} onChange={e => change('is_active', e.target.checked)} /><span>Visible in the customer catalog</span></label>
       <p className="ad-plan-meta">Hiding a plan prevents new selections. Existing memberships are not changed.</p>
       {error && <div id={errorId}><Alert tone="danger">{error}</Alert></div>}

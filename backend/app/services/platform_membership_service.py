@@ -46,6 +46,7 @@ def price_plan(plan: PlatformMembershipPlan, offer: PlatformMembershipOffer | No
         discount_percentage=percentage, currency=plan.currency, offer=promotion,
         benefits=plan.benefits, badge=plan.badge, display_order=plan.display_order,
         is_active=plan.is_active, version=plan.version, purchase_available=wallet_enabled() and plan.is_active,
+        pause_rule={"allowed": bool(plan.pause_allowed), "max_pause_days": plan.max_pause_days or 0},
     )
 
 
@@ -102,15 +103,19 @@ class PlatformMembershipService:
 
     def save_plan(self, data: PlatformPlanCreate | PlatformPlanUpdate, *, actor_id: int, plan_id: int | None = None) -> PlatformPlanResponse:
         try:
+            values = data.model_dump(exclude={"expected_version", "pause_rule"})
+            # Old clients omitting policy must not wipe an existing configuration.
+            if plan_id is None or "pause_rule" in data.model_fields_set:
+                values.update(pause_allowed=data.pause_rule.allowed, max_pause_days=data.pause_rule.max_pause_days)
             if plan_id is None:
-                plan = PlatformMembershipPlan(**data.model_dump())
+                plan = PlatformMembershipPlan(**values)
                 self.db.add(plan)
                 action = "PLAN_CREATED"
             else:
                 plan = self._plan(plan_id, lock=True)
                 if plan.version != data.expected_version:
                     fail("PLAN_VERSION_CHANGED")
-                for key, value in data.model_dump(exclude={"expected_version"}).items():
+                for key, value in values.items():
                     setattr(plan, key, value)
                 plan.version += 1
                 action = "PLAN_UPDATED"

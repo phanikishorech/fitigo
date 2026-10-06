@@ -1,0 +1,8 @@
+.ow-scan-live{position:absolute;inset:0;pointer-events:none;display:grid;place-items:center;padding:20px}
+.ow-scan-ready{align-self:end;background:#102319e8;color:#fff;border:1px solid #78c29280;padding:8px 18px;border-radius:10px;font-size:14px;font-weight:600}
+.ow-scan-overlay{width:min(100%,420px);max-height:100%;overflow:auto;background:#fff;color:#111827;border:1px solid #e2e8f0;border-radius:16px;padding:22px;display:flex;flex-direction:column;align-items:center;gap:9px;text-align:center;box-shadow:0 8px 28px #0003;overflow-wrap:anywhere}
+.ow-scan-overlay h2{font-size:20px;letter-spacing:.2px}.ow-scan-overlay h3{font-size:18px}.ow-scan-overlay p{font-size:14px;color:#475569}.ow-scan-overlay .ow-result-icon{width:54px;height:54px;flex-shrink:0}
+.ow-scan-overlay--success{border-color:#86efac}.ow-scan-overlay--success h2,.ow-scan-overlay--success strong{color:#15803d}
+.ow-scan-overlay--error{border-color:#fca5a5}.ow-scan-overlay--error h2{color:#b91c1c}
+.ow-scan-overlay--info>svg{color:#64748b}
+@media(max-width:639px){.ow-scan-live{padding:16px}.ow-scan-overlay{padding:20px 16px}.ow-scan-overlay h2{font-size:19px}}

@@ -17,9 +17,35 @@ from app.services.membership_service import MembershipService
 from app.services.membership_wallet_service import single_terms, quote_key, wallet_enabled, buy_single
 from app.models.wallet import WalletAccount
 from sqlalchemy import select
+from app.services.membership_pause_service import MembershipPauseService, membership_status
+from app.schemas.membership_pause import PauseRequest, PauseConfirm, PauseEligibility, PausePreview
 
 
 router = APIRouter(prefix="/memberships")
+
+
+@router.get("/me/{membership_id}/pause", response_model=PauseEligibility)
+def pause_eligibility(membership_id: int, response: Response, db: Session = Depends(get_db),
+                      current_user: User = Depends(require_role({ROLE_CUSTOMER}))):
+    response.headers["Cache-Control"] = "no-store"
+    service = MembershipPauseService(db)
+    return service.eligibility(service.membership(current_user.id, membership_id))
+
+
+@router.post("/me/{membership_id}/pause/preview", response_model=PausePreview)
+def preview_pause(membership_id: int, payload: PauseRequest, response: Response, db: Session = Depends(get_db),
+                  current_user: User = Depends(require_role({ROLE_CUSTOMER}))):
+    response.headers["Cache-Control"] = "no-store"
+    service = MembershipPauseService(db)
+    return service.preview(service.membership(current_user.id, membership_id), payload)
+
+
+@router.post("/me/{membership_id}/pause", response_model=PauseEligibility)
+def create_pause(membership_id: int, payload: PauseConfirm, response: Response,
+                 idempotency_key: str = Header(..., alias="Idempotency-Key", min_length=8, max_length=64, pattern=r"^[A-Za-z0-9_-]+$"),
+                 db: Session = Depends(get_db), current_user: User = Depends(require_role({ROLE_CUSTOMER}))):
+    response.headers["Cache-Control"] = "no-store"
+    return MembershipPauseService(db).create(current_user.id, membership_id, payload, idempotency_key)
 
 
 @router.get("/gyms/{gym_id}/plans/{plan_id}/wallet-quote")
@@ -43,6 +69,7 @@ def create_plan(
     plan = svc.create_plan(owner_user_id=current_user.id, gym_id=gym_id, data=payload.model_dump())
     return MembershipPlanResponse(
         id=plan.id,
+        pause_policy={"allowed": plan.pause_allowed, "max_pause_days": plan.max_pause_days},
         gym_id=plan.gym_id,
         name=plan.name,
         description=plan.description,
@@ -65,6 +92,7 @@ def list_public_plans(
     return [
         MembershipPlanResponse(
             id=p.id,
+            pause_policy={"allowed": p.pause_allowed, "max_pause_days": p.max_pause_days},
             gym_id=p.gym_id,
             name=p.name,
             description=p.description,
@@ -122,7 +150,8 @@ def list_my_memberships(
             user_id=m.user_id,
             gym_id=m.gym_id,
             plan_id=m.plan_id,
-            status=m.status,
+            status=membership_status(db, m),
+            original_end_at=m.original_end_at or m.end_at,
             start_at=m.start_at,
             end_at=m.end_at,
             cancelled_at=m.cancelled_at,

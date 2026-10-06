@@ -6,6 +6,14 @@ export class ApiError extends Error {
 
 // Only recognized public business codes are exposed; never retain raw error payloads.
 export const accessErrorMessages: Record<string, string> = {
+  PAUSE_NOT_ALLOWED: 'Pause is not available for this membership.',
+  PAUSE_LIMIT_EXCEEDED: 'The selected duration exceeds your remaining pause allowance. Refresh to see your current allowance.',
+  MEMBERSHIP_ALREADY_PAUSED: 'Your membership is currently paused. Refresh to see when it resumes.',
+  MEMBERSHIP_INACTIVE: 'This membership is not currently active.',
+  MEMBERSHIP_NOT_FOUND: 'This membership is not available on your account.',
+  INVALID_PAUSE_DATE: 'Choose future dates within the valid pause range shown.',
+  PAUSE_OVERLAP: 'These dates overlap an existing pause. Choose a different period.',
+  PAUSE_PREVIEW_CHANGED: 'Your membership or pause policy changed. Review the updated dates before confirming.',
   DAILY_ACCESS_ALREADY_CONSUMED: 'You have already used your FitiGo access today.',
   DAILY_ACCESS_ALREADY_USED: 'You have already used your FitiGo access today.',
   MEMBERSHIP_PAUSED: 'Your membership access is paused. Gym access is unavailable during a pause.',
@@ -61,6 +69,7 @@ export function safeError(status: number, detail?: unknown): string {
 }
 
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const requestToken = getAccessToken()
   let response: Response
   try {
     // Legacy customer endpoints fall back to a dev account for invalid tokens.
@@ -69,7 +78,7 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
       if (!getAccessToken()) throw new ApiError('Please sign in to continue.', 401)
       const identity = await authFetch('/api/v1/users/me', { cache: 'no-store' })
       if (!identity.ok) {
-        if (identity.status === 401) clearTokens()
+        if (identity.status === 401 && requestToken === getAccessToken()) clearTokens('expired')
         throw new ApiError(safeError(identity.status), identity.status)
       }
     }
@@ -84,7 +93,7 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
   const data: unknown = response.status === 204 ? null : await response.json().catch(() => null)
   if (!response.ok) {
-    if (response.status === 401) clearTokens()
+    if (response.status === 401 && requestToken === getAccessToken() && !/^\/auth\/(login|logout|email\/verify-otp|mobile\/verify-otp)/.test(path)) clearTokens('expired')
     const code = response.status !== 401 && response.status < 500 ? publicBusinessCode(data) : undefined
     throw new ApiError(code ? accessErrorMessages[code] : safeError(response.status, data && typeof data === 'object' && 'detail' in data ? data.detail : undefined), response.status, code)
   }

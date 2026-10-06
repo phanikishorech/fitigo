@@ -33,6 +33,8 @@ class GymMembershipPlan(Base):
     price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(10), nullable=False, default="INR")
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    pause_allowed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
+    max_pause_days: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -60,6 +62,7 @@ class UserMembership(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False, default=MembershipStatus.ACTIVE.value)
     start_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     end_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    original_end_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     paid_amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
@@ -70,6 +73,22 @@ class UserMembership(Base):
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class MembershipPause(Base):
+    """Confirmed, membership-scoped periods. Status is derived from UTC dates."""
+    __tablename__ = "membership_pauses"
+    __table_args__ = (UniqueConstraint("membership_id", "request_key", name="uq_membership_pause_request"),
+                     Index("ix_membership_pauses_range", "membership_id", "start_date", "end_date"))
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    membership_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("user_memberships.id"), nullable=False)
+    request_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    start_date: Mapped[date] = mapped_column(Date, nullable=False)
+    end_date: Mapped[date] = mapped_column(Date, nullable=False)
+    days: Mapped[int] = mapped_column(Integer, nullable=False)
+    previous_end_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    new_end_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
 
 
 class MembershipDailyAccess(Base):

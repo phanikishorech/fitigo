@@ -99,6 +99,8 @@ def get_membership_daily_qr(
     response.headers["Cache-Control"] = "no-store"
     svc = AccessService(db)
     ctx = svc._resolve_today_access_context(user_id=current_user.id)
+    if ctx["status"] == "PAUSED":
+        raise HTTPException(status_code=403, detail={"code": "MEMBERSHIP_PAUSED"})
     gym = db.get(Gym, gym_id)
     if not gym or not covers(resolve_memberships(db, current_user.id, datetime.utcnow()), gym):
         raise HTTPException(status_code=403, detail={"code": "GYM_NOT_ELIGIBLE"})
@@ -192,7 +194,8 @@ def get_profile(db: Session = Depends(get_db), current_user: User | None = Depen
 
     membership_status = None
     if active:
-        membership_status = "ACTIVE"
+        from app.services.membership_pause_service import membership_status as effective_status
+        membership_status = effective_status(db, active, now)
     else:
         latest = (
             db.execute(select(UserMembership).where(UserMembership.user_id == uid).order_by(UserMembership.end_at.desc()))
@@ -229,7 +232,7 @@ def get_membership_summary(
     if m:
         plan_name = membership_name(db, m)
 
-    membership_scope = scope(active_memberships)
+    membership_scope = scope(active_memberships) or (m.membership_type if m else None)
 
     # Gym details for active memberships
     active_gym_ids = sorted(included_ids(db, uid, now))
@@ -288,15 +291,15 @@ def get_membership_summary(
             visits_booked = booked
             visits_completed = completed
 
-    # Pause policy constants (MVP)
-    pause_days_max = 0
-    pause_days_used = 0
-    pause_days_remaining = pause_days_max
+    from app.services.membership_pause_service import MembershipPauseService, membership_status
+    pause = MembershipPauseService(db).eligibility(m) if m else None
+    pause_days_used = pause.pause_days_used if pause else 0
+    pause_days_remaining = pause.pause_days_remaining if pause else 0
 
     return MembershipSummaryResponse(
         membership_id=int(m.id) if m else None,
         plan_name=plan_name,
-        status=("EXPIRED" if m and m.status == "ACTIVE" and m.end_at <= now else m.status if m else None),
+        status=membership_status(db, m) if m else None,
         start_date=(m.start_at if m else None),
         end_date=(m.end_at if m else None),
         membership_scope=membership_scope,
@@ -562,7 +565,8 @@ def get_membership_pass(
     if m:
         plan_name = membership_name(db, m)
         valid_until = m.end_at
-        status_val = m.status
+        from app.services.membership_pause_service import membership_status as effective_status
+        status_val = effective_status(db, m, now)
 
     active_memberships = resolve_memberships(db, uid, now)
     active_gym_ids = sorted(included_ids(db, uid, now))
@@ -620,6 +624,8 @@ def get_membership_pass(
                 or 0
             )
 
+    from app.services.membership_pause_service import MembershipPauseService
+    pause = MembershipPauseService(db).eligibility(m) if m else None
     # Pass metadata is not a credential; daily QR issuance has one authority.
     qr_payload = None
 
@@ -635,6 +641,6 @@ def get_membership_pass(
         active_gyms=active_gyms,
         visits_booked=visits_booked,
         visits_completed=visits_completed,
-        pause_days_used=0,
-        pause_days_remaining=0,
+        pause_days_used=pause.pause_days_used if pause else 0,
+        pause_days_remaining=pause.pause_days_remaining if pause else 0,
     )

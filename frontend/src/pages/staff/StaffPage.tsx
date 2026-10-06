@@ -1,16 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import { useMutation, useResource } from '../../hooks/useResource'
-import { post, request } from '../../services/client'
+import { useMutation } from '../../hooks/useResource'
+import { post } from '../../services/client'
+import { useIdentity } from '../../session/SessionGuard'
 import { Alert, Badge, Button, EmptyState, ErrorState, Heading, Link, Skeleton } from '../../components/common/UI'
 
 type Checkin = { success: true; customer_name: string; gym_name: string; access_type: string; checkin_time: string } | { success: false; status: string; message: string }
 type Detector = { detect: (video: HTMLVideoElement) => Promise<{ rawValue: string }[]> }
 type DetectorConstructor = new (options: { formats: string[] }) => Detector
 export default function StaffPage() {
-  const roles = useResource(() => request<string[]>('/users/me/roles'), 'roles')
-  if (roles.loading) return <Skeleton cards={1} />
-  if (roles.error) return <ErrorState message={roles.error} retry={roles.retry} />
-  if (!roles.data?.some(role => ['GYM_STAFF', 'GYM_OWNER', 'ADMIN', 'SUPER_ADMIN'].includes(role))) return <EmptyState title="Staff access required" description="This area is separate from the customer application." action={<Link to="/home" className="fg-button fg-button--secondary">Customer home</Link>} />
+  useIdentity() // Authentication and portal access are enforced by the central guard.
   return <Scanner />
 }
 function Scanner() {

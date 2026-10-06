@@ -2,8 +2,10 @@
 // This verifies rendering and navigation, NOT connectivity or authorization of the live backend.
 // Run separately from admin-browser-smoke.mjs, which uses real backend responses by default.
 import assert from 'node:assert/strict'
-const targets = await (await fetch('http://localhost:9231/json')).json()
-const ws = new WebSocket(targets.find(target => target.type === 'page').webSocketDebuggerUrl)
+import { isolatedBrowserTarget } from './isolated-browser.mjs'
+const target = await isolatedBrowserTarget()
+process.env.FITIGO_TEST_TARGET = target.id
+const ws = new WebSocket(target.webSocketDebuggerUrl)
 await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject })
 let sequence = 0; const pending = new Map()
 function command(method, params = {}) { return new Promise((resolve, reject) => { const id = ++sequence; pending.set(id, { resolve, reject }); ws.send(JSON.stringify({ id, method, params })) }) }
@@ -21,6 +23,9 @@ function fixture(url, method) {
   if (path === '/api/v1/auth/login') return { access_token: 'test-only-admin-token', refresh_token: 'test-only-refresh' }
   if (path === '/api/v1/auth/logout') return { status: 'ok' }
   if (path === '/api/v1/users/me') return user
+  if (path === '/api/v1/auth/session') return {user,roles:identityRoles}
+  if (path === '/api/v1/gyms/discover') return {gyms:[],page:1,page_size:8,total_count:0,has_more:false}
+  if (path === '/api/v1/meta/gym-types' || path === '/api/v1/facilities') return []
   if (path === '/api/v1/users/me/roles') return identityRoles
   if (path === '/api/v1/admin/ping') return { status: 'ok', user_id: 1 }
   if (/^\/api\/v1\/admin\/gyms\/\d+$/.test(path)) {
@@ -89,6 +94,7 @@ try {
   await evaluate(`(() => {const el=document.querySelector('textarea');Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(el,'Missing information');el.dispatchEvent(new Event('input',{bubbles:true}));})()`)
   await click('Reject Gym','dialog button'); await until(`!document.querySelector('dialog[open]')`); await until(`document.querySelector('main')?.innerText.includes('This gym is rejected')`)
   await visit('/admin/users/1', 'Account information'); await click('Deactivate user'); await click('Deactivate user','dialog button'); await until(`!document.querySelector('dialog[open]')`); await until(`document.querySelector('main')?.innerText.includes('Inactive')`)
+  user.status = 'ACTIVE' // Other scenarios retain a valid administrator session.
   await visit('/admin/bookings/1', 'Booking information'); await click('Force Cancel Booking'); await until(`document.querySelector('dialog')?.innerText.includes('Payment received.')`)
   // Two rapid submissions still produce one POST because useMutation has a synchronous lock.
   await evaluate(`document.querySelector('dialog form').requestSubmit();document.querySelector('dialog form').requestSubmit()`)
@@ -103,8 +109,8 @@ try {
     await click('Try again'); await until(`!!document.querySelector('main a[href="/admin/users/1"]')`)
   }
   simulatedError = { path: '/admin/users?', status: 401 }; await visit('/admin/users','Your session has expired.'); simulatedError = null
-  identityRoles = ['CUSTOMER']; await evaluate(`localStorage.setItem('fitigo:access_token','test-only-non-admin')`); await visit('/admin/dashboard', 'Access denied'); assert.equal(await evaluate('location.pathname'), '/admin/access-denied')
+  identityRoles = ['CUSTOMER']; await evaluate(`localStorage.setItem('fitigo:access_token','test-only-non-admin')`); await visit('/admin/dashboard', 'Your next workout.'); assert.equal(await evaluate('location.pathname'), '/home')
   await evaluate(`localStorage.removeItem('fitigo:access_token');localStorage.removeItem('fitigo:refresh_token')`)
   console.log('PASS TEST FIXTURES: sanitized server/network/403 errors, retry, 401 expiration and non-admin rejection')
   if (failures.length) throw new Error(failures.join('\n'))
-} finally { await command('Fetch.disable'); ws.close(); delete process.env.FITIGO_TEST_EMAIL; delete process.env.FITIGO_TEST_PASSWORD; delete process.env.FITIGO_FIXTURE_MODE }
+} finally { await command('Fetch.disable'); ws.close(); await target.dispose(); delete process.env.FITIGO_TEST_TARGET; delete process.env.FITIGO_TEST_EMAIL; delete process.env.FITIGO_TEST_PASSWORD; delete process.env.FITIGO_FIXTURE_MODE }

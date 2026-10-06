@@ -53,6 +53,7 @@ class TodayAccessUsedResponse(BaseModel):
 
 class TodayAccessPausedResponse(BaseModel):
     status: Literal["PAUSED"] = "PAUSED"
+    code: Literal["MEMBERSHIP_PAUSED"] = "MEMBERSHIP_PAUSED"
 
 
 class TodayAccessExpiredResponse(BaseModel):

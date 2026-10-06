@@ -1,46 +1,45 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import AuthModal from './components/AuthModal/AuthModal'
-import { navigate, parseRoute, subscribeNavigation, type RouteState } from './router'
-import { clearTokens, setTokens } from './auth'
+import { subscribeNavigation } from './router'
 import { subscribeOpenAuthModal } from './authUi'
 import CustomerApp from './pages/CustomerApp'
-import { safeReturnTo } from './customerRoutes'
-import { EmptyState, Link, Skeleton } from './components/common/UI'
+import { Skeleton } from './components/common/UI'
+import { SessionGuard, SessionProvider, useSession } from './session/SessionGuard'
+import { completeLogin, logoutSession } from './session/store'
 
 const OwnerApp = lazy(() => import('./owner/OwnerApp'))
 const AdminApp = lazy(() => import('./admin/AdminApp'))
 
 export default function App() {
+  return <SessionProvider><Application /></SessionProvider>
+}
+function Application() {
   const [authOpen, setAuthOpen] = useState(false)
-
-  const [route, setRoute] = useState<RouteState>(() => parseRoute(window.location.pathname))
-
-  // Optional: preserve intent for post-login return-to-action behavior.
-  const [loginIntent, setLoginIntent] = useState<string | null>(null)
-
+  const [location, setLocation] = useState(() => window.location.pathname + window.location.search + window.location.hash)
+  const path = location.split(/[?#]/)[0]
+  const session = useSession()
+  useEffect(() => { if (session.status !== 'anonymous' && session.status !== 'expired') setAuthOpen(false) }, [session.status])
 
   useEffect(() => {
-    return subscribeOpenAuthModal((intent) => {
-      setLoginIntent(intent)
+    return subscribeOpenAuthModal(() => {
       setAuthOpen(true)
     })
   }, [])
 
   useEffect(() => {
-    return subscribeNavigation(() => setRoute(parseRoute(window.location.pathname)))
+    return subscribeNavigation(() => setLocation(window.location.pathname + window.location.search + window.location.hash))
   }, [])
 
   return (
     <div className="appShell">
+      <SessionGuard path={path}>
       <Suspense fallback={<div className="fg-app fg-main"><Skeleton /></div>}>
-      {!/^\/(owner|admin)(\/|$)/.test(window.location.pathname) ? (
-        <CustomerApp key={window.location.pathname + window.location.search} path={window.location.pathname} />
-      ) : /^\/owner(\/|$)/.test(window.location.pathname) ? (
-        <OwnerApp path={window.location.pathname} />
-      ) : /^\/admin(\/|$)/.test(window.location.pathname) ? (
-        <AdminApp path={window.location.pathname} />
+      {!/^\/(owner|admin)(\/|$)/.test(path) ? (
+        <CustomerApp key={location.split('#')[0]} path={path} />
+      ) : /^\/owner(\/|$)/.test(path) ? (
+        <OwnerApp path={path} />
       ) : (
-        <div className="fg-app fg-main"><EmptyState title="Page not found" action={<Link to="/home" className="fg-button fg-button--primary">Customer home</Link>} /></div>
+        <AdminApp path={path} />
       )}
       </Suspense>
 
@@ -48,17 +47,15 @@ export default function App() {
         open={authOpen}
         onClose={() => setAuthOpen(false)}
         onAuthed={(payload) => {
-          setTokens(payload.access_token, payload.refresh_token)
           setAuthOpen(false)
-          if (loginIntent?.startsWith('/')) navigate(safeReturnTo(loginIntent))
-          setLoginIntent(null)
+          void completeLogin(payload)
         }}
-        intent={loginIntent}
       />
+      </SessionGuard>
     </div>
   )
 }
 
 export function logout() {
-  clearTokens()
+  void logoutSession()
 }

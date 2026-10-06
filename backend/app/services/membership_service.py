@@ -21,6 +21,8 @@ class MembershipService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gym not found")
 
         plan = GymMembershipPlan(
+            pause_allowed=data.get("pause_policy", {}).get("allowed", False),
+            max_pause_days=data.get("pause_policy", {}).get("max_pause_days", 0),
             gym_id=gym_id,
             name=data["name"],
             description=data.get("description"),
@@ -90,6 +92,9 @@ class MembershipService:
             plan.currency = data["currency"]
         if "is_active" in data and data["is_active"] is not None:
             plan.is_active = bool(data["is_active"])
+        if data.get("pause_policy") is not None:
+            plan.pause_allowed = data["pause_policy"]["allowed"]
+            plan.max_pause_days = data["pause_policy"]["max_pause_days"]
 
         self.db.commit()
         self.db.refresh(plan)
@@ -124,7 +129,9 @@ class MembershipService:
         )
 
     def cancel_membership(self, *, user_id: int, membership_id: int) -> UserMembership:
-        m = self.db.execute(select(UserMembership).where(UserMembership.id == membership_id, UserMembership.user_id == user_id)).scalars().first()
+        from app.models.auth import User
+        self.db.scalars(select(User).where(User.id == user_id).with_for_update()).first()
+        m = self.db.execute(select(UserMembership).where(UserMembership.id == membership_id, UserMembership.user_id == user_id).with_for_update().execution_options(populate_existing=True)).scalars().first()
         if not m:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Membership not found")
         if m.status != MembershipStatus.ACTIVE.value:

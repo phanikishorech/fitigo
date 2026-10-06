@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import styles from './gymOwner.module.css'
 import { navigate } from '../../router'
-import { setTokens } from '../../auth'
+import { completeLogin } from '../../session/store'
+import { authService } from '../../services/authService'
 
 export default function GymOwnerLoginPage() {
   const [email, setEmail] = useState('')
@@ -44,15 +45,7 @@ export default function GymOwnerLoginPage() {
                 setError(null)
                 setBusy(true)
                 try {
-                  const r = await fetch('/api/v1/auth/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: email.trim().toLowerCase(), password })
-                  })
-                  const data = await r.json().catch(() => ({}))
-                  if (!r.ok) throw new Error((data as any)?.detail ?? 'Login failed')
-                  setTokens((data as any).access_token, (data as any).refresh_token)
-                  navigate('/owner')
+                  await completeLogin(await authService.loginWithPassword(email, password))
                 } catch (e: any) {
                   setError(e?.message ?? 'Login failed')
                 } finally {

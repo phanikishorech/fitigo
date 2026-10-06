@@ -1,8 +1,9 @@
+import { logoutSession } from '../../session/store'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import styles from './profile.module.css'
 import AccessPanel from './AccessPanel'
 import { navigate } from '../../router'
-import { authFetch, clearTokens } from '../../auth'
+import { authFetch } from '../../auth'
 
 type Profile = {
   user_id: number
@@ -201,8 +202,7 @@ function ProfileMenu() {
               onClick={() => {
                 setOpen(false)
                 if (it.label === 'Logout') {
-                  clearTokens()
-                  navigate(it.to)
+                  void logoutSession()
                   return
                 }
                 navigate(it.to)

@@ -6,6 +6,7 @@ export type PlanInput = {
   code: string; name: string; description: string | null; duration_value: number
   duration_unit: PlatformPlan['duration_unit']; base_price: string; currency: 'INR'
   benefits: string[]; badge: string | null; display_order: number; is_active: boolean
+  pause_rule?: { allowed: boolean; max_pause_days: number }
 }
 export type OfferInput = {
   expected_version: number; kind: 'PERCENTAGE' | 'FIXED'; value: string; title: string | null
@@ -23,7 +24,8 @@ export const adminMembershipPlans = {
 export function editablePlan(plan: PlatformPlan): PlanInput {
   return { code: plan.code, name: plan.name, description: plan.description, duration_value: plan.duration_value,
     duration_unit: plan.duration_unit, base_price: plan.base_price, currency: 'INR', benefits: [...plan.benefits],
-    badge: plan.badge, display_order: plan.display_order, is_active: plan.is_active }
+    badge: plan.badge, display_order: plan.display_order, is_active: plan.is_active,
+    ...(plan.pause_rule ? { pause_rule: { ...plan.pause_rule } } : {}) }
 }
 export function planAdminError(error: unknown) {
   if (error instanceof ApiError && error.code === 'PLAN_VERSION_CHANGED') return 'Another administrator changed this plan. Reload the latest version before saving again. Your changes have not been saved.'

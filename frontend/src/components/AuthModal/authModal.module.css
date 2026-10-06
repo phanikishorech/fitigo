@@ -27,6 +27,7 @@
   box-shadow: var(--shadow);
   display: grid;
   grid-template-columns: 1fr;
+  grid-template-rows: minmax(0, 1fr);
   transform-origin: center;
   animation: modalIn 200ms ease-out;
 }
@@ -159,11 +160,19 @@
 }
 
 .rightPanel {
+  min-height: 0;
+  max-height: inherit;
+  box-sizing: border-box;
   padding: 22px 24px;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
 }
+
+/* Keep fields/buttons at their normal size and scroll the panel, not the locked page. */
+.rightPanel > * { flex-shrink: 0; }
 
 .headerRow {
   display: flex;
@@ -254,6 +263,10 @@
     height: auto;
     max-height: 90dvh;
     border-radius: 20px 20px 0 0;
+  }
+
+  .rightPanel {
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   }
 
   .leftPanel {

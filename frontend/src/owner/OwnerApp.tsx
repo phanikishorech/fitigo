@@ -1,8 +1,5 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
-import { getAccessToken, subscribeAuth } from '../auth'
-import { profileService } from '../services/accountService'
-import { fetchMyRoles } from '../screens/GymOwner/api'
-import { useResource } from '../hooks/useResource'
+import { lazy, Suspense } from 'react'
+import { useIdentity } from '../session/SessionGuard'
 import { ownerRoute, type OwnerRoute } from './routes'
 import { OwnerProvider, useOwner } from './context'
 import OwnerLayout from './OwnerLayout'
@@ -20,17 +17,11 @@ const Account = lazy(() => import('./Account'))
 
 export default function OwnerApp({ path }: { path: string }) {
   const route = ownerRoute(path)
-  const [token, setToken] = useState(getAccessToken)
-  useEffect(() => subscribeAuth(() => setToken(getAccessToken())), [])
   const auth = ['login', 'register', 'verify'].includes(route.page)
-  return <div className="fg-app ow-app"><Suspense fallback={<div className="ow-loading"><Skeleton /></div>}>{auth ? <AuthPage key={route.page} page={route.page} /> : token ? <Authenticated key={token} path={path} route={route} /> : <div className="ow-auth"><EmptyState title="Sign in to your owner workspace" description="Your session is missing or has expired. Sign in to manage your gyms securely." action={<Link to="/owner/login" className="fg-button fg-button--primary">Sign in</Link>} /></div>}</Suspense></div>
+  return <div className="fg-app ow-app"><Suspense fallback={<div className="ow-loading"><Skeleton /></div>}>{auth ? <AuthPage key={route.page} page={route.page} /> : <Authenticated path={path} route={route} />}</Suspense></div>
 }
 function Authenticated({ path, route }: { path: string; route: OwnerRoute }) {
-  const identity = useResource(async () => { const [user, roles] = await Promise.all([profileService.me(), fetchMyRoles()]); return { user, roles } }, 'owner-identity')
-  if (identity.loading) return <div className="ow-loading"><Skeleton /></div>
-  if (identity.error) return <div className="ow-loading"><ErrorState message={identity.error} retry={identity.retry} /><Link to="/owner/login" className="fg-button fg-button--secondary">Sign in again</Link></div>
-  const { user, roles } = identity.data!
-  if (!roles.some(r => r === 'GYM_OWNER' || r === 'GYM_STAFF')) return <div className="ow-loading"><EmptyState title="Owner access required" description="This account is not authorized for the owner or staff workspace." action={<Link to="/owner/login" className="fg-button fg-button--primary">Use another account</Link>} /></div>
+  const { user, roles } = useIdentity()
   return <OwnerProvider user={user} roles={roles} routeGymId={route.gymId}><OwnerLayout path={path}><Content route={route} /></OwnerLayout></OwnerProvider>
 }
 function Content({ route }: { route: OwnerRoute }) {

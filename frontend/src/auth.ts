@@ -1,6 +1,8 @@
 const ACCESS_KEY = 'fitigo:access_token'
 const REFRESH_KEY = 'fitigo:refresh_token'
 const AUTH_EVENT = 'fitigo:auth'
+let authReason: 'signedOut' | 'expired' = 'signedOut'
+export const getAuthReason = () => authReason
 
 export function getAccessToken(): string | null {
   try {
@@ -11,6 +13,7 @@ export function getAccessToken(): string | null {
 }
 
 export function setTokens(accessToken: string, refreshToken?: string | null) {
+  authReason = 'signedOut'
   try {
     window.localStorage.setItem(ACCESS_KEY, accessToken)
     if (typeof refreshToken !== 'undefined') {
@@ -23,7 +26,8 @@ export function setTokens(accessToken: string, refreshToken?: string | null) {
   window.dispatchEvent(new CustomEvent(AUTH_EVENT))
 }
 
-export function clearTokens() {
+export function clearTokens(reason: 'signedOut' | 'expired' = 'signedOut') {
+  authReason = reason
   try {
     window.localStorage.removeItem(ACCESS_KEY)
     window.localStorage.removeItem(REFRESH_KEY)
@@ -35,8 +39,10 @@ export function clearTokens() {
 
 export function subscribeAuth(handler: () => void) {
   const on = () => handler()
+  const onStorage = (event: StorageEvent) => { if (event.key === ACCESS_KEY || event.key === REFRESH_KEY || event.key === null) { authReason = 'signedOut'; handler() } }
   window.addEventListener(AUTH_EVENT, on as EventListener)
-  return () => window.removeEventListener(AUTH_EVENT, on as EventListener)
+  window.addEventListener('storage', onStorage)
+  return () => { window.removeEventListener(AUTH_EVENT, on as EventListener); window.removeEventListener('storage', onStorage) }
 }
 
 export function authFetch(input: RequestInfo | URL, init?: RequestInit) {

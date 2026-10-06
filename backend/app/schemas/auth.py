@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pydantic import BaseModel, EmailStr, Field
+from app.schemas.user import UserMeResponse
 
 
 class CustomerRegisterRequest(BaseModel):
@@ -24,6 +25,15 @@ class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+
+
+class SessionResponse(BaseModel):
+    user: UserMeResponse
+    roles: list[str]
+
+
+class AuthSessionResponse(TokenResponse, SessionResponse):
+    pass
 
 
 class RefreshRequest(BaseModel):

@@ -6,7 +6,7 @@ export type PlatformPlan = {
   base_price: string; final_price: string; discount_amount: string; discount_percentage: string | null; currency: string
   offer: { id: number; kind: 'FIXED' | 'PERCENTAGE'; title: string | null; valid_until: string } | null
   benefits: string[]; badge: string | null; display_order: number; is_active: boolean; version: number
-  access_rule: { scope: 'ELIGIBLE_PARTNER_GYMS'; daily_access: number }; pause_rule: null; purchase_available: boolean
+  access_rule: { scope: 'ELIGIBLE_PARTNER_GYMS'; daily_access: number }; pause_rule: { allowed: boolean; max_pause_days: number } | null; purchase_available: boolean
 }
 export type PlatformCatalog = { items: PlatformPlan[]; server_time: string; checkout_available: boolean; checkout_unavailable_reason: string | null; payment_mode: string }
 export type PlatformOrder = {

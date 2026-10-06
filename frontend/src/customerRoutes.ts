@@ -15,7 +15,7 @@ export function customerRoute(path: string): CustomerRoute {
     '/membership/checkout': 'membershipCheckout', '/membership/success': 'membershipSuccess', '/profile': 'profile',
     '/access/qr': 'access', '/my-access': 'access', '/profile/access/today': 'access', '/profile/access': 'calendar',
     '/profile/history': 'history', '/profile/visits': 'visits', '/profile/reviews': 'reviews', '/settings': 'settings',
-    '/auth': 'auth', '/auth/login': 'auth', '/auth/otp': 'auth', '/auth/profile-setup': 'settings', '/staff/check-in': 'staff'
+    '/login': 'auth', '/auth': 'auth', '/auth/login': 'auth', '/auth/otp': 'auth', '/auth/profile-setup': 'settings', '/staff/check-in': 'staff'
   }
   if (aliases[normalized]) return { page: aliases[normalized] } as CustomerRoute
   const patterns: [RegExp, 'gym' | 'bookingAccess' | 'bookingSchedule' | 'plans' | 'bookingDetail' | 'bookingSuccess' | 'review' | 'membershipRecord' | 'membershipDetails' | 'confirmVisit'][] = [

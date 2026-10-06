@@ -42,6 +42,8 @@ def validate_checkin(
         if isinstance(e, HTTPException):
             code = getattr(e, "status_code", 400)
             msg = getattr(e, "detail", "Invalid")
+            if isinstance(msg, dict) and msg.get("code") == "MEMBERSHIP_PAUSED":
+                return ValidateCheckinFailureResponse(success=False, status="MEMBERSHIP_PAUSED", message="This membership is paused. Access resumes after the pause period.")
             if code == 409:
                 return ValidateCheckinFailureResponse(success=False, status="QR_ALREADY_USED", message=str(msg))
             if "only at" in str(msg):

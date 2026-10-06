@@ -64,6 +64,38 @@ test('failed eligibility stays a failure and cannot become a paid decision', asy
   globalThis.__visitCalendar = async () => calendar
   await assert.rejects(access.visitAccessService.check(12), /API unavailable/)
 })
+for (const status of ['NO_ACTIVE_MEMBERSHIP', 'DAY_PASS_AVAILABLE', 'UPGRADE_REQUIRED', 'UNAVAILABLE']) test(`${status} skips the membership calendar and enters existing paid booking`, async () => {
+  let calendarCalls = 0
+  globalThis.__visitGym = async () => ({ ...gym, membership_access: { status } })
+  globalThis.__visitCalendar = async () => { calendarCalls++; throw new Error('No membership found') }
+  const result = await access.visitAccessService.check(12)
+  assert.equal(result.decision, 'PAID_BOOKING')
+  assert.equal(result.calendar, null)
+  assert.equal(calendarCalls, 0)
+  assert.equal(access.visitDestination(12, result.decision), '/gyms/12/book/access')
+})
+for (const scope of ['SINGLE_GYM', 'MULTI_GYM']) test(`${scope} covered gym checks available and used access`, async () => {
+  globalThis.__visitGym = async () => gym
+  for (const state of ['ACTIVE', 'USED']) {
+    globalThis.__visitCalendar = async () => ({ ...calendar, access_type: scope, gym: scope === 'MULTI_GYM' ? null : calendar.gym, days: [{ ...today, qr_status: state, qr_available: state === 'ACTIVE' }] })
+    assert.equal((await access.visitAccessService.check(12)).decision, state === 'ACTIVE' ? 'MEMBERSHIP' : 'ALREADY_USED')
+  }
+})
+test('included gym calendar errors remain errors, even with a no-membership error message', async () => {
+  globalThis.__visitGym = async () => gym
+  for (const message of ['No membership found', 'Network error', 'Server error', 'Not found']) {
+    globalThis.__visitCalendar = async () => { throw new Error(message) }
+    await assert.rejects(access.visitAccessService.check(12), { message })
+  }
+})
+test('unknown/missing eligibility never becomes paid booking or calls the calendar', async () => {
+  globalThis.__visitCalendar = async () => { throw new Error('Calendar must not be called') }
+  for (const membership_access of [undefined, {}, { status: 'UNKNOWN' }]) {
+    globalThis.__visitGym = async () => ({ ...gym, membership_access })
+    await assert.rejects(access.visitAccessService.check(12), /Unable to check/)
+  }
+  assert.throws(() => access.visitAccessDecision(gym, null), /Unable to check/)
+})
 test('companion draft is independent of normal booking and counts extras only', () => {
   store.updateDraft(12, { memberCount: 4, accessType: 'CLASS', classId: 7 })
   assert.equal(store.getDraft(12, '2026-10-01').memberCount, 1)

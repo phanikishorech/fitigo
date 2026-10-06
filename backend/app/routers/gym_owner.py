@@ -40,6 +40,7 @@ router = APIRouter(prefix="/gym-owner")
 
 def _to_membership_plan_response(p) -> MembershipPlanResponse:
     return MembershipPlanResponse(
+        pause_policy={"allowed": p.pause_allowed, "max_pause_days": p.max_pause_days},
         id=p.id,
         gym_id=p.gym_id,
         name=p.name,

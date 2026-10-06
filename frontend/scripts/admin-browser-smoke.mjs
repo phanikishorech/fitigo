@@ -7,7 +7,7 @@ import { join } from 'node:path'
 const origin = process.env.FITIGO_TEST_ORIGIN || 'http://localhost:5173'
 const sourceLabel = process.env.FITIGO_FIXTURE_MODE === '1' ? 'test-fixture' : 'live API'
 const targets = await (await fetch('http://localhost:9231/json')).json()
-const ws = new WebSocket(targets.find(target => target.type === 'page').webSocketDebuggerUrl)
+const ws = new WebSocket(targets.find(target => process.env.FITIGO_TEST_TARGET ? target.id === process.env.FITIGO_TEST_TARGET : target.type === 'page').webSocketDebuggerUrl)
 await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject })
 let sequence = 0; const pending = new Map(); const exceptions = []
 ws.onmessage = event => {
@@ -30,7 +30,7 @@ try {
   await evaluate(`localStorage.removeItem('fitigo:access_token');localStorage.removeItem('fitigo:refresh_token')`)
   for (const value of [360,390,430,768,1024,1280,1440,1920]) await width(value)
   await screenshot('fitigo-admin-login.png')
-  await visit('/admin/users', 'Welcome back'); assert.equal(await evaluate('location.pathname'), '/admin/login')
+  await visit('/admin/users', 'Welcome to FitiGo'); assert.equal(await evaluate('location.pathname'), '/login')
   await visit('/admin/access-denied', 'Access denied'); await width(360)
   await visit('/admin/session-expired', 'Your session has expired.')
   console.log('PASS login, protected-route redirect, denied/expired states and 8 viewport widths')
@@ -38,7 +38,8 @@ try {
     await visit('/admin/login', 'Welcome back')
     await fill('input[name="email"]', process.env.FITIGO_TEST_EMAIL); await fill('input[name="password"]', process.env.FITIGO_TEST_PASSWORD)
     await evaluate(`document.querySelector('form').requestSubmit()`)
-    await until(`location.pathname==='/admin/dashboard'`); await until(`document.querySelectorAll('.ad-metric').length===4`); await until(`!document.querySelector('[aria-label="Loading"]')`)
+    await until(`location.pathname==='/admin/users'`); await until(`document.body.innerText.includes('Manage FitiGo platform users.')`)
+    await visit('/admin/dashboard','Platform overview and activity'); await until(`document.querySelectorAll('.ad-metric').length===4`); await until(`!document.querySelector('[aria-label="Loading"]')`)
     for (const value of [360,390,430,768,1024,1280,1440,1920]) await width(value)
     await width(1440); await screenshot('fitigo-admin-dashboard-desktop.png'); await width(390); await screenshot('fitigo-admin-dashboard-mobile.png')
     await evaluate(`document.querySelector('[aria-label="Open navigation"]').click()`); await until(`!!document.querySelector('dialog[open]')`)
@@ -57,7 +58,7 @@ try {
     console.log(`PASS ${sourceLabel} lists, available record details and non-mutating confirmation dialogs`)
     await visit('/admin/users?status=ACTIVE','Manage FitiGo platform users.'); await fill('main input[type="search"]','no-match-admin-qa-987654321'); await until(`location.search.includes('q=no-match-admin-qa-987654321')`); assert.equal(await evaluate(`new URLSearchParams(location.search).get('status')`),'ACTIVE'); await until(`document.body.innerText.includes('No users found.')`)
     await visit('/admin/not-real','Page not found'); await width(360)
-    await visit('/admin/dashboard','Platform overview and activity'); await width(1440); await click('Logout'); await until(`!!document.querySelector('dialog[open]')`); await click('Sign out','dialog button'); await until(`location.pathname==='/admin/login'`)
+    await visit('/admin/dashboard','Platform overview and activity'); await width(1440); await click('Logout'); await until(`!!document.querySelector('dialog[open]')`); await click('Sign out','dialog button'); await until(`location.pathname==='/login'`)
     assert.equal(await evaluate(`localStorage.getItem('fitigo:access_token')`),null)
     console.log('PASS debounced server search, preserved filters, empty state, 404 and logout')
   } else console.log('SKIP authenticated checks: set FITIGO_TEST_EMAIL and FITIGO_TEST_PASSWORD')

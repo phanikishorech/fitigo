@@ -74,24 +74,7 @@ class AccessService:
         return bool(row)
 
     def _active_memberships_for_date(self, *, user_id: int, at: datetime) -> list[UserMembership]:
-        # Membership rows use timezone-aware columns, but historically MySQL may return naive.
-        # We stick to naive UTC comparisons (datetime.utcnow) elsewhere. Here we only compare
-        # using datetime.utcnow() style values.
-        # at is timezone-aware (utcnow); we convert to naive UTC for safety.
-        at_naive = _utc(at).replace(tzinfo=None)
-        return list(
-            self.db.execute(
-                select(UserMembership).where(
-                    UserMembership.user_id == user_id,
-                    UserMembership.status == MembershipStatus.ACTIVE.value,
-                    UserMembership.payment_status == "PAID",
-                    UserMembership.start_at <= at_naive,
-                    UserMembership.end_at > at_naive,
-                )
-            )
-            .scalars()
-            .all()
-        )
+        return active_memberships(self.db, user_id, at)
 
     def _resolve_today_access_context(self, *, user_id: int) -> dict:
         now = utcnow()
@@ -105,6 +88,8 @@ class AccessService:
 
         memberships = self._active_memberships_for_date(user_id=user_id, at=now)
         if not memberships:
+            if active_memberships(self.db, user_id, now, include_paused=True):
+                return {"status": "PAUSED", "today": today, "now": now}
             return {"status": "NO_ACCESS", "today": today, "now": now}
 
         # Determine access type based on number of active gyms.
@@ -422,6 +407,9 @@ class AccessService:
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Membership is not active")
 
             # Pause-day policy
+            from app.services.membership_pause_service import paused_on
+            if paused_on(self.db, m.id, today):
+                raise HTTPException(status_code=403, detail={"code": "MEMBERSHIP_PAUSED"})
             if self._is_paused(user_id=int(daily.user_id), access_date=today):
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This visit has been paused.")
 
@@ -536,6 +524,11 @@ class AccessService:
             ).all()
         )
 
+        from app.models.membership import MembershipPause
+        scoped_pauses = list(self.db.scalars(select(MembershipPause).join(UserMembership,
+            MembershipPause.membership_id == UserMembership.id).where(UserMembership.user_id == user_id,
+            MembershipPause.start_date <= end, MembershipPause.end_date >= start)))
+
         # Keep each historical membership interval separate: gaps between plans
         # are not missed visits, and pausing today must not erase past eligibility.
         memberships = self.db.execute(select(UserMembership).where(
@@ -546,6 +539,7 @@ class AccessService:
             UserMembership.end_at > datetime.combine(start, time.min),
         )).scalars().all()
         intervals = []
+        member_intervals = []
         for membership in memberships:
             interval_end = _utc(membership.end_at)
             if membership.status == MembershipStatus.CANCELLED.value:
@@ -553,6 +547,17 @@ class AccessService:
                     continue
                 interval_end = min(interval_end, _utc(membership.cancelled_at))
             intervals.append((_utc(membership.start_at), interval_end))
+            member_intervals.append((membership.id, _utc(membership.start_at), interval_end))
+
+        # A pause of one membership must not disable another unpaused entitlement.
+        day = start
+        while day <= end:
+            day_start = datetime.combine(day, time.min, tzinfo=timezone.utc)
+            day_end = day_start + timedelta(days=1)
+            entitled = [mid for mid, a, b in member_intervals if a < day_end and b > day_start]
+            if entitled and all(any(p.membership_id == mid and p.start_date <= day <= p.end_date for p in scoped_pauses) for mid in entitled):
+                paused_dates.add(day)
+            day += timedelta(days=1)
 
         daily_states = {daily.access_date: daily.status for daily in self.db.execute(
             select(CustomerDailyAccess).where(

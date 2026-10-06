@@ -1,7 +1,8 @@
 // Isolated auth fixtures. No real accounts, passwords, reset emails, or sessions are changed.
 import assert from 'node:assert/strict'
+import { isolatedBrowserTarget } from './isolated-browser.mjs'
 const origin='http://localhost:5173', debug='http://localhost:9231'
-const target=await(await fetch(`${debug}/json/new?${encodeURIComponent(origin)}`,{method:'PUT'})).json()
+const target=await isolatedBrowserTarget(debug)
 const ws=new WebSocket(target.webSocketDebuggerUrl)
 await new Promise((resolve,reject)=>{ws.onopen=resolve;ws.onerror=reject})
 const pending=new Map(), errors=[], calls=[]
@@ -27,9 +28,13 @@ ws.onmessage=async event=>{
    else if(path==='/api/v1/auth/forgot-password')body={message:'If an active account exists for this email, you will receive a password reset link.'}
    else if(path==='/api/v1/auth/reset-password'){body={status:'ok'};if(mode==='expired'){code=400;body={detail:'This reset link is invalid or expired. Request a new link.'}}}
    else if(path==='/api/v1/auth/change-password'){body={status:'ok'};if(mode==='wrong'){code=400;body={detail:'Your current password is incorrect.'}}}
-   else if(path==='/api/v1/users/me')body={id:1,first_name:'Account',last_name:'Fixture',email:'new@example.com',phone:null}
+    else if(path==='/api/v1/auth/session')body={user:{id:1,first_name:'Account',last_name:'Fixture',email:'new@example.com',phone:null},roles}
+    else if(path==='/api/v1/gyms/discover')body={gyms:[],page:1,page_size:8,total_count:0,has_more:false}
+    else if(path==='/api/v1/meta/gym-types'||path==='/api/v1/facilities')body=[]
+    else if(path==='/api/v1/users/me')body={id:1,first_name:'Account',last_name:'Fixture',email:'new@example.com',phone:null}
    else if(path==='/api/v1/users/me/roles')body=roles
    else if(path==='/api/v1/gym-owner/gyms'||path==='/api/v1/gym-staff/gyms')body=[]
+    else if(path==='/api/v1/memberships/me')body=[]
    else throw Error(`Unexpected API: ${path}`)
    await command('Fetch.fulfillRequest',{requestId,responseCode:code,responseHeaders:[{name:'Content-Type',value:'application/json'}],body:Buffer.from(JSON.stringify(body)).toString('base64')})
   }catch(e){if(e.message.includes('Invalid InterceptionId'))return;errors.push(e.message);await command('Fetch.failRequest',{requestId,errorReason:'Failed'}).catch(()=>{})}
@@ -38,7 +43,29 @@ ws.onmessage=async event=>{
 try{
  await command('Runtime.enable');await command('Page.enable');await command('Fetch.enable',{patterns:[{urlPattern:'*/api/v1/*'}]})
  await visit('/auth/login?returnTo=%2Fmembership%2Fpause','Welcome to FitiGo')
- await until(`!!document.querySelector('[role="dialog"]')`);await click('Create account')
+ await until(`!!document.querySelector('[role="dialog"]')`)
+ await click('Password')
+ async function checkModalScroll(label) {
+  await evaluate(`(()=>{const d=document.querySelector('[role="dialog"]');window.scrollPanel=Array.from(d.children).find(el=>getComputedStyle(el).overflowY==='auto');window.scrollPanel.scrollTop=0})()`)
+  const metrics=await evaluate(`(()=>{const p=window.scrollPanel,r=p.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+Math.min(120,r.height/2),overflow:p.scrollHeight>p.clientHeight,height:r.height,bottom:r.bottom,viewport:innerHeight}})()`)
+  assert.ok(metrics.bottom<=metrics.viewport+1,`${label}: scroll panel fits viewport`)
+  if(metrics.overflow){
+    await command('Input.dispatchMouseEvent',{type:'mouseWheel',x:metrics.x,y:metrics.y,deltaY:1800,deltaX:0})
+    await until(`window.scrollPanel.scrollTop>0`)
+  }
+  const result=await evaluate(`(()=>{const p=window.scrollPanel;p.scrollTop=p.scrollHeight;const buttons=Array.from(p.querySelectorAll('button'));const el=buttons.at(-1);const r=el.getBoundingClientRect(),bounds=p.getBoundingClientRect();return {visible:r.top>=bounds.top-1&&r.bottom<=bounds.bottom+1,hit:el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)),pageScroll:window.scrollY}})()`)
+  assert.equal(result.visible,true,`${label}: bottom action visible`);assert.equal(result.hit,true,`${label}: bottom action is reachable`)
+ }
+ for(const [width,height] of [[360,640],[390,700],[430,740],[768,600],[1440,600],[390,360]]) {
+  await command('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:width<640});await wait(220)
+  await checkModalScroll(`Sign in ${width}x${height}`)
+ }
+ await click('Create account')
+ for(const [width,height] of [[360,640],[390,700],[430,740],[768,600],[1440,600],[390,360]]) {
+  await command('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:width<640});await wait(100)
+  await checkModalScroll(`Registration ${width}x${height}`)
+ }
+ console.log('PASS sign-in and signup scroll with wheel; bottom links reachable on mobile, short desktop and keyboard-height viewport')
  for(const width of [360,390,768,1440]){
   await command('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width<640})
   assert.equal(await evaluate(`document.documentElement.scrollWidth<=document.documentElement.clientWidth+1`),true)
@@ -55,6 +82,7 @@ try{
  await evaluate(`(()=>{const form=document.querySelector('form[aria-label="Password sign in"]');form.requestSubmit();form.requestSubmit()})()`)
  await until(`!document.querySelector('[role="dialog"]')`);assert.equal(calls.filter(x=>x.path.endsWith('/login')).length,1)
  assert.equal(await evaluate(`localStorage.getItem('fitigo:access_token')`),'fixture-account-token')
+   await until(`location.pathname==='/membership/pause' && document.body.innerText.includes('Pause Membership')`)
  console.log('PASS registration mismatch/duplicate/success, duplicate-submit prevention, existing login callback, responsive form')
  await evaluate(`localStorage.clear()`);await visit('/auth/forgot-password','Enter your account email.')
  await fill('input[name="email"]','new@example.com');await click('Send reset link');await until(`document.body.innerText.includes('If an active account exists')`)
@@ -78,4 +106,4 @@ try{
  }
  assert.deepEqual(errors,[])
  console.log('PASS owner and staff change password, incorrect-current-password error, logout and new sign-in prompt')
-}finally{await command('Fetch.disable').catch(()=>{});ws.close();await fetch(`${debug}/json/close/${target.id}`)}
+}finally{await command('Fetch.disable').catch(()=>{});ws.close();await target.dispose()}

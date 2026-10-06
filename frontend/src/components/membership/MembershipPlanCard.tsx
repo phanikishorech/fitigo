@@ -22,6 +22,7 @@ export function MembershipPlanCard({ plan, children }: { plan: PlatformPlan; chi
     <ul className="fm-plan-benefits">
       <li><Icon name="check" size={18} /><span>Access eligible FitiGo partner gyms</span></li>
       <li><Icon name="check" size={18} /><span>{plan.access_rule.daily_access} daily access per active day</span></li>
+      {plan.pause_rule?.allowed && <li><Icon name="calendar" size={18} /><span>Pause allowance: {plan.pause_rule.max_pause_days} days</span></li>}
       {plan.benefits.map((benefit, index) => <li key={`${index}:${benefit}`}><Icon name="check" size={18} /><span>{benefit}</span></li>)}
     </ul>
     {children && <div className="fm-plan-action">{children}</div>}

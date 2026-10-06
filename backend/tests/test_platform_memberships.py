@@ -45,6 +45,8 @@ def api(monkeypatch):
         table = Base.metadata.tables[name].to_metadata(metadata)
         if "id" in table.c and name != "platform_membership_orders":
             table.c.id.type = Integer()
+    pause_table = Base.metadata.tables['membership_pauses'].to_metadata(metadata)
+    pause_table.c.id.type = Integer()
     metadata.create_all(engine)
     monkeypatch.setattr(platform_membership_service, "utcnow", lambda: NOW)
     with Session(engine) as db:
@@ -117,7 +119,7 @@ def test_empty_and_server_ordered_active_catalog(api):
     assert catalog["checkout_available"] is False
     plan = catalog["items"][1]
     assert plan["final_price"] == "1200.00" and plan["offer"] is None
-    assert plan["pause_rule"] is None and plan["purchase_available"] is False
+    assert plan["pause_rule"] == {"allowed": False, "max_pause_days": 0} and plan["purchase_available"] is False
     assert client.get(f"/api/v1/memberships/plans/{hidden['id']}").status_code == 404
     assert client.get("/api/v1/memberships/plans?membership_type=SINGLE_GYM").status_code == 422
 

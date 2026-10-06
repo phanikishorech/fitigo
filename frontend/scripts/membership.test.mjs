@@ -14,12 +14,13 @@ const account = await load('../src/services/accountService.ts', source => source
 
 test('membership choices depend on backend status, not record existence or dates', () => {
   assert.equal(state.membershipOverviewState([], null), 'none')
-  for (const status of ['NONE', 'EXPIRED', 'INACTIVE', 'CANCELLED', 'PAUSED']) {
+  for (const status of ['NONE', 'EXPIRED', 'INACTIVE', 'CANCELLED']) {
     assert.equal(state.membershipOverviewState([{ status }], status), 'none')
   }
   assert.equal(state.membershipOverviewState([{status:'EXPIRED'}, {status:'ACTIVE'}], 'ACTIVE'), 'active')
   assert.equal(state.membershipOverviewState([{status:'ACTIVE',end_at:'2000-01-01'}], null), 'active')
   assert.equal(state.membershipOverviewState([], 'ACTIVE'), 'active')
+  assert.equal(state.membershipOverviewState([{status:'PAUSED'}], 'PAUSED'), 'active')
   assert.equal(state.membershipOverviewState([{status:'PENDING'}], 'PENDING'), 'unknown')
   assert.equal(state.membershipOverviewState([], 'NEW_STATUS'), 'unknown')
 })
@@ -81,8 +82,9 @@ test('server errors cannot masquerade as known access states', async () => {
   globalThis.__membershipFetch = async () => new Response(JSON.stringify({ code: 'MEMBERSHIP_PAUSED' }), { status: 500 })
   await assert.rejects(client.request('/test'), error => !error.code && /Something went wrong/.test(error.message))
 })
-test('pause is explicitly unavailable; no invented submission or expiry arithmetic', () => {
-  const source = readFileSync(new URL('../src/components/membership/MembershipUI.tsx', import.meta.url),'utf8')
-  assert.match(source,/Pause scheduling is not available/)
-  assert.doesNotMatch(source,/\/api\/|new_expiry|pause_days_remaining/)
+test('pause uses server eligibility and preview rather than local expiry arithmetic', () => {
+  const source = readFileSync(new URL('../src/components/membership/MembershipPause.tsx', import.meta.url),'utf8')
+  assert.match(source,/eligibility.can_pause/)
+  assert.match(source,/preview.new_end_at/)
+  assert.doesNotMatch(source,/setDate\(|getDate\(|86400000/)
 })

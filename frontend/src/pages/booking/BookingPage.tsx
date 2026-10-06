@@ -11,6 +11,7 @@ import Icon from '../../components/common/Icon'
 import { isBookableSession } from '../../utils/booking'
 import { visitAccessService } from '../../services/visitAccessService'
 import { todayFrom } from '../../utils/membership'
+import { usePendingAction } from '../../session/usePendingAction'
 
 export default function BookingPage({ gymId, schedule, companionsDate }: { gymId: number; schedule: boolean; companionsDate?: string }) {
   const [draft, update] = useBookingDraft(gymId, companionsDate)
@@ -21,6 +22,7 @@ export default function BookingPage({ gymId, schedule, companionsDate }: { gymId
     return { hours, sessions }
   }, `${gymId}:${draft.date}:${draft.accessType}`)
   const mutation = useMutation()
+  usePendingAction('ADD_TO_CART', () => add(), !!options.data && !!availability.data && !options.loading && !availability.loading && !options.error && !availability.error)
   useEffect(() => {
     if (!companionsDate && new URLSearchParams(window.location.search).get('type') === 'CLASS' && options.data?.has_classes) update({ accessType: 'CLASS' })
   }, [gymId, options.data?.has_classes, companionsDate])
@@ -29,8 +31,8 @@ export default function BookingPage({ gymId, schedule, companionsDate }: { gymId
   const selected = availability.data?.sessions.find(s => s.id === draft.classId)
   const price = draft.accessType === 'GYM' ? options.data?.gym_price_per_person : selected?.price_per_person
   const max = draft.accessType === 'CLASS' && selected ? Math.min(50, selected.available_capacity) : 50
-  const add = () => mutation.run(async () => {
-    if (!getAccessToken()) { openAuthModal(window.location.pathname + window.location.search); return }
+  function add() { return mutation.run(async () => {
+    if (!getAccessToken()) { openAuthModal({ action: 'ADD_TO_CART', metadata: { gymId: String(gymId) } }); return }
     if (companionsDate) {
       let access
       try { access = await visitAccessService.check(gymId) } catch { throw new Error('Unable to check your membership access. Please try again.') }
@@ -51,7 +53,7 @@ export default function BookingPage({ gymId, schedule, companionsDate }: { gymId
       await bookingService.addClass({ booking_type: 'CLASS', gym_id: gymId, booking_date: draft.date, class_session_id: selected.id, member_count: draft.memberCount })
     }
     navigate('/cart')
-  })
+  }) }
   return <>
     <Link to={`/gyms/${gymId}`} className="fg-inline-link"><Icon name="back" />{options.data?.gym_name}</Link>
     <Heading eyebrow="YOUR NEXT WORKOUT" title={companionsDate ? 'Add People' : schedule ? 'Make time for yourself' : 'How do you want to work out?'} subtitle={companionsDate ? 'Choose paid day visits for friends or family joining you today. Do not include yourself in the count.' : 'Choose your visit. We’ll take care of the next step.'} />

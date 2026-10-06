@@ -2,7 +2,7 @@
 
 ## Current scope
 
-Both Single-Gym and Multi-Gym membership checkout use the existing wallet_accounts / wallet_transactions ledger. A shared service performs wallet debit, PAYMENT ledger insertion and ACTIVE/PAID membership creation in one transaction. No external payment provider, bank/card charge, automatic renewal, refund workflow or pause scheduling is enabled.
+Both Single-Gym and Multi-Gym membership checkout use the existing wallet_accounts / wallet_transactions ledger. A shared service performs wallet debit, PAYMENT ledger insertion and ACTIVE/PAID membership creation in one transaction. No external payment provider, bank/card charge, automatic renewal or refund workflow is enabled. Membership pause is now supported through backend-configured policy; see MEMBERSHIP_PAUSE.md.
 
 The backend permits this checkout only when `settings.environment == 'development'`. Every checkout displays **Test credits only**. These are not verified real-money funds. Do not expose this development environment to untrusted/public users. Changing frontend build mode does not bypass the backend gate.
 
@@ -37,7 +37,7 @@ Membership checkout takes a customer lock, then locks order/plan, checks active 
 
 MVP overlap policy: Multi-Gym purchase requires no active membership; Single-Gym purchase rejects an active membership for the same gym or any active Multi-Gym membership. No upgrade/proration is invented. Existing separate Single-Gym memberships remain usable at their specific gyms and share one daily access. The legacy scanner behavior that allowed unrelated gyms merely because a user owned multiple Single-Gym plans is closed.
 
-Activation starts at backend UTC time. Single-Gym duration retains configured days. Platform DAY is elapsed days; MONTH/YEAR use calendar months/years and clamp to the target month's last day. Catalog edits do not change purchased dates or terms. Pause scheduling remains unsupported; fixed legacy pause allowance claims are removed from summary/pass responses.
+Activation starts at backend UTC time at database second precision. Single-Gym duration retains configured days. Platform DAY is elapsed days; MONTH/YEAR use calendar months/years and clamp to the target month's last day. Catalog edits do not change purchased dates or prices. Current configured pause policy applies to future requests; accepted pauses remain honored. Summary/pass responses return actual pause usage.
 
 Shared entitlement checks require ACTIVE, PAID, started and unexpired membership. Discovery/details and staff scanning use the same explicit scope/partner rules. Partner status is re-read under lock on scanning. One consumed daily access still prevents another check-in even when membership keys change. Account calendars and existing short-lived QR issuance are reused.
 

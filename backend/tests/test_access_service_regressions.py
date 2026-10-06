@@ -31,7 +31,7 @@ def access(monkeypatch):
         "users", "gyms", "gym_membership_plans", "user_memberships",
         "customer_daily_accesses", "access_qr_tokens", "checkins",
         "access_pause_days", "gym_operating_hours", "gym_special_hours",
-        "membership_daily_accesses",
+        "membership_daily_accesses", "membership_pauses",
         "platform_membership_plans", "wallet_accounts", "wallet_transactions",
     ):
         table = Base.metadata.tables[name].to_metadata(metadata)

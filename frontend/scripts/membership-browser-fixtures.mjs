@@ -4,8 +4,9 @@ import assert from 'node:assert/strict'
 import { writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-const targets = await (await fetch('http://localhost:9231/json')).json()
-const ws = new WebSocket(targets.find(target => target.type === 'page').webSocketDebuggerUrl)
+import { isolatedBrowserTarget } from './isolated-browser.mjs'
+const target = await isolatedBrowserTarget()
+const ws = new WebSocket(target.webSocketDebuggerUrl)
 await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject })
 let sequence = 0; const pending = new Map(); const exceptions = []; const failures = []
 function command(method, params = {}) { return new Promise((resolve,reject) => { const id=++sequence; const timer=setTimeout(()=>reject(new Error(`CDP timeout: ${method}`)),20000); pending.set(id,{resolve,reject,timer}); ws.send(JSON.stringify({id,method,params})) }) }
@@ -23,18 +24,20 @@ const plan = { id:1,gym_id:1,name:'Test Monthly Plan',description:'Test-only mem
 const gym = { gym_id:1,gym_name:'Test Movement Studio',slug:'test',location:{locality:'Test District',city:'Test City',full_address:'Test Street'},ratings:{average_rating:null,review_count:0},images:[],opening_hours:{open_now:true,open_today:'06:00 – 22:00',weekly:[]},workout_options:[],amenities:[],description:'Test-only gym',important_information:[],rules:[],membership_access:{status:'INCLUDED',upgrade_required:false,day_pass_available:false},classes_nearby:[],related_gyms:[],reviews:[] }
 function calendar(y,m) {
   const length = new Date(Date.UTC(y,m,0)).getUTCDate()
+  const fixtureDays = Array.from({length},(_,index)=>index).filter(index=>`${y}-${String(m).padStart(2,'0')}-${String(index+1).padStart(2,'0')}`!==today)
   const days = Array.from({length},(_,index)=> {
     const date = `${y}-${String(m).padStart(2,'0')}-${String(index+1).padStart(2,'0')}`
     if(date===today) return {date,status:'TODAY',qr_available:mode==='ACTIVE',qr_status:mode==='ACTIVE'?'ACTIVE':mode==='USED'?'USED':mode==='PAUSED'?'PAUSED':'NO_ACCESS',gym_id:mode==='USED'?1:null,gym_name:mode==='USED'?gym.gym_name:null,checkin_time:mode==='USED'?'08:15:00':null}
-    if(index===5) return {date,status:'VISITED',qr_available:false,qr_status:'USED',gym_id:1,gym_name:gym.gym_name,checkin_time:'07:30:00'}
-    if(index===6) return {date,status:'NO_VISIT',qr_available:false,qr_status:'EXPIRED',gym_name:null,checkin_time:null}
-    if(index===7) return {date,status:'PAUSED',qr_available:false,qr_status:'PAUSED',gym_name:null,checkin_time:null}
+    if(index===fixtureDays[0]) return {date,status:'VISITED',qr_available:false,qr_status:'USED',gym_id:1,gym_name:gym.gym_name,checkin_time:'07:30:00'}
+    if(index===fixtureDays[1]) return {date,status:'NO_VISIT',qr_available:false,qr_status:'EXPIRED',gym_name:null,checkin_time:null}
+    if(index===fixtureDays[2]) return {date,status:'PAUSED',qr_available:false,qr_status:'PAUSED',gym_name:null,checkin_time:null}
     return {date,status:'FUTURE',qr_available:false,qr_status:null,gym_name:null,checkin_time:null}
   })
   return {year:y,month:m,access_type:scope,gym:scope==='SINGLE_GYM'?{id:1,name:gym.gym_name}:null,days}
 }
 function fixture(url,method,postData) {
   const {pathname:path,searchParams:query}=new URL(url)
+  if(path==='/api/v1/auth/session')return {user,roles:['CUSTOMER']}
   if(path.endsWith('/pay-wallet') && method==='POST') {
     const body=JSON.parse(postData);assert.deepEqual(body,{accepted_quote:'fixture-quote'});membershipPayments++
     Object.assign(memberships[0],{membership_type:'MULTI_GYM',gym_id:null,plan_id:null,terms_snapshot:platformOrder.plan,payment_provider:'WALLET'})
@@ -70,6 +73,7 @@ function fixture(url,method,postData) {
   if(path==='/api/v1/users/me') return user
   if(path==='/api/v1/meta/gym-types' || path==='/api/v1/facilities') return []
   if(path==='/api/v1/memberships/me') return empty?[]:memberships
+  if(path==='/api/v1/memberships/me/1/pause')return {membership_id:1,membership_status:memberships[0].status,pause_allowed:false,can_pause:false,max_pause_days:0,pause_days_used:0,pause_days_remaining:0,currently_paused:false,eligible_from:null,eligible_until:null,original_end_at:end,current_end_at:memberships[0].end_at,current_pause:null,history:[],reason_code:'PAUSE_NOT_ALLOWED',timezone:'UTC'}
   if(path==='/api/v1/profile/membership') return {membership_id:empty?null:1,plan_name:empty?null:plan.name,status:empty?null:memberships[0].status,start_date:start,end_date:end,membership_scope:scope,active_gyms:empty?[]:[{gym_id:1,gym_name:gym.gym_name,locality:'Test District',city:'Test City'}],membership_features:[]}
   if(path==='/api/v1/memberships/gyms/1/plans') return [plan]
   if(path==='/api/v1/gyms/1/details') return gym
@@ -93,6 +97,7 @@ ws.onmessage=async event=>{
   if(message.method==='Runtime.exceptionThrown') exceptions.push(message.params.exceptionDetails.text)
   if(message.method==='Fetch.requestPaused'){
     const {requestId,request}=message.params
+    if(request.url.includes('/customer/access-calendar'))calendarRequests++
     try{
       if(delayCalendar && request.url.includes('/customer/access-calendar'))await new Promise(resolve=>setTimeout(resolve,600))
       if(platformDelay && request.url.includes('/memberships/plans'))await new Promise(resolve=>setTimeout(resolve,800))
@@ -106,6 +111,7 @@ ws.onmessage=async event=>{
 }
 async function evaluate(expression){const result=await command('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(result.exceptionDetails)throw new Error(result.exceptionDetails.text);return result.result.value}
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms))
+let calendarRequests=0
 async function until(expression){for(let i=0;i<150;i++){if(await evaluate(expression))return;await wait(120)}throw new Error(`Not ready ${expression}: ${await evaluate('document.body.innerText.slice(-900)')}`)}
 async function visit(path,text){await command('Page.navigate',{url:'http://localhost:5173'+path});await until(`document.body.innerText.includes(${JSON.stringify(text)})`);await until(`!document.querySelector('[aria-label="Loading"]')`)}
 async function width(value){await command('Emulation.setDeviceMetricsOverride',{width:value,height:950,deviceScaleFactor:1,mobile:value<640});await wait(80);const sizes=await evaluate('({client:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth})');assert.ok(sizes.scroll<=sizes.client+1,`Overflow at ${value}: ${JSON.stringify(sizes)}`)}
@@ -114,7 +120,7 @@ async function shot(name){const image=await command('Page.captureScreenshot',{fo
 async function fill(selector,value){await evaluate(`(()=>{const el=document.querySelector(${JSON.stringify(selector)});Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,${JSON.stringify(value)});el.dispatchEvent(new Event('input',{bubbles:true}));})()`);await wait(60)}
 try{
   await command('Runtime.enable');await command('Page.enable');await command('Fetch.enable',{patterns:[{urlPattern:'*://localhost:5173/api/v1/*'}]})
-  await visit('/membership','Sign in to continue');await evaluate(`localStorage.setItem('fitigo:access_token','test-only-customer-token')`)
+  await visit('/membership','Welcome to FitiGo');await evaluate(`localStorage.setItem('fitigo:access_token','test-only-customer-token')`)
   await visit('/membership','My Membership');await until(`document.body.innerText.includes('Test Monthly Plan')`)
   assert.equal(qrRequests,0,'Opening membership must not mint QR')
   for(const value of [360,375,390,430,768,1024,1280,1440,1920])await width(value)
@@ -132,7 +138,7 @@ try{
   await visit('/access/qr?gymId=1','You’ve used your access today.');assert.equal(qrRequests,1,'Already used cannot mint QR')
   mode='PAUSED';await visit('/membership','Gym access is unavailable during a pause');assert.equal(await evaluate(`!!document.querySelector('main a[href="/gyms"]')`),false)
   await visit('/access/qr?gymId=1','Gym access is unavailable during a pause');assert.equal(qrRequests,1)
-  await visit('/membership/pause','Pause scheduling is not available');assert.equal(await evaluate(`document.querySelectorAll('main input[type="date"]').length`),0)
+  await visit('/membership/pause','Pause unavailable for this membership plan.');assert.equal(await evaluate(`document.querySelectorAll('main input[type="date"]').length`),0)
   mode='ACTIVE';await visit('/gyms/2/visit','Membership access isn’t available today');assert.equal(qrRequests,1)
   await visit('/profile/access','Membership Calendar');for(const value of [360,375,390,430,768,1024,1280,1440])await width(value)
   await width(390);await shot('fitigo-membership-calendar.png');assert.equal(qrRequests,1)
@@ -160,7 +166,7 @@ try{
   await evaluate(`document.querySelector('a[href="/gyms/1"]').click()`);await until(`document.body.innerText.includes('View Membership Plans')`)
   await click('View Membership Plans','a');await until(`location.pathname==='/gyms/1/membership' && document.body.innerText.includes('Test Monthly Plan')`)
   empty=false;mode='NO_ACCESS'
-  for(const status of ['EXPIRED','INACTIVE','CANCELLED','PAUSED','NONE']) {
+  for(const status of ['EXPIRED','INACTIVE','CANCELLED','NONE']) {
     memberships[0].status=status;await visit('/membership','Your next chapter starts here')
     assert.equal(await evaluate(`!!document.querySelector('.fm-membership-history')`),true)
     assert.equal(await evaluate(`!!document.querySelector('.fm-current-access')`),false)
@@ -220,13 +226,32 @@ try{
   assert.equal(await evaluate(`document.querySelector('main')?.innerText.includes('Generate Visit QR')`),false)
   mode='PAUSED';await visit('/gyms/1','Book a Visit');await click('Book a Visit');await until(`location.pathname==='/gyms/1/book/access'`)
   mode='NO_ACCESS';await visit('/gyms/1','Book a Visit');await click('Book a Visit');await until(`location.pathname==='/gyms/1/book/access'`)
-  mode='ACTIVE';await visit('/gyms/2','Book a Visit');await click('Book a Visit');await until(`location.pathname==='/gyms/2/book/access'`);await until(`document.body.innerText.includes('How do you want to work out?')`)
+  // Explicit no-membership must not request the membership calendar at all.
+  // Arm a calendar failure so the previous Promise.all implementation fails this regression.
+  mode='NO_ACCESS';empty=true;gym.membership_access.status='NO_ACTIVE_MEMBERSHIP'
+  await visit('/gyms/1','Book a Visit');const noMembershipCalendars=calendarRequests
+  failure={path:'/customer/access-calendar',status:404}
+  await click('Book a Visit');await until(`location.pathname==='/gyms/1/book/access'`);await until(`document.body.innerText.includes('How do you want to work out?')`)
+  assert.equal(calendarRequests,noMembershipCalendars);assert.equal(await evaluate(`!!document.querySelector('dialog[open]')`),false)
+  assert.equal(await evaluate(`document.body.innerText.includes('No membership found') || document.body.innerText.includes('Unable to check your membership access')`),false)
+  failure=null;empty=false;gym.membership_access.status='INCLUDED';mode='ACTIVE'
+  await visit('/gyms/2','Book a Visit');const incompatibleCalendars=calendarRequests
+  await click('Book a Visit');await until(`location.pathname==='/gyms/2/book/access'`);await until(`document.body.innerText.includes('How do you want to work out?')`)
+  assert.equal(calendarRequests,incompatibleCalendars)
   await click('Continue');await until(`document.body.innerText.includes('You and your workout crew')`)
   await fill('input[type="time"]','09:00');await evaluate(`(()=>{const el=document.querySelectorAll('input[type="time"]')[1];Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,'10:00');el.dispatchEvent(new Event('input',{bubbles:true}));})()`);await wait(80)
   await click('Check availability & add to cart');await until(`location.pathname==='/cart'`);assert.equal(submittedCart.length,2);assert.equal(submittedCart[1].gym_id,2);assert.equal(submittedCart[1].member_count,1)
   scope='MULTI_GYM';await visit('/gyms/1','Book a Visit');failure={path:'/customer/access-calendar',status:500};await click('Book a Visit');await until(`document.body.innerText.includes('Unable to check your membership access.')`);assert.equal(await evaluate('location.pathname'),'/gyms/1')
   failure=null;await click('Try Again');await until(`!!document.querySelector('dialog[open]')`);assert.equal(await evaluate('location.pathname'),'/gyms/1')
   await click('Use My Membership','dialog button');await until(`location.pathname==='/my-access'`);await until(`document.body.innerText.includes('FitiGo Multi-Gym')`)
+  mode='USED';await visit('/gyms/1','Book a Visit');await click('Book a Visit');await until(`location.pathname==='/gyms/1/book/access'`);assert.equal(await evaluate(`!!document.querySelector('dialog[open]')`),false);mode='ACTIVE'
+  for(const path of ['/gyms/1/details','/customer/access-calendar'])for(const status of [0,404,500]){
+    await visit('/gyms/1','Book a Visit');failure={path,status}
+    await click('Book a Visit');await until(`document.body.innerText.includes('Unable to check your membership access.')`)
+    assert.equal(await evaluate('location.pathname'),'/gyms/1');assert.equal(await evaluate(`!!document.querySelector('dialog[open]')`),false)
+    failure=null;await click('Try Again');await until(`!!document.querySelector('dialog[open]')`)
+  }
+  console.log('PASS no-membership skips calendar and opens normal booking; single/multi available and used; ineligible gym; network/404/500 failures require retry')
   await visit('/gyms/1/membership','Choose your membership');await width(360)
   await visit('/gyms/1/visit?entry=book','You have an active membership');await until(`!!document.querySelector('dialog[open]')`)
   assert.equal(await evaluate('location.pathname'),'/gyms/1/visit')
@@ -280,5 +305,5 @@ try{
   console.log('PASS TEST FIXTURES: membership single/multi/details, 9 widths, navigation, server-filtered gyms, debounce, confirm, QR issuance, backend-reported check-in, already-used/paused/ineligible/expired states, QR expiry, calendar/history distinction, safe errors and retries. No real backend mutations.')
 }finally{
   await evaluate(`localStorage.removeItem('fitigo:access_token');localStorage.removeItem('fitigo:refresh_token')`).catch(()=>{})
-  await command('Fetch.disable');ws.close()
+  await command('Fetch.disable');ws.close();await target.dispose()
 }

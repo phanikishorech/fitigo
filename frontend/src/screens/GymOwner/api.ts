@@ -76,6 +76,7 @@ export type SlotAvailability = OwnerSlot & { availability: { slot_date: string; 
 export const listPublicSlotAvailability = (gymId: number, date: string) => request<SlotAvailability[]>(`/gyms/${gymId}/slots?date=${encodeURIComponent(date)}`)
 
 export type OwnerMembershipPlan = {
+  pause_policy?: { allowed: boolean; max_pause_days: number }
   id: number
   gym_id: number
   name: string
@@ -209,7 +210,7 @@ export async function listOwnerMembershipPlans(gymId: number): Promise<OwnerMemb
 
 export async function createOwnerMembershipPlan(
   gymId: number,
-  payload: { name: string; description?: string | null; duration_days: number; price: string; currency?: string }
+  payload: { name: string; description?: string | null; duration_days: number; price: string; currency?: string; pause_policy?: { allowed: boolean; max_pause_days: number } }
 ): Promise<OwnerMembershipPlan> {
   return request(`/gym-owner/gyms/${gymId}/membership-plans`, {
     method: 'POST',
@@ -220,7 +221,7 @@ export async function createOwnerMembershipPlan(
 
 export async function updateOwnerMembershipPlan(
   planId: number,
-  patch: { name?: string; description?: string | null; duration_days?: number; price?: string; currency?: string; is_active?: boolean }
+  patch: { name?: string; description?: string | null; duration_days?: number; price?: string; currency?: string; is_active?: boolean; pause_policy?: { allowed: boolean; max_pause_days: number } }
 ): Promise<OwnerMembershipPlan> {
   return request(`/gym-owner/membership-plans/${planId}`, {
     method: 'PUT',

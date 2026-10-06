@@ -25,9 +25,20 @@ from app.core.dependencies import get_current_user
 from app.models.auth import User
 from app.schemas.auth import ForgotPasswordRequest, ResetPasswordRequest, ChangePasswordRequest
 from app.services.password_service import PasswordService, email_ready, deliver_password_reset
+from app.schemas.auth import SessionResponse, AuthSessionResponse
+from app.repositories.user_repository import UserRepository
 
 
 router = APIRouter(prefix="/auth")
+
+
+def session_response(db: Session, user: User) -> dict:
+    return {'user': user_to_public_dict(user), 'roles': UserRepository(db).get_role_names(user.id)}
+
+
+@router.get('/session', response_model=SessionResponse)
+def authenticated_session(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return session_response(db, current_user)
 
 
 @router.get('/password-reset/options')
@@ -82,11 +93,12 @@ def register_gym_owner(payload: GymOwnerRegisterRequest, db: Session = Depends(g
     return {"id": user.id, "email": user.email}
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=AuthSessionResponse)
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
     svc = AuthService(db)
     access, refresh = svc.login(email=str(payload.email).lower(), password=payload.password)
-    return TokenResponse(access_token=access, refresh_token=refresh)
+    user = UserRepository(db).get_by_email(str(payload.email).lower())
+    return AuthSessionResponse(access_token=access, refresh_token=refresh, **session_response(db, user))
 
 
 @router.post("/refresh", response_model=TokenResponse)
@@ -119,6 +131,7 @@ def email_verify_otp(payload: EmailVerifyOtpRequest, db: Session = Depends(get_d
         "refresh_token": refresh,
         "token_type": "bearer",
         "user": user_to_public_dict(user),
+        "roles": UserRepository(db).get_role_names(user.id),
     }
 
 
@@ -142,4 +155,5 @@ def mobile_verify_otp(payload: MobileVerifyOtpRequest, db: Session = Depends(get
         "refresh_token": refresh,
         "token_type": "bearer",
         "user": user_to_public_dict(user),
+        "roles": UserRepository(db).get_role_names(user.id),
     }

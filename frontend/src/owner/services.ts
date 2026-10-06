@@ -18,11 +18,7 @@ export const ownerService = {
   booking: (id: number) => request<OwnerBooking>(`/gym-owner/bookings/${id}`),
   notifications: (offset: number) => request<Notification[]>(`/notifications/me?limit=20&offset=${offset}`),
   staffGyms: () => request<{ id: number; name: string; city: string | null }[]>('/gym-staff/gyms'),
-  checkIn: (gymId: number, token: string) => post<CheckInResult>('/checkins/validate', { gym_id: gymId, qr_token: token }),
-  logout: async () => {
-    const refresh = window.localStorage.getItem('fitigo:refresh_token')
-    if (refresh) await post('/auth/logout', { refresh_token: refresh })
-  }
+  checkIn: (gymId: number, token: string, signal?: AbortSignal) => request<CheckInResult>('/checkins/validate', { method: 'POST', body: JSON.stringify({ gym_id: gymId, qr_token: token }), signal }),
 }
 
 export function allowedBookingActions(booking: OwnerBooking) {

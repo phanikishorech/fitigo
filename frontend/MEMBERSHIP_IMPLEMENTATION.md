@@ -1,10 +1,26 @@
 # Customer membership and daily access implementation
 
+## Direct My Access QR update
+
+`/my-access`, `/access/qr` without generation parameters, and `/profile/access/today` now show a read-only personal access overview. Backend calendar scope determines Single-Gym versus Multi-Gym; membership summary, owned records, assigned gym details and existing pause eligibility supply display information. Unknown/incomplete availability and failed requests show an error/retry, never a no-membership fallback.
+
+Generate Visit QR explicitly opens `/access/qr?generate=1`. The existing QR hook rechecks read-only status, then calls the existing `/customer/access/today` endpoint without requiring a gym selection. Single-Gym shows its backend-assigned gym; Multi-Gym offers Find a Gym as a secondary link to the existing discovery flow. Existing gym-specific confirmation/QR links remain supported. Tokens stay in memory and are hidden on use, expiry, lost connectivity or hidden tabs; polling does not mint tokens. Pause changes during issuance retain the rejection and reload existing pause information.
+
+The QR screen includes customer name, backend-issued membership scope, assigned gym or eligible-partner description, expiry and access status. No booking, cart or companion actions were added. Scanner, booking and backend business rules are unchanged.
+
+Validation: `node scripts/my-access-browser.mjs`, `node scripts/membership-browser-fixtures.mjs`, frontend unit tests/typecheck/build, and isolated backend tests in `tests/test_my_access_direct_qr.py`, `tests/test_access_service_regressions.py`, `tests/test_membership_pause.py`, and `tests/test_membership_wallet_mvp.py`. Browser fixtures intercept all APIs; backend tests use disposable SQLite, not live customer records.
+
+## Current membership pause update
+
+Pause is now implemented for both membership types. Existing Owner/Admin plan editors configure policy; Customer membership cards/details and `/membership/pause` use verified eligibility, server preview, atomic scheduling, history and backend-derived status/expiry. Paused memberships remain visible. Future periods are scheduled, not immediately paused. Access/QR validation enforces the period and automatically resumes afterwards. No frontend limits or expiry calculations are authoritative.
+
+Migration `6eb14f5a7c93` is applied locally; all existing plan policies remain disabled until configured. See `C:\Users\ckishor\.cline\data\workspaces\chat\fitigo\backend\MEMBERSHIP_PAUSE.md` for the exact changes and operations. This supersedes historical pause-unavailable descriptions below.
+
 ## Current wallet MVP update
 
 Membership checkout now supports backend-gated development wallet test credits for Single-Gym and Multi-Gym plans. Shared confirmation UI displays balance, current backend price, explicit test-credit limitations, safe errors and refresh/review after price changes. Single-Gym submits plan ID, server quote fingerprint and idempotency key; Multi-Gym submits its order and accepted fingerprint. Neither submits an authoritative price. Successful backend activation navigates to My Membership; Multi-Gym record/details handle null gym IDs using purchased terms. Recharge preserves membership-checkout return navigation.
 
-Admin gym details now include explicit Multi-Gym participation opt-in. Discovery and QR validation share backend partner eligibility. Existing memberships retain their periods; multiple Single-Gym plans do not grant entry to unrelated gyms. External payments remain unavailable, and pause scheduling is not added.
+Admin gym details now include explicit Multi-Gym participation opt-in. Discovery and QR validation share backend partner eligibility. Multiple Single-Gym plans do not grant entry to unrelated gyms. External payments remain unavailable; pause scheduling is covered by the current update above.
 
 Migration `4c9f2d3e5a71` was applied to local development without changing existing balances, memberships, wallet transactions or check-ins. No partners were enabled automatically. See `C:\Users\ckishor\.cline\data\workspaces\chat\fitigo\backend\MEMBERSHIP_WALLET_MVP.md` for current operational details. The remaining sections retain earlier implementation history; payments-disabled and count-based entitlement limitations described there are superseded by this update.
 
@@ -50,8 +66,8 @@ Deployment requires the additive migration and backend plan configuration import
 | `/gyms/:id/visit` | Personal My Access alias; `?entry=book` renders the gym page and resumes its eligibility check/popup after login |
 | `/my-access?gymId=:id` | Personal membership access only: selected gym, status, Generate Visit QR and membership information; no paid booking or companion actions |
 | `/gyms/:id/book/schedule?for=others` | Existing BookingPage with additional-people count; member excluded from paid cart |
-| `/access/qr?gymId=:id` | Backend credential issuance and real-state QR lifecycle |
-| `/access/qr`, `/my-access`, `/profile/access/today` | Read-only current access, leading to gym selection/confirmation; no automatic QR issuance |
+| `/access/qr?gymId=:id`, `/access/qr?generate=1` | Backend credential issuance and real-state QR lifecycle; direct generation requires no gym selection |
+| `/access/qr`, `/my-access`, `/profile/access/today` | Read-only personal access overview with explicit Generate Visit QR; no automatic QR issuance |
 | `/profile/access` | Monthly server-supplied account access calendar |
 | `/profile/visits`, `/profile/history` | Actual validated membership visits by month; separate All access activity view |
 | `/membership/pause` | Honest unavailable state; no fake date picker, preview, confirmation or success |
@@ -75,7 +91,7 @@ Prefix: `/api/v1`.
 
 ## QR and state safeguards
 
-- Opening membership, calendar, history or My Access does not mint credentials. The Generate Visit QR action enters the QR route, which verifies fresh inclusion and access before calling the existing issuance endpoint.
+- Opening membership, calendar, history or My Access does not mint credentials. The Generate Visit QR action enters the QR route, which verifies fresh access (and inclusion for gym-specific links) before calling the existing issuance endpoint. Direct Multi-Gym generation does not require selecting a gym.
 - The browser renders the exact backend token using the existing QR component. It does **not** generate random credentials, validity or successful scans.
 - Tokens exist only in component memory, never in URLs, storage, logs or a read cache.
 - A single-gym token cannot be presented as a different gym's QR.

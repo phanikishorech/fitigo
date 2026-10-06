@@ -5,7 +5,7 @@ export type AccessPresentation = 'AVAILABLE' | 'USED' | 'VISITED' | 'PAUSED' | '
 // Presentation of returned membership statuses, not an eligibility/date calculation.
 // Unknown statuses must not be interpreted as an invitation to buy another plan.
 export function membershipOverviewState(records: { status: string }[], summaryStatus: string | null): 'active' | 'none' | 'unknown' {
-  if (summaryStatus === 'ACTIVE' || records.some(record => record.status === 'ACTIVE')) return 'active'
+  if (['ACTIVE', 'PAUSED'].includes(summaryStatus || '') || records.some(record => ['ACTIVE', 'PAUSED'].includes(record.status))) return 'active'
   const nonActive = ['PAUSED', 'EXPIRED', 'INACTIVE', 'CANCELLED', 'NONE']
   if ((summaryStatus === null || nonActive.includes(summaryStatus)) && records.every(record => nonActive.includes(record.status))) return 'none'
   return 'unknown'

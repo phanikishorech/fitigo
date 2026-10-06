@@ -32,7 +32,7 @@ class MembershipSummaryResponse(BaseModel):
     visits_booked: int | None = None
     visits_completed: int | None = None
 
-    # Pause policy (MVP: not implemented yet, but we surface limits clearly)
+    # Backend-configured pause allowance (reserved scheduled days count as used).
     pause_days_used: int | None = None
     pause_days_remaining: int | None = None
     membership_features: list[str] = Field(default_factory=list)

@@ -51,10 +51,13 @@ def lock_customer(db: Session, user_id: int):
 
 
 def activate(db: Session, *, user_id: int, terms: dict, checkout_key: str) -> UserMembership:
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    # MySQL DATETIME columns have second precision. Rounding a fractional start
+    # into the next second can make a just-purchased membership look future-dated
+    # to a competing purchase despite the customer lock.
+    now = datetime.now(timezone.utc).replace(tzinfo=None, microsecond=0)
     multi = terms["membership_type"] == "MULTI_GYM"
     # Caller holds the customer lock; competing purchases/QR scans share that lock.
-    current = active_memberships(db, user_id, now, lock=True)
+    current = active_memberships(db, user_id, now, lock=True, include_paused=True)
     if any(multi or m.membership_type == "MULTI_GYM" or m.gym_id == terms["gym_id"] for m in current):
         fail("MEMBERSHIP_ALREADY_ACTIVE")
     if multi and not db.scalar(select(Gym.id).where(Gym.multi_gym_enabled.is_(True), Gym.status == "APPROVED", Gym.is_active.is_(True)).limit(1).with_for_update()):
@@ -80,7 +83,7 @@ def activate(db: Session, *, user_id: int, terms: dict, checkout_key: str) -> Us
         user_id=user_id, gym_id=None if multi else terms["gym_id"], plan_id=None if multi else terms["id"],
         platform_plan_id=terms["id"] if multi else None, membership_type=terms["membership_type"],
         checkout_key=checkout_key, wallet_transaction_id=transaction.id, terms_snapshot=terms,
-        status="ACTIVE", start_at=now, end_at=end, paid_amount=amount, currency=terms["currency"],
+        status="ACTIVE", start_at=now, end_at=end, original_end_at=end, paid_amount=amount, currency=terms["currency"],
         payment_provider="WALLET", payment_status="PAID", external_ref=f"WALLET_TXN:{transaction.id}",
     )
     db.add(membership)
@@ -101,7 +104,8 @@ def single_terms(db: Session, gym_id: int, plan_id: int, *, lock: bool = False) 
         fail("PLAN_UNAVAILABLE", 404)
     return dict(id=plan.id, gym_id=gym_id, membership_type="SINGLE_GYM", name=plan.name,
                 description=plan.description, duration_value=plan.duration_days, duration_unit="DAY",
-                final_price=str(Decimal(plan.price).quantize(Decimal("0.01"))), currency=plan.currency)
+                final_price=str(Decimal(plan.price).quantize(Decimal("0.01"))), currency=plan.currency,
+                pause_rule={"allowed": bool(plan.pause_allowed), "max_pause_days": plan.max_pause_days or 0})
 
 
 def buy_single(db: Session, *, user_id: int, gym_id: int, plan_id: int, accepted_quote: str, key: str) -> UserMembership:

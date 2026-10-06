@@ -3,9 +3,11 @@ from __future__ import annotations
 from datetime import datetime
 
 from pydantic import BaseModel, Field, ConfigDict
+from app.schemas.membership_pause import PausePolicy
 
 
 class MembershipPlanCreateRequest(BaseModel):
+    pause_policy: PausePolicy = Field(default_factory=PausePolicy)
     name: str = Field(min_length=2, max_length=120)
     description: str | None = Field(default=None, max_length=2000)
     duration_days: int = Field(ge=1, le=3660)
@@ -14,6 +16,7 @@ class MembershipPlanCreateRequest(BaseModel):
 
 
 class MembershipPlanUpdateRequest(BaseModel):
+    pause_policy: PausePolicy | None = None
     name: str | None = Field(default=None, min_length=2, max_length=120)
     description: str | None = Field(default=None, max_length=2000)
     duration_days: int | None = Field(default=None, ge=1, le=3660)
@@ -23,6 +26,7 @@ class MembershipPlanUpdateRequest(BaseModel):
 
 
 class MembershipPlanResponse(BaseModel):
+    pause_policy: PausePolicy = Field(default_factory=PausePolicy)
     id: int
     gym_id: int
     name: str
@@ -42,6 +46,7 @@ class PurchaseMembershipRequest(BaseModel):
 
 
 class UserMembershipResponse(BaseModel):
+    original_end_at: datetime | None = None
     id: int
     user_id: int
     gym_id: int | None

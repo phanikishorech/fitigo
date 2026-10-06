@@ -3,6 +3,7 @@ import { getAccessToken, subscribeAuth } from '../auth'
 import { openAuthModal } from '../authUi'
 import { navigate } from '../router'
 import { visitAccessService, visitDestination } from '../services/visitAccessService'
+import { usePendingAction } from '../session/usePendingAction'
 
 export function useBookVisit(gymId: number, resumeBook = false) {
   const [pending, setPending] = useState(false)
@@ -13,6 +14,7 @@ export function useBookVisit(gymId: number, resumeBook = false) {
   const generation = useRef(0)
   useEffect(() => () => { generation.current++ }, [gymId])
   useEffect(() => subscribeAuth(() => setChoiceOpen(false)), [])
+  usePendingAction('BOOK_VISIT', () => book())
   useEffect(() => {
     if (!resumeBook) return
     const timer = window.setTimeout(() => { void book() }, 0)
@@ -21,7 +23,7 @@ export function useBookVisit(gymId: number, resumeBook = false) {
   async function book() {
     if (lock.current) return
     // Resume the decision after authentication, not a paid booking picked in advance.
-    if (!getAccessToken()) { openAuthModal(`/gyms/${gymId}/visit?entry=book`); return }
+    if (!getAccessToken()) { openAuthModal({ action: 'BOOK_VISIT', metadata: { gymId: String(gymId) } }); return }
     lock.current = true; setPending(true); setError('')
     const version = generation.current
     const token = getAccessToken()

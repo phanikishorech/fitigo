@@ -7,7 +7,7 @@ import '../../membership.css'
 
 export function MembershipStatusBadge({ status }: { status: string }) {
   const tone = ['ACTIVE', 'AVAILABLE', 'VISITED', 'VALID', 'CHECKED_IN'].includes(status) ? 'success' : ['PAUSED', 'PENDING'].includes(status) ? 'warning' : ['EXPIRED', 'CANCELLED', 'INVALID_QR', 'UNAVAILABLE'].includes(status) ? 'danger' : 'neutral'
-  const labels: Record<string, string> = { AVAILABLE: 'Available', ACTIVE: 'Active', PAUSED: 'Paused', USED: 'Used', VISITED: 'Visited', EXPIRED: 'Expired', CONSUMED: 'Access consumed', CHECKED_IN: 'Validated', SINGLE_GYM: 'Single-gym', MULTI_GYM: 'Multi-gym' }
+  const labels: Record<string, string> = { AVAILABLE: 'Available', ACTIVE: 'Active', PAUSED: 'Paused', USED: 'Used', VISITED: 'Visited', EXPIRED: 'Expired', NOT_ACTIVE: 'Not active', CONSUMED: 'Access consumed', CHECKED_IN: 'Validated', SINGLE_GYM: 'Single-gym', MULTI_GYM: 'Multi-gym' }
   return <span className={`fm-status fm-status--${tone}`}><span aria-hidden="true">{tone === 'success' ? '✓' : tone === 'warning' ? 'Ⅱ' : '•'}</span>{labels[status] || status.replaceAll('_', ' ').toLowerCase()}</span>
 }
 export function MembershipPanel({ title, children, className = '', action }: { title?: string; children: ReactNode; className?: string; action?: ReactNode }) {
@@ -32,9 +32,6 @@ export function DailyAccessCard({ calendar, refresh, compact = false }: { calend
 export function AccessDayDetail({ day }: { day: AccessDay }) {
   const state = dayPresentation(day)
   return <div className="fm-day-detail" role="status"><div className="fm-panel-heading"><strong>{membershipDate(day.date)}</strong><MembershipStatusBadge status={state} /></div><p>{accessLabels[state]}</p>{day.gym_name && <p><Icon name="gym" size={17} /> {day.gym_name}</p>}{day.checkin_time && <small>Validated at {day.checkin_time.slice(0, 5)} UTC</small>}{state === 'CONSUMED' && <small>No gym visit was recorded. This active day’s access did not carry forward.</small>}{state === 'PAUSED' && <small>Gym access was paused. Daily access was not consumed.</small>}</div>
-}
-export function PauseUnavailable() {
-  return <div className="fm-page fm-narrow"><MembershipBack /><MembershipPanel><div className="fm-centered"><span className="fm-icon fm-icon--large"><Icon name="calendar" size={30} /></span><h1>Pause Membership</h1><p className="fm-muted">Take a break without losing sight of your routine.</p></div><MembershipNotice warning>Pause scheduling is not available for your account in this version of FitiGo. No dates have been paused and your membership expiry has not changed.</MembershipNotice><p>Verified plan allowances, eligible dates and a server-confirmed expiry are required before a pause can be requested.</p><Link to="/membership" className="fg-button fg-button--primary fm-full">View Membership</Link></MembershipPanel></div>
 }
 export function NoMembership() {
   return <section className="fm-membership-choices" aria-labelledby="membership-choices-title">

@@ -38,7 +38,7 @@ def mysql_wallet():
             connection.execute(text(f'CREATE DATABASE `{name}` CHARACTER SET utf8mb4'))
             created = True
         test_engine = create_engine(application_engine.url.set(database=name), pool_pre_ping=True)
-        tables = [Base.metadata.tables[n] for n in ('users','gyms','gym_membership_plans','wallet_accounts','wallet_transactions','platform_membership_plans','platform_membership_offers','platform_membership_audit','user_memberships','platform_membership_orders')]
+        tables = [Base.metadata.tables[n] for n in ('users','gyms','gym_membership_plans','wallet_accounts','wallet_transactions','platform_membership_plans','platform_membership_offers','platform_membership_audit','user_memberships','platform_membership_orders','membership_pauses')]
         Base.metadata.create_all(test_engine, tables=tables)
         with Session(test_engine) as db:
             user=User(email='isolated-mysql@example.test',password_hash='unused',status='ACTIVE')

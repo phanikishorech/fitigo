@@ -32,5 +32,5 @@ export function planAdminError(error: unknown) {
   if (error instanceof ApiError && error.code === 'PLAN_CODE_EXISTS') return 'This plan code is already in use. Choose a different code.'
   return adminError(error)
 }
-export function utcInput(value: string) { return new Date(value).toISOString().slice(0, 19) }
-export function utcValue(value: string) { return new Date(`${value}Z`).toISOString() }
+export function istInput(value: string) { const p = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(value)); const part = (type: string) => p.find(v => v.type === type)!.value; return `${part('year')}-${part('month')}-${part('day')}T${part('hour')}:${part('minute')}:${part('second')}` }
+export function istValue(value: string) { return `${value}+05:30` }

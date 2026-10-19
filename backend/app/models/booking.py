@@ -10,6 +10,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    JSON,
     Numeric,
     String,
     Text,
@@ -60,6 +61,9 @@ class Booking(Base):
 
     status: Mapped[str] = mapped_column(String(30), nullable=False, default=BookingStatus.PENDING_PAYMENT.value)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Purchaser remains user_id. Named guests are not implicitly account holders.
+    visitor_names: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    access_source: Mapped[str] = mapped_column(String(30), nullable=False, default="BOOKING_ACCESS", server_default="BOOKING_ACCESS")
 
     # Payment deadline for pending-payment reservations
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

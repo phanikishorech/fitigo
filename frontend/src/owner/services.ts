@@ -11,7 +11,7 @@ export const capabilities = {
   bookingActions: { available: false, message: 'The booking API does not provide action eligibility yet. Attendance and cancellation controls are unavailable until the server supplies permitted actions.' }
 } as const
 
-export type CheckInResult = { success: true; status: string; customer_name: string; gym_name: string; access_type: string; checkin_time: string } | { success: false; status: string; message: string }
+export type CheckInResult = { success: true; status: string; customer_name: string; gym_name: string; access_type: string; access_label?: string; access_source?: string; checkin_time: string } | { success: false; status: string; message: string }
 export type Notification = { id: number; event_type: string; status: string; created_at: string }
 export const ownerService = {
   register: (body: { first_name: string; last_name: string; email: string; phone: string | null; password: string }) => post<{ id: number; email: string }>('/auth/register/gym-owner', body),

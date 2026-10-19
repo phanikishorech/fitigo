@@ -3,18 +3,21 @@ from __future__ import annotations
 from datetime import date, time
 
 from pydantic import BaseModel, Field
+from app.schemas.visitors import VisitorName
 
 
 class CartItemCreateGymRequest(BaseModel):
+    visitor_names: list[VisitorName] | None = Field(default=None, min_length=1, max_length=50)
     booking_type: str = Field(default="GYM")
     gym_id: int
     booking_date: date
     preferred_start_time: time
-    preferred_end_time: time
+    preferred_end_time: time | None = None
     member_count: int = Field(default=1, ge=1, le=50)
 
 
 class CartItemCreateClassRequest(BaseModel):
+    visitor_names: list[VisitorName] | None = Field(default=None, min_length=1, max_length=50)
     booking_type: str = Field(default="CLASS")
     gym_id: int
     class_session_id: int
@@ -23,6 +26,7 @@ class CartItemCreateClassRequest(BaseModel):
 
 
 class CartItemResponse(BaseModel):
+    visitor_names: list[str] | None = None
     id: int
     booking_type: str
     gym_id: int

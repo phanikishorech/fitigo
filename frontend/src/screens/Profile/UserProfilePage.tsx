@@ -1,3 +1,4 @@
+import { istDateTime } from '../../utils/membership'
 import { logoutSession } from '../../session/store'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import styles from './profile.module.css'
@@ -1154,7 +1155,7 @@ export default function UserProfilePage() {
                             <div key={t.id} className={styles.infoRow} style={{ alignItems: 'start' }}>
                               <div className={styles.infoLabel}>
                                 <div style={{ fontWeight: 900 }}>{t.txn_type}</div>
-                                <div className={styles.muted}>{new Date(t.created_at).toLocaleString()}</div>
+                                <div className={styles.muted}>{istDateTime(t.created_at)}</div>
                                 {t.description ? <div className={styles.muted}>{t.description}</div> : null}
                               </div>
                               <div className={styles.infoValue} style={{ fontWeight: 950 }}>

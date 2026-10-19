@@ -1,3 +1,4 @@
+import { istDateTime } from '../utils/membership'
 import { useState } from 'react'
 import { useOwner } from './context'
 import { capabilities, ownerService } from './services'
@@ -26,7 +27,7 @@ function Reports({ page }: { page: string }) {
 }
 function Notifications() {
   const [page, setPage] = useState(0); const resource = useResource(() => ownerService.notifications(page * 20), `notifications:${page}`)
-  return <div className="ow-stack"><PageHeader title="Notifications" description="Updates associated with your FitiGo account." /><Card>{resource.loading ? <Skeleton /> : resource.error ? <ErrorState message={resource.error} retry={resource.retry} /> : <>{resource.data?.length ? <div className="ow-notifications">{resource.data.map(n => <article key={n.id}><span className="ow-icon-tile"><Icon name="bell" /></span><div><h3>{n.event_type.replace(/_/g, ' ').toLowerCase()}</h3><p>{new Date(n.created_at).toLocaleString()}</p></div><StatusBadge status={n.status} /></article>)}</div> : <EmptyState title="You're all caught up" description="Account events will appear here when they are available." />}<Pagination page={page} hasMore={resource.data?.length === 20} onChange={setPage} /></>}</Card><p className="ow-caption">Status describes event delivery, not whether a notification has been read. Read/unread tracking is not provided by the API.</p></div>
+  return <div className="ow-stack"><PageHeader title="Notifications" description="Updates associated with your FitiGo account." /><Card>{resource.loading ? <Skeleton /> : resource.error ? <ErrorState message={resource.error} retry={resource.retry} /> : <>{resource.data?.length ? <div className="ow-notifications">{resource.data.map(n => <article key={n.id}><span className="ow-icon-tile"><Icon name="bell" /></span><div><h3>{n.event_type.replace(/_/g, ' ').toLowerCase()}</h3><p>{istDateTime(n.created_at)}</p></div><StatusBadge status={n.status} /></article>)}</div> : <EmptyState title="You're all caught up" description="Account events will appear here when they are available." />}<Pagination page={page} hasMore={resource.data?.length === 20} onChange={setPage} /></>}</Card><p className="ow-caption">Status describes event delivery, not whether a notification has been read. Read/unread tracking is not provided by the API.</p></div>
 }
 function Settings() {
   const { user, roles, gym } = useOwner(); const [logout, setLogout] = useState(false); const mutation = useMutation()

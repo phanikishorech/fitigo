@@ -5,11 +5,11 @@ import secrets
 from datetime import date, datetime, time, timedelta, timezone
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import func, select, or_, and_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.time import utc_today, utcnow
+from app.core.time import utcnow, as_ist, IST, stored_instant, ist_day_bounds
 from app.models.access import (
     AccessPauseDay,
     AccessQrToken,
@@ -36,6 +36,10 @@ def _token_prefix() -> str:
 def _utc(value: datetime) -> datetime:
     # MySQL returns naive DATETIME values; they are stored as UTC.
     return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
+
+
+def access_today() -> date:
+    return as_ist(utcnow()).date()
 
 
 def _format_access_key(*, user_id: int, membership_id: int, access_date: date, gym_id: int | None) -> str:
@@ -78,7 +82,7 @@ class AccessService:
 
     def _resolve_today_access_context(self, *, user_id: int) -> dict:
         now = utcnow()
-        today = now.date()
+        today = as_ist(now).date()
 
         if self._get_user(user_id).status != UserStatus.ACTIVE.value:
             return {"status": "NO_ACCESS", "today": today, "now": now}
@@ -152,7 +156,7 @@ class AccessService:
         return rec
 
     def _get_active_token_for_daily_access(self, *, daily_access_id: int, now: datetime) -> AccessQrToken | None:
-        now_naive = now.replace(tzinfo=None)
+        now_naive = stored_instant(now)
         return (
             self.db.execute(
                 select(AccessQrToken)
@@ -172,18 +176,18 @@ class AccessService:
         raw = secrets.token_urlsafe(32)
         token_hash = _sha256_hex(raw)
         now = utcnow()
-        exp = min(now + timedelta(minutes=ttl_minutes), datetime.combine(now.date() + timedelta(days=1), time.min, tzinfo=timezone.utc))
+        exp = min(now + timedelta(minutes=ttl_minutes), datetime.combine(as_ist(now).date() + timedelta(days=1), time.min, tzinfo=IST))
         rec = AccessQrToken(
             daily_access_id=daily_access_id,
             token_hash=token_hash,
             status=QrTokenStatus.ACTIVE.value,
-            generated_at=now,
-            expires_at=exp,
+            generated_at=stored_instant(now),
+            expires_at=stored_instant(exp),
             used_at=None,
             used_gym_id=None,
             checkin_id=None,
-            created_at=now,
-            updated_at=now,
+            created_at=stored_instant(now),
+            updated_at=stored_instant(now),
         )
         self.db.add(rec)
         self.db.commit()
@@ -200,14 +204,14 @@ class AccessService:
 
     def get_or_create_active_qr_token(self, *, user_id: int) -> dict:
         # Helper for API: always return a qr_token when access is ACTIVE.
-        used = self._used_access(user_id=user_id, access_date=utc_today())
+        used = self._used_access(user_id=user_id, access_date=access_today())
         if used:
             gym = self.db.get(Gym, used.used_gym_id) if used.used_gym_id else None
-            return {"status": "USED", "gym_name": gym.name if gym else None, "used_at": _utc(used.used_at) if used.used_at else None}
-        legacy = self._legacy_visit(user_id=user_id, access_date=utc_today())
+            return {"status": "USED", "gym_name": gym.name if gym else None, "used_at": as_ist(used.used_at) if used.used_at else None}
+        legacy = self._legacy_visit(user_id=user_id, access_date=access_today())
         if legacy:
             gym = self.db.get(Gym, legacy.gym_id)
-            return {"status": "USED", "gym_name": gym.name if gym else None, "used_at": _utc(legacy.scanned_at or legacy.created_at)}
+            return {"status": "USED", "gym_name": gym.name if gym else None, "used_at": as_ist(legacy.scanned_at or legacy.created_at)}
         ctx = self._resolve_today_access_context(user_id=user_id)
         today = ctx["today"]
         now = ctx["now"]
@@ -233,7 +237,7 @@ class AccessService:
             if daily.used_gym_id:
                 g = self.db.execute(select(Gym).where(Gym.id == daily.used_gym_id)).scalars().first()
                 gym_name = g.name if g else None
-            return {"status": "USED", "gym_name": gym_name, "used_at": _utc(daily.used_at) if daily.used_at else None}
+            return {"status": "USED", "gym_name": gym_name, "used_at": as_ist(daily.used_at) if daily.used_at else None}
 
         if daily.status != DailyAccessStatus.AVAILABLE.value:
             return {"status": "NO_ACCESS" if daily.status == DailyAccessStatus.REVOKED.value else daily.status}
@@ -246,20 +250,24 @@ class AccessService:
             "access_type": access_type,
             "gym": ({"id": int(gym.id), "name": gym.name} if gym else None),
             "qr_token": qr_token,
-            "expires_at": _utc(rec.expires_at),
+            "expires_at": as_ist(rec.expires_at),
         }
 
     def _legacy_visit(self, *, user_id: int, access_date: date) -> MembershipDailyAccess | None:
+        start, end = ist_day_bounds(access_date)
         return self.db.execute(select(MembershipDailyAccess).where(
             MembershipDailyAccess.user_id == user_id,
-            MembershipDailyAccess.access_date == access_date,
+            or_(MembershipDailyAccess.access_date == access_date,
+                and_(MembershipDailyAccess.scanned_at >= start, MembershipDailyAccess.scanned_at < end)),
             MembershipDailyAccess.status == "SCANNED",
         )).scalars().first()
 
     def _used_access(self, *, user_id: int, access_date: date, lock: bool = False) -> CustomerDailyAccess | None:
+        start, end = ist_day_bounds(access_date)
         query = select(CustomerDailyAccess).where(
             CustomerDailyAccess.user_id == user_id,
-            CustomerDailyAccess.access_date == access_date,
+            or_(CustomerDailyAccess.access_date == access_date,
+                and_(CustomerDailyAccess.used_at >= start, CustomerDailyAccess.used_at < end)),
             CustomerDailyAccess.status == DailyAccessStatus.USED.value,
         )
         if lock:
@@ -277,8 +285,9 @@ class AccessService:
         from app.models.class_booking import GymSpecialHours
         from app.models.gym import GymOperatingHours
 
-        d = at.date()
-        t = at.time()
+        local = as_ist(at)
+        d = local.date()
+        t = local.time()
 
         sp = (
             self.db.execute(select(GymSpecialHours).where(GymSpecialHours.gym_id == gym_id, GymSpecialHours.date == d))
@@ -307,7 +316,7 @@ class AccessService:
             if not (row.open_time <= t <= row.close_time):
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Outside allowed check-in window")
 
-    def validate_checkin(self, *, gym_id: int, qr_token: str) -> dict:
+    def validate_checkin(self, *, gym_id: int, qr_token: str, scanned_by: int | None = None) -> dict:
         # Parse token
         if not qr_token.startswith(_token_prefix()):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid QR")
@@ -317,7 +326,7 @@ class AccessService:
         token_hash = _sha256_hex(raw)
 
         now = utcnow()
-        today = now.date()
+        today = as_ist(now).date()
 
         # Validate scanning gym is approved/active
         gym = (
@@ -327,6 +336,11 @@ class AccessService:
         )
         if not gym:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gym not found")
+
+        booking_id = self.db.scalar(select(AccessQrToken.booking_id).where(AccessQrToken.token_hash == token_hash))
+        if booking_id is not None:
+            from app.services.booking_access_service import BookingAccessService
+            return BookingAccessService(self.db).validate(token_hash, booking_id, gym, scanned_by)
 
         # Start txn / lock QR row
         try:
@@ -438,9 +452,11 @@ class AccessService:
             checkin = Checkin(
                 user_id=int(daily.user_id),
                 daily_access_id=int(daily.id),
+                membership_id=int(daily.membership_id),
+                scanned_by=scanned_by,
                 qr_token_id=int(token_row.id),
                 gym_id=int(gym_id),
-                checkin_time=now,
+                checkin_time=stored_instant(now),
                 status=CheckinStatus.SUCCESS.value,
                 note=None,
                 created_at=now,
@@ -450,13 +466,13 @@ class AccessService:
 
             # Mark used
             daily.status = DailyAccessStatus.USED.value
-            daily.used_at = now
+            daily.used_at = stored_instant(now)
             daily.used_gym_id = int(gym_id)
             daily.checkin_id = int(checkin.id)
             daily.updated_at = datetime.utcnow()
 
             token_row.status = QrTokenStatus.USED.value
-            token_row.used_at = now
+            token_row.used_at = stored_instant(now)
             token_row.used_gym_id = int(gym_id)
             token_row.checkin_id = int(checkin.id)
             token_row.updated_at = datetime.utcnow()
@@ -469,7 +485,9 @@ class AccessService:
                 "customer_name": full_name,
                 "gym_name": gym.name,
                 "access_type": daily.access_type,
-                "checkin_time": _utc(checkin.checkin_time),
+                "access_source": "MEMBERSHIP_ACCESS",
+                "access_label": "FitiGo Multi-Gym" if daily.access_type == "MULTI_GYM" else "Single-Gym membership",
+                "checkin_time": as_ist(checkin.checkin_time),
             }
         except HTTPException:
             self.db.rollback()
@@ -480,7 +498,9 @@ class AccessService:
 
     def calendar_month(self, *, user_id: int, year: int, month: int) -> dict:
         start, end = _month_bounds(year=year, month=month)
-        today = utc_today()
+        today = access_today()
+        month_start = ist_day_bounds(start)[0]
+        month_end = ist_day_bounds(end)[1]
 
         # Determine access type for THIS MONTH context based on memberships active today (MVP)
         ctx = self._resolve_today_access_context(user_id=user_id)
@@ -492,14 +512,14 @@ class AccessService:
             self.db.execute(
                 select(Checkin, Gym)
                 .join(Gym, Gym.id == Checkin.gym_id)
-                .where(Checkin.user_id == user_id, Checkin.status == CheckinStatus.SUCCESS.value, func.date(Checkin.checkin_time) >= start, func.date(Checkin.checkin_time) <= end)
+                .where(Checkin.user_id == user_id, Checkin.booking_id.is_(None), Checkin.status == CheckinStatus.SUCCESS.value, Checkin.checkin_time >= month_start, Checkin.checkin_time < month_end)
                 .order_by(Checkin.checkin_time.asc())
             ).all()
         )
         visited_map: dict[date, dict] = {}
         for c, g in rows:
-            d = (c.checkin_time.date() if isinstance(c.checkin_time, datetime) else today)
-            visited_map[d] = {"gym_id": int(g.id), "gym_name": g.name, "checkin_time": c.checkin_time.time()}
+            local = as_ist(c.checkin_time)
+            visited_map[local.date()] = {"gym_id": int(g.id), "gym_name": g.name, "checkin_time": local.time()}
 
         # Legacy attendance remains visible without manufacturing new credentials.
         legacy_rows = self.db.execute(select(MembershipDailyAccess, Gym).join(
@@ -507,13 +527,13 @@ class AccessService:
         ).where(
             MembershipDailyAccess.user_id == user_id,
             MembershipDailyAccess.status == "SCANNED",
-            MembershipDailyAccess.access_date >= start,
-            MembershipDailyAccess.access_date <= end,
+            or_(and_(MembershipDailyAccess.scanned_at >= month_start, MembershipDailyAccess.scanned_at < month_end),
+                and_(MembershipDailyAccess.scanned_at.is_(None), MembershipDailyAccess.access_date >= start, MembershipDailyAccess.access_date <= end)),
         )).all()
         for visit, visited_gym in legacy_rows:
-            visited_map.setdefault(visit.access_date, {
+            visited_map.setdefault(as_ist(visit.scanned_at or visit.created_at).date(), {
                 "gym_id": int(visited_gym.id), "gym_name": visited_gym.name,
-                "checkin_time": _utc(visit.scanned_at or visit.created_at).time(),
+                "checkin_time": as_ist(visit.scanned_at or visit.created_at).time(),
             })
 
         paused_dates = set(
@@ -535,8 +555,8 @@ class AccessService:
             UserMembership.user_id == user_id,
             UserMembership.payment_status == "PAID",
             UserMembership.status.in_([status.value for status in MembershipStatus]),
-            UserMembership.start_at < datetime.combine(end + timedelta(days=1), time.min),
-            UserMembership.end_at > datetime.combine(start, time.min),
+            UserMembership.start_at < month_end,
+            UserMembership.end_at > month_start,
         )).scalars().all()
         intervals = []
         member_intervals = []
@@ -552,7 +572,7 @@ class AccessService:
         # A pause of one membership must not disable another unpaused entitlement.
         day = start
         while day <= end:
-            day_start = datetime.combine(day, time.min, tzinfo=timezone.utc)
+            day_start = datetime.combine(day, time.min, tzinfo=IST)
             day_end = day_start + timedelta(days=1)
             entitled = [mid for mid, a, b in member_intervals if a < day_end and b > day_start]
             if entitled and all(any(p.membership_id == mid and p.start_date <= day <= p.end_date for p in scoped_pauses) for mid in entitled):
@@ -602,7 +622,7 @@ class AccessService:
                     else:
                         days.append({"date": cur, "status": "TODAY", "qr_available": False, "qr_status": "NO_ACCESS"})
                 elif cur < today:
-                    day_start = datetime.combine(cur, time.min, tzinfo=timezone.utc)
+                    day_start = datetime.combine(cur, time.min, tzinfo=IST)
                     day_end = day_start + timedelta(days=1)
                     eligible = any(interval_start < day_end and interval_end > day_start for interval_start, interval_end in intervals)
                     if eligible:

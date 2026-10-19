@@ -1,11 +1,12 @@
 from __future__ import annotations
+from app.schemas.time import ISTResponse
 
 from datetime import datetime
 
 from pydantic import BaseModel, Field
 
 
-class WalletBalanceResponse(BaseModel):
+class WalletBalanceResponse(ISTResponse):
     balance: str
     currency: str = "INR"
 
@@ -16,7 +17,7 @@ class WalletTopupRequest(BaseModel):
     description: str | None = None
 
 
-class WalletTransactionResponse(BaseModel):
+class WalletTransactionResponse(ISTResponse):
     id: int
     direction: str
     txn_type: str
@@ -27,13 +28,13 @@ class WalletTransactionResponse(BaseModel):
     created_at: datetime
 
 
-class WalletTopupResponse(BaseModel):
+class WalletTopupResponse(ISTResponse):
     transaction: WalletTransactionResponse
     balance: str
     currency: str = "INR"
 
 
-class WalletTransactionsResponse(BaseModel):
+class WalletTransactionsResponse(ISTResponse):
     balance: str
     currency: str = "INR"
     transactions: list[WalletTransactionResponse]

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.schemas.time import ISTResponse
 
 from datetime import date, datetime, time
 
@@ -38,7 +39,7 @@ class AdminBookingPayment(BaseModel):
     external_ref: str | None
 
 
-class AdminBookingResponse(BaseModel):
+class AdminBookingResponse(ISTResponse):
     id: int
     user_id: int
     gym_id: int

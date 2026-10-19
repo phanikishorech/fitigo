@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from app.core.time import IST, stored_instant
 
 import pytest
 from fastapi import HTTPException
@@ -13,6 +14,8 @@ from app.models.gym import Gym
 from app.models.membership import GymMembershipPlan, MembershipDailyAccess, UserMembership
 from app.models.platform_membership import PlatformMembershipPlan
 from app.models.wallet import WalletAccount, WalletTransaction
+from app.models.booking import Booking
+from app.models.slot import GymSlot
 from app.services import access_service
 from app.services.access_service import AccessService, _utc
 from app.schemas.access import TodayAccessResponse
@@ -28,6 +31,7 @@ def access(monkeypatch):
     engine = create_engine("sqlite://")
     metadata = MetaData()
     for name in (
+        "gym_slots", "bookings",
         "users", "gyms", "gym_membership_plans", "user_memberships",
         "customer_daily_accesses", "access_qr_tokens", "checkins",
         "access_pause_days", "gym_operating_hours", "gym_special_hours",
@@ -38,7 +42,7 @@ def access(monkeypatch):
         table.c.id.type = Integer()
     metadata.create_all(engine)
     monkeypatch.setattr(access_service, "utcnow", lambda: NOW)
-    monkeypatch.setattr(access_service, "utc_today", lambda: NOW.date())
+    monkeypatch.setattr(access_service, "access_today", lambda: NOW.date())
     with Session(engine) as db:
         user = User(email="member@example.com", password_hash="unused", status="ACTIVE")
         db.add(user)
@@ -65,7 +69,7 @@ def test_rotated_tokens_share_one_daily_use(access):
     first = service.get_today_access(user_id=user.id)
     second = service.get_today_access(user_id=user.id)
     assert first["qr_token"] != second["qr_token"]
-    assert first["expires_at"].utcoffset() == timedelta(0)
+    assert first["expires_at"].utcoffset() == timedelta(hours=5, minutes=30)
     assert service.validate_checkin(gym_id=gym.id, qr_token=first["qr_token"])["success"]
     with pytest.raises(HTTPException) as error:
         service.validate_checkin(gym_id=gym.id, qr_token=second["qr_token"])
@@ -132,12 +136,12 @@ def test_used_access_survives_membership_key_change(access):
 def test_calendar_preserves_expired_history_and_gaps(access):
     service, user, _, membership = access
     membership.status = "EXPIRED"
-    membership.start_at = NOW.replace(day=2, hour=0)
-    membership.end_at = NOW.replace(day=5, hour=0)
+    membership.start_at = stored_instant(NOW.replace(day=2, hour=0, tzinfo=IST))
+    membership.end_at = stored_instant(NOW.replace(day=5, hour=0, tzinfo=IST))
     service.db.add(UserMembership(
         user_id=user.id, gym_id=membership.gym_id, plan_id=membership.plan_id,
-        status="CANCELLED", start_at=NOW.replace(day=8, hour=0),
-        end_at=NOW.replace(day=20, hour=0), cancelled_at=NOW.replace(day=10, hour=0),
+        status="CANCELLED", start_at=stored_instant(NOW.replace(day=8, hour=0, tzinfo=IST)),
+        end_at=stored_instant(NOW.replace(day=20, hour=0, tzinfo=IST)), cancelled_at=stored_instant(NOW.replace(day=10, hour=0, tzinfo=IST)),
         paid_amount=999, payment_status="PAID",
     ))
     service.db.commit()
@@ -205,8 +209,8 @@ def test_legacy_visit_blocks_new_issuance_and_scan_and_preserves_history(access)
     assert day["qr_available"] is False
 
 
-def test_qr_expiry_is_capped_at_utc_midnight(access, monkeypatch):
+def test_qr_expiry_is_capped_at_ist_midnight(access, monkeypatch):
     service, user, _, _ = access
-    monkeypatch.setattr(access_service, "utcnow", lambda: NOW.replace(hour=23, minute=59))
+    monkeypatch.setattr(access_service, "utcnow", lambda: NOW.replace(hour=18, minute=29))
     result = service.get_today_access(user_id=user.id)
-    assert result["expires_at"] == NOW.replace(day=17, hour=0, minute=0)
+    assert result["expires_at"] == NOW.replace(day=17, hour=0, minute=0, tzinfo=IST)

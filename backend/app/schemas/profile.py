@@ -1,11 +1,13 @@
 from __future__ import annotations
+from app.schemas.time import ISTResponse
 
 from datetime import date, datetime, time
 
 from pydantic import BaseModel, Field
+from app.schemas.booking import BookingAccessResponse
 
 
-class ProfileResponse(BaseModel):
+class ProfileResponse(ISTResponse):
     user_id: int
     full_name: str
     profile_image: str | None = None
@@ -13,7 +15,7 @@ class ProfileResponse(BaseModel):
     membership_status: str | None = None
 
 
-class MembershipSummaryResponse(BaseModel):
+class MembershipSummaryResponse(ISTResponse):
     membership_id: int | None = None
     plan_name: str | None = None
     status: str | None = None
@@ -38,7 +40,8 @@ class MembershipSummaryResponse(BaseModel):
     membership_features: list[str] = Field(default_factory=list)
 
 
-class BookingItemResponse(BaseModel):
+class BookingItemResponse(ISTResponse):
+    booking_access: BookingAccessResponse | None = None
     booking_id: int
     booking_status: str
     attendance_status: str | None = None
@@ -68,7 +71,7 @@ class ActivityBreakdownItem(BaseModel):
     count: int
 
 
-class ProfileActivityResponse(BaseModel):
+class ProfileActivityResponse(ISTResponse):
     total_gym_visits: int
     total_classes_attended: int
     current_streak_days: int
@@ -83,11 +86,11 @@ class FavoriteGymItem(BaseModel):
     visit_count: int
 
 
-class FavoritesResponse(BaseModel):
+class FavoritesResponse(ISTResponse):
     gyms: list[FavoriteGymItem] = Field(default_factory=list)
 
 
-class MembershipPassResponse(BaseModel):
+class MembershipPassResponse(ISTResponse):
     member_id: str
     full_name: str
     plan_name: str | None = None

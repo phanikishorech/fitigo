@@ -4,6 +4,7 @@ from typing import Annotated, Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 from app.schemas.membership_pause import PausePolicy
+from app.schemas.time import ISTResponse
 
 
 Money = Annotated[Decimal, Field(ge=0, max_digits=12, decimal_places=2, allow_inf_nan=False)]
@@ -51,7 +52,7 @@ class PlatformOfferUpdate(StrictRequest):
         return self
 
 
-class ActiveOffer(BaseModel):
+class ActiveOffer(ISTResponse):
     id: int
     kind: Literal["PERCENTAGE", "FIXED"]
     title: str | None
@@ -63,7 +64,7 @@ class AccessRule(BaseModel):
     daily_access: Literal[1] = 1
 
 
-class PlatformPlanResponse(BaseModel):
+class PlatformPlanResponse(ISTResponse):
     id: int
     code: str
     membership_type: Literal["MULTI_GYM"] = "MULTI_GYM"
@@ -87,7 +88,7 @@ class PlatformPlanResponse(BaseModel):
     purchase_available: bool = False
 
 
-class PlatformCatalogResponse(BaseModel):
+class PlatformCatalogResponse(ISTResponse):
     items: list[PlatformPlanResponse]
     server_time: datetime
     checkout_available: bool = False
@@ -99,7 +100,7 @@ class PlatformOrderCreate(StrictRequest):
     plan_id: int = Field(gt=0, strict=True)
 
 
-class AdminOfferConfiguration(BaseModel):
+class AdminOfferConfiguration(ISTResponse):
     id: int
     kind: Literal["PERCENTAGE", "FIXED"]
     value: Decimal
@@ -110,13 +111,13 @@ class AdminOfferConfiguration(BaseModel):
     state: Literal["ACTIVE", "SCHEDULED", "EXPIRED", "DISABLED"]
 
 
-class AdminPlanDetail(BaseModel):
+class AdminPlanDetail(ISTResponse):
     plan: PlatformPlanResponse
     offer_configuration: AdminOfferConfiguration | None
     server_time: datetime
 
 
-class PlatformOrderResponse(BaseModel):
+class PlatformOrderResponse(ISTResponse):
     id: str
     status: str = "PAYMENT_DISABLED"
     payment_status: str = "NOT_STARTED"

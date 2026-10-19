@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.schemas.time import ISTResponse
 
 from datetime import date, datetime, time
 from typing import Literal
@@ -22,7 +23,7 @@ class AccessCalendarDay(BaseModel):
     checkin_time: time | None = None
 
 
-class AccessCalendarResponse(BaseModel):
+class AccessCalendarResponse(ISTResponse):
     month: int = Field(ge=1, le=12)
     year: int = Field(ge=2000, le=2100)
 
@@ -37,7 +38,7 @@ class TodayAccessGym(BaseModel):
     name: str
 
 
-class TodayAccessActiveResponse(BaseModel):
+class TodayAccessActiveResponse(ISTResponse):
     status: Literal["ACTIVE"] = "ACTIVE"
     access_type: str
     gym: TodayAccessGym | None = None
@@ -45,22 +46,22 @@ class TodayAccessActiveResponse(BaseModel):
     expires_at: datetime
 
 
-class TodayAccessUsedResponse(BaseModel):
+class TodayAccessUsedResponse(ISTResponse):
     status: Literal["USED"] = "USED"
     gym_name: str | None = None
     used_at: datetime
 
 
-class TodayAccessPausedResponse(BaseModel):
+class TodayAccessPausedResponse(ISTResponse):
     status: Literal["PAUSED"] = "PAUSED"
     code: Literal["MEMBERSHIP_PAUSED"] = "MEMBERSHIP_PAUSED"
 
 
-class TodayAccessExpiredResponse(BaseModel):
+class TodayAccessExpiredResponse(ISTResponse):
     status: Literal["EXPIRED"] = "EXPIRED"
 
 
-class TodayAccessNoAccessResponse(BaseModel):
+class TodayAccessNoAccessResponse(ISTResponse):
     status: Literal["NO_ACCESS"] = "NO_ACCESS"
 
 
@@ -74,11 +75,13 @@ TodayAccessResponse = (
 
 
 class ValidateCheckinRequest(BaseModel):
-    qr_token: str = Field(min_length=10)
+    qr_token: str = Field(min_length=1, max_length=512)
     gym_id: int = Field(ge=1)
 
 
-class ValidateCheckinSuccessResponse(BaseModel):
+class ValidateCheckinSuccessResponse(ISTResponse):
+    access_source: str = "MEMBERSHIP_ACCESS"
+    access_label: str | None = None
     success: bool = True
     status: str = "CHECKED_IN"
     customer_name: str
@@ -87,7 +90,7 @@ class ValidateCheckinSuccessResponse(BaseModel):
     checkin_time: datetime
 
 
-class ValidateCheckinFailureResponse(BaseModel):
+class ValidateCheckinFailureResponse(ISTResponse):
     success: bool = False
     status: str
     message: str

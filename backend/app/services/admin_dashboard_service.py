@@ -10,6 +10,7 @@ from app.models.booking import Booking, BookingStatus, Payment, PaymentStatus
 from app.models.gym import Gym
 from app.repositories.user_repository import UserRepository
 from app.core.roles import ROLE_CUSTOMER, ROLE_GYM_OWNER
+from app.core.time import ist_today
 
 
 class AdminDashboardService:
@@ -49,7 +50,7 @@ class AdminDashboardService:
         ).scalar_one()
 
         # Booking snapshots
-        today = date.today()
+        today = ist_today()
         bookings_today = self.db.execute(
             select(func.count()).select_from(Booking).where(Booking.slot_date == today)
         ).scalar_one()

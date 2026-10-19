@@ -97,11 +97,19 @@ export function scannerReducer(context: ScannerContext, event: ScannerEvent): Sc
 }
 
 const rejectionMessages: Record<string, string> = {
+  GYM_CLOSED: 'The gym is closed on this booking date.',
+  GYM_HOURS_UNAVAILABLE: 'Gym opening hours are unavailable for this visit.',
+  MEMBERSHIP_ACCESS_REQUIRED: 'Use the member’s current membership access QR.',
+  BOOKING_NOT_FOUND: 'Booking not found.', BOOKING_CANCELLED: 'Booking cancelled.',
+  BOOKING_NOT_CONFIRMED: 'This booking is not confirmed.', PAYMENT_NOT_COMPLETED: 'Payment is not completed or has been refunded.',
+  BOOKING_EXPIRED: 'This booking has expired.', BOOKING_ALREADY_USED: 'This booking access has already been used.',
+  WRONG_DATE: 'This booking is not valid on this date.', OUTSIDE_BOOKING_WINDOW: 'The booking entry window has not started.',
+  INVALID_VISITOR: 'Visitor details do not match this booking.', INVALID_BOOKING: 'This booking is not valid.',
   INVALID_QR: 'Invalid QR. Ask the member to show a current access QR.', QR_INVALID: 'Invalid QR. Ask the member to show a current access QR.',
   QR_EXPIRED: 'This QR has expired. Ask the member to generate a new QR.', QR_ALREADY_USED: 'This QR has already been used.',
   DAILY_ACCESS_ALREADY_USED: 'Today’s access has already been used.', DAILY_ACCESS_ALREADY_CONSUMED: 'Today’s access has already been used.',
   MEMBERSHIP_EXPIRED: 'Membership expired.', MEMBERSHIP_PAUSED: 'Membership access is paused.', MEMBERSHIP_INACTIVE: 'Membership is not active.',
-  GYM_NOT_ELIGIBLE: 'Membership not valid at this gym.', WRONG_GYM: 'Membership not valid at this gym.', MEMBERSHIP_NOT_ELIGIBLE: 'Membership does not cover this visit.',
+  GYM_NOT_ELIGIBLE: 'Membership not valid at this gym.', WRONG_GYM: 'This access is not valid at this gym.', MEMBERSHIP_NOT_ELIGIBLE: 'Membership does not cover this visit.',
   GYM_NOT_ALLOWED: 'Your staff account is not assigned to this gym.', CUSTOMER_NOT_ELIGIBLE: 'Customer is not eligible for entry.'
 }
 // Existing endpoint collapses some business failures into INVALID_QR. Whitelist

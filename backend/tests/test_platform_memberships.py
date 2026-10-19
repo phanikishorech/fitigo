@@ -38,7 +38,7 @@ def api(monkeypatch):
     monkeypatch.setattr(settings, "environment", "production")
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     metadata = MetaData()
-    for name in ("gym_slots", "bookings"):
+    for name in ("gym_slots", "bookings", "payments"):
         table = Base.metadata.tables[name].to_metadata(metadata)
         table.c.id.type = Integer()
     for name in ("users", "roles", "user_roles", "gyms", "gym_membership_plans", "wallet_accounts", "wallet_transactions", "user_memberships", "platform_membership_plans", "platform_membership_offers", "platform_membership_orders", "platform_membership_audit", "customer_daily_accesses", "access_qr_tokens", "checkins", "access_pause_days", "membership_daily_accesses", "gym_operating_hours", "gym_special_hours"):
@@ -283,7 +283,7 @@ def test_admin_can_read_complete_offer_configuration_without_public_leak(api, up
     config = detail['offer_configuration']
     assert config['state'] == state
     assert config['value'] == '125.00'
-    assert config['starts_at'].endswith('Z') and config['ends_at'].endswith('Z')
+    assert config['starts_at'].endswith('+05:30') and config['ends_at'].endswith('+05:30')
     assert detail['plan']['version'] == saved.json()['version']
     for auth in ({}, headers[1], headers[2]):
         assert client.get(url, headers=auth).status_code in (401, 403)

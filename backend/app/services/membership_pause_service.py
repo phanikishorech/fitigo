@@ -1,4 +1,4 @@
-"""Pause rules and dates have one authority. UTC matches the access-day service."""
+"""Pause rules and dates use the same IST calendar as the access-day service."""
 import hashlib
 import json
 from datetime import datetime, timedelta, timezone
@@ -11,6 +11,7 @@ from app.models.auth import User
 from app.models.membership import GymMembershipPlan, MembershipPause, UserMembership
 from app.models.platform_membership import PlatformMembershipPlan
 from app.schemas.membership_pause import PauseEligibility, PausePeriod, PausePolicy, PausePreview, PauseRequest
+from app.core.time import as_ist, stored_instant
 
 
 def utcnow():
@@ -18,7 +19,7 @@ def utcnow():
 
 
 def aware(value):
-    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
+    return as_ist(value)
 
 
 def paused_on(db: Session, membership_id: int, day):
@@ -82,7 +83,7 @@ class MembershipPauseService:
         remaining = max(0, policy.max_pause_days - used)
         status = membership_status(self.db, membership, now)
         earliest = max(now.date() + timedelta(days=1), aware(membership.start_at).date())
-        # Only whole UTC days within the CURRENT validity can be paused.
+        # Only whole IST days within the CURRENT validity can be paused.
         last = aware(membership.end_at).date() - timedelta(days=1)
         while earliest <= last and any(p.start_date <= earliest <= p.end_date for p in periods):
             earliest = next(p.end_date + timedelta(days=1) for p in periods if p.start_date <= earliest <= p.end_date)
@@ -146,7 +147,7 @@ class MembershipPauseService:
                 membership.original_end_at = membership.end_at
             record = MembershipPause(membership_id=membership.id, request_key=key, start_date=preview.start_date,
                 end_date=preview.end_date, days=preview.days, previous_end_at=membership.end_at,
-                new_end_at=preview.new_end_at.replace(tzinfo=None))
+                new_end_at=stored_instant(preview.new_end_at))
             self.db.add(record)
             membership.end_at = record.new_end_at
             self.db.flush()

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.core.time import ist_today
 from datetime import date
 from datetime import time as dtime
 from decimal import Decimal
@@ -99,7 +100,7 @@ class SlotService:
             to_create = [specific_date]
         else:
             # next 30 days for each selected weekday
-            d0 = date.today()
+            d0 = ist_today()
             days = {int(d) for d in repeat_days}
             invalid = [d for d in days if d < 0 or d > 6]
             if invalid:

@@ -8,6 +8,8 @@ from sqlalchemy.orm import Session
 
 from app.models.booking import Booking, BookingStatus, Payment, PaymentStatus
 from app.models.slot import GymSlot, SlotAvailability, SlotAvailabilityStatus
+from app.services.booking_access_service import BookingAccessService
+from app.services.booking_time import require_future_start
 
 
 class AdminBookingOpsService:
@@ -15,7 +17,7 @@ class AdminBookingOpsService:
         self.db = db
 
     def cancel_booking(self, *, booking_id: int, reason: str | None = None) -> Booking:
-        booking = self.db.execute(select(Booking).where(Booking.id == booking_id)).scalars().first()
+        booking = self.db.execute(select(Booking).where(Booking.id == booking_id).with_for_update().execution_options(populate_existing=True)).scalars().first()
         if not booking:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
 
@@ -57,6 +59,7 @@ class AdminBookingOpsService:
             if payment and payment.status == PaymentStatus.PAID.value:
                 payment.status = PaymentStatus.REFUNDED.value
 
+            BookingAccessService(self.db).revoke(booking)
             self.db.commit()
         except Exception:
             self.db.rollback()
@@ -73,7 +76,7 @@ class AdminBookingOpsService:
         external_ref: str | None = None,
         note: str | None = None,
     ) -> Booking:
-        booking = self.db.execute(select(Booking).where(Booking.id == booking_id)).scalars().first()
+        booking = self.db.execute(select(Booking).where(Booking.id == booking_id).with_for_update().execution_options(populate_existing=True)).scalars().first()
         if not booking:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
 
@@ -86,6 +89,12 @@ class AdminBookingOpsService:
             if not payment:
                 raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Payment not found")
 
+            confirming = new_status == PaymentStatus.PAID.value and booking.status == BookingStatus.PENDING_PAYMENT.value
+            if confirming:
+                slot = self.db.get(GymSlot, booking.gym_slot_id)
+                if not slot:
+                    raise HTTPException(status_code=404, detail="Slot not found")
+                require_future_start(booking.slot_date, slot.start_time)
             payment.status = new_status
             if external_ref is not None:
                 payment.external_ref = external_ref
@@ -99,6 +108,12 @@ class AdminBookingOpsService:
             if new_status == PaymentStatus.REFUNDED.value and booking.status != BookingStatus.CANCELLED.value:
                 booking.status = BookingStatus.CANCELLED.value
 
+            if new_status == PaymentStatus.PAID.value:
+                BookingAccessService(self.db).ensure_records(booking)
+            else:
+                BookingAccessService(self.db).revoke(booking)
+            if confirming:
+                require_future_start(booking.slot_date, slot.start_time)
             self.db.commit()
         except Exception:
             self.db.rollback()

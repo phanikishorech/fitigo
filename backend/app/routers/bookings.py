@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Header
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, Header, Response
+from sqlalchemy.orm import Session, object_session
 
 from app.core.dependencies import require_role
 from app.core.roles import ROLE_CUSTOMER
@@ -13,9 +13,12 @@ from app.schemas.booking import (
     BookingCreateRequest,
     BookingRescheduleRequest,
     BookingResponse,
+    BookingQrResponse,
     PaymentResponse,
 )
 from app.services.booking_service import BookingService
+from app.services.booking_access_service import BookingAccessService
+from app.schemas.visitors import BookingVisitorsRequest
 from sqlalchemy import select
 
 
@@ -39,6 +42,8 @@ def _to_payment_response(p: Payment | None) -> PaymentResponse | None:
 
 def _to_booking_response(b: Booking) -> BookingResponse:
     return BookingResponse(
+        visitor_names=b.visitor_names,
+        access=BookingAccessService(object_session(b)).summary(b),
         id=b.id,
         user_id=b.user_id,
         gym_id=b.gym_id,
@@ -73,6 +78,7 @@ def create_booking(
         slot_date=payload.slot_date,
         quantity=payload.quantity,
         notes=payload.notes,
+        visitor_names=payload.visitor_names,
         idempotency_key=idempotency_key,
     )
     # load payment relationship
@@ -130,6 +136,20 @@ def cancel_booking(
     booking = svc.cancel_booking(user_id=current_user.id, booking_id=booking_id, reason=payload.reason)
     booking = db.execute(select(Booking).where(Booking.id == booking.id)).scalars().first() or booking
     return _to_booking_response(booking)
+
+
+@router.post("/{booking_id}/qr", response_model=BookingQrResponse)
+def booking_qr(booking_id: int, response: Response, db: Session = Depends(get_db),
+               current_user: User = Depends(require_role({ROLE_CUSTOMER}))):
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
+    return BookingAccessService(db).issue(booking_id, current_user.id)
+
+
+@router.post("/{booking_id}/visitors", response_model=BookingResponse)
+def booking_visitors(booking_id: int, payload: BookingVisitorsRequest, db: Session = Depends(get_db),
+                     current_user: User = Depends(require_role({ROLE_CUSTOMER}))):
+    return _to_booking_response(BookingAccessService(db).set_visitors(booking_id, current_user.id, payload.visitor_names))
 
 
 @router.post("/{booking_id}/reschedule", response_model=BookingResponse)

@@ -35,8 +35,12 @@ export function utcTimestamp(value: string) {
   return /(?:Z|[+-]\d{2}:\d{2})$/i.test(value) ? value : `${value}Z`
 }
 export function membershipDate(value: string) {
-  return new Date(value.length === 10 ? `${value}T12:00:00Z` : utcTimestamp(value)).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })
+  return new Date(value.length === 10 ? `${value}T12:00:00+05:30` : utcTimestamp(value)).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' })
 }
 export function membershipTime(value: string) {
-  return new Date(utcTimestamp(value)).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })
+  return new Date(utcTimestamp(value)).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })
+}
+
+export function istDateTime(value: string) {
+  return `${membershipDate(value)}, ${membershipTime(value)} IST`
 }

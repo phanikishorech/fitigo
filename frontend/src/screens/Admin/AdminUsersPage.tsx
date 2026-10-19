@@ -1,3 +1,4 @@
+import { istDateTime } from '../../utils/membership'
 import { useEffect, useState } from 'react'
 import AdminLayout from './AdminLayout'
 import styles from './admin.module.css'
@@ -68,7 +69,7 @@ export default function AdminUsersPage() {
                     <span className={styles.tag}>{u.status}</span>
                   </td>
                   <td>{u.roles?.length ? u.roles.join(', ') : '—'}</td>
-                  <td>{new Date(u.created_at).toLocaleString()}</td>
+                  <td>{istDateTime(u.created_at)}</td>
                   <td>
                     <div className={styles.row}>
                       <button

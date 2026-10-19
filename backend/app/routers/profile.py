@@ -10,8 +10,9 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.dependencies import get_optional_user, require_role
 from app.core.roles import ROLE_CUSTOMER
-from app.core.time import utc_today
+from app.core.time import ist_today, ist_now, as_ist
 from app.services.access_service import AccessService
+from app.services.booking_access_service import BookingAccessService
 from app.services.membership_entitlement import membership_name, included_ids, scope, active_memberships as resolve_memberships, covers
 from app.models.access import Checkin
 from app.database.session import get_db
@@ -70,8 +71,9 @@ def get_membership_calendar(
     if not m:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active membership for this gym")
 
-    # default month = current month (UTC)
-    month_val = month or f"{now.year:04d}-{now.month:02d}"
+    # Calendar month follows IST even when the underlying audit instant is UTC.
+    local = as_ist(now)
+    month_val = month or f"{local.year:04d}-{local.month:02d}"
     month_start, month_end = _month_bounds(month_val)
 
     calendar = AccessService(db).calendar_month(user_id=uid, year=month_start.year, month=month_start.month)
@@ -108,7 +110,7 @@ def get_membership_daily_qr(
         raise HTTPException(status_code=403, detail="No active membership for this gym")
     result = svc.get_today_access(user_id=current_user.id)
     return MembershipDailyQRResponse(
-        gym_id=gym_id, access_date=utc_today(), status=result["status"],
+        gym_id=gym_id, access_date=ist_today(), status=result["status"],
         scanned=result["status"] == "USED", scanned_at=result.get("used_at"),
         qr_payload=result.get("qr_token"), expires_at=result.get("expires_at"),
     )
@@ -258,8 +260,8 @@ def get_membership_summary(
     visits_booked: int | None = None
     visits_completed: int | None = None
     if m and active_gym_ids:
-        start_d = m.start_at.date() if m.start_at else None
-        end_d = m.end_at.date() if m.end_at else None
+        start_d = as_ist(m.start_at).date() if m.start_at else None
+        end_d = as_ist(m.end_at).date() if m.end_at else None
         if start_d and end_d:
             booked = int(
                 db.execute(
@@ -322,7 +324,7 @@ def list_profile_bookings(
     current_user: User | None = Depends(get_optional_user),
 ):
     uid = _require_user_id(db, current_user)
-    today = datetime.utcnow().date()
+    today = ist_today()
 
     stmt = (
         select(Booking, Gym, GymSlot)
@@ -380,6 +382,7 @@ def list_profile_bookings(
         items.append(
             BookingItemResponse(
                 booking_id=int(b.id),
+                booking_access=BookingAccessService(db).summary(b),
                 booking_status=shown_status,
                 attendance_status=b.attendance_status,
                 gym_id=int(g.id),
@@ -419,9 +422,7 @@ def list_profile_bookings(
             gym_location = ", ".join([p for p in loc_parts if p])
             scanned_at = rec.scanned_at or rec.created_at
             if scanned_at:
-                dt = scanned_at
-                if dt.tzinfo is not None:
-                    dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+                dt = as_ist(scanned_at)
                 t = dt.time().replace(tzinfo=None)
             else:
                 t = time(0, 0, 0)
@@ -451,10 +452,10 @@ def list_profile_bookings(
 
     if status_filter in {"past", "all", None, ""}:
         rows = db.execute(select(Checkin, Gym).join(Gym, Gym.id == Checkin.gym_id).where(
-            Checkin.user_id == uid, Checkin.status == "SUCCESS",
+            Checkin.user_id == uid, Checkin.booking_id.is_(None), Checkin.status == "SUCCESS",
         )).all()
         for checkin, gym in rows:
-            dt = checkin.checkin_time
+            dt = as_ist(checkin.checkin_time)
             items.append(BookingItemResponse(
                 booking_id=-(2 * int(checkin.id) + 1), booking_status="COMPLETED",
                 attendance_status="ATTENDED", gym_id=int(gym.id), gym_name=gym.name,
@@ -593,8 +594,8 @@ def get_membership_pass(
     visits_booked: int | None = None
     visits_completed: int | None = None
     if active_gym_ids and m:
-        start_d = m.start_at.date() if m.start_at else None
-        end_d = m.end_at.date() if m.end_at else None
+        start_d = as_ist(m.start_at).date() if m.start_at else None
+        end_d = as_ist(m.end_at).date() if m.end_at else None
         if start_d and end_d:
             visits_booked = int(
                 db.execute(

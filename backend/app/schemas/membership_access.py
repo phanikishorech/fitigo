@@ -1,11 +1,12 @@
 from __future__ import annotations
+from app.schemas.time import ISTResponse
 
 from datetime import date, datetime
 
 from pydantic import BaseModel, Field
 
 
-class MembershipCalendarResponse(BaseModel):
+class MembershipCalendarResponse(ISTResponse):
     gym_id: int
 
     # Membership validity window for this gym.
@@ -20,7 +21,7 @@ class MembershipCalendarResponse(BaseModel):
     accessed_dates: list[date] = Field(default_factory=list)
 
 
-class MembershipDailyQRResponse(BaseModel):
+class MembershipDailyQRResponse(ISTResponse):
     gym_id: int
     access_date: date
     scanned: bool = False
@@ -35,7 +36,7 @@ class ScanMembershipQRRequest(BaseModel):
     gym_id: int | None = Field(default=None, ge=1)
 
 
-class ScanMembershipQRResponse(BaseModel):
+class ScanMembershipQRResponse(ISTResponse):
     gym_id: int
     user_id: int
     access_date: date

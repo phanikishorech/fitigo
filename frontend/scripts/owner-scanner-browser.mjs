@@ -6,7 +6,7 @@ const origin=process.env.FITIGO_TEST_ORIGIN||'http://localhost:5173', debug='htt
 const target=await isolatedBrowserTarget(debug)
 const ws=new WebSocket(target.webSocketDebuggerUrl)
 await new Promise((resolve,reject)=>{ws.onopen=resolve;ws.onerror=reject})
-let sequence=0, responseMode='CHECKED_IN', responseDelay=300
+let sequence=0, responseMode='CHECKED_IN', responseDelay=300, bookingMode=false
 const pending=new Map(), failures=[], exceptions=[], calls=[]
 function command(method,params={}){return new Promise((resolve,reject)=>{const id=++sequence,timer=setTimeout(()=>reject(Error(method)),20000);pending.set(id,{resolve,reject,timer});ws.send(JSON.stringify({id,method,params}))})}
 async function evaluate(expression){const r=await command('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(r.exceptionDetails)throw Error(r.exceptionDetails.exception?.description||r.exceptionDetails.text);return r.result.value}
@@ -33,7 +33,7 @@ ws.onmessage=async event=>{
     const mode=responseMode;await wait(responseDelay)
     if(mode==='NETWORK'){await command('Fetch.failRequest',{requestId,errorReason:'ConnectionFailed'});return}
     if(mode==='SERVER'){await command('Fetch.fulfillRequest',{requestId,responseCode:500,body:Buffer.from('{"detail":"SQL private failure"}').toString('base64')});return}
-    body=mode==='CHECKED_IN'?{success:true,status:'CHECKED_IN',customer_name:'Fixture Member',gym_name:'Scanner Fixture Gym',access_type:'MULTI_GYM',checkin_time:new Date().toISOString()}:mode==='MALFORMED'?{success:true,status:'OK'}:{success:false,status:mode,message:'SQL private failure'}
+     body=mode==='CHECKED_IN'?{success:true,status:'CHECKED_IN',customer_name:bookingMode?'David Visitor':'Fixture Member',gym_name:'Scanner Fixture Gym',access_type:bookingMode?'BOOKING_ACCESS':'MULTI_GYM',access_label:bookingMode?'Booking':'FitiGo Multi-Gym',checkin_time:new Date().toISOString()}:mode==='MALFORMED'?{success:true,status:'OK'}:{success:false,status:mode,message:'SQL private failure'}
    }else throw Error(`Unexpected API ${path}`)
    await command('Fetch.fulfillRequest',{requestId,responseCode:200,responseHeaders:[{name:'Content-Type',value:'application/json'}],body:Buffer.from(JSON.stringify(body)).toString('base64')})
   }catch(e){if(e.message.includes('Invalid InterceptionId'))return;failures.push(e.message);await command('Fetch.failRequest',{requestId,errorReason:'Failed'}).catch(()=>{})}
@@ -75,7 +75,10 @@ try{
  await show('GYMACCESS:second-fixture');await isState('APPROVED');assert.equal(calls.length,2);await isState('SCANNING')
  responseMode='QR_ALREADY_USED';await show(null);await wait(900);await show('GYMACCESS:first-fixture');await isState('REJECTED');await isState('SCANNING')
  console.log('PASS auto-start, real decoder, persistent video/stream, two consecutive members, stationary suppression, deliberate QR reuse rejection')
- for(const code of ['DAILY_ACCESS_ALREADY_CONSUMED','MEMBERSHIP_EXPIRED','MEMBERSHIP_PAUSED','WRONG_GYM','INVALID_QR']){
+ bookingMode=true;responseMode='CHECKED_IN';await show('GYMACCESS:booking-fixture');await isState('APPROVED')
+ assert.equal(await evaluate(`document.querySelector('.ow-scan-overlay').innerText.includes('David Visitor') && document.querySelector('.ow-scan-overlay').innerText.includes('Booking')`),true)
+ await isState('SCANNING');bookingMode=false
+ for(const code of ['DAILY_ACCESS_ALREADY_CONSUMED','MEMBERSHIP_EXPIRED','MEMBERSHIP_PAUSED','WRONG_GYM','INVALID_QR','BOOKING_CANCELLED','BOOKING_NOT_CONFIRMED','PAYMENT_NOT_COMPLETED','BOOKING_ALREADY_USED','BOOKING_EXPIRED','WRONG_DATE']){
   responseMode=code;await show('GYMACCESS:fixture-'+code);await isState('REJECTED')
   assert.equal(await evaluate(`document.body.innerText.includes('SQL')`),false)
   await isState('SCANNING')

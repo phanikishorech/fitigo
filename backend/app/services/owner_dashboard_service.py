@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.models.booking import Booking, BookingStatus, Payment, PaymentStatus
 from app.models.gym import Gym
+from app.core.time import ist_today
 
 
 class OwnerDashboardService:
@@ -27,7 +28,7 @@ class OwnerDashboardService:
         ).scalar_one()
 
         # Booking snapshots
-        today = date.today()
+        today = ist_today()
         bookings_today = self.db.execute(
             select(func.count())
             .select_from(Booking)

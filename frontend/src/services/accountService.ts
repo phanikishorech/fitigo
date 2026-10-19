@@ -35,8 +35,8 @@ export const accessService = {
   calendar: (year: number, month: number) => request<AccessCalendar>(`/customer/access-calendar?year=${year}&month=${month}`, { cache: 'no-store' }),
   // Read-only status checks must not mint QR credentials. The calendar exposes TODAY.
   current: () => {
-    const now = new Date()
-    return accessService.calendar(now.getUTCFullYear(), now.getUTCMonth() + 1)
+    const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', year: 'numeric', month: 'numeric' }).formatToParts(new Date())
+    return accessService.calendar(Number(parts.find(p => p.type === 'year')!.value), Number(parts.find(p => p.type === 'month')!.value))
   }
 }
 export const reviewService = { submit: (gymId: number, rating: number, comment: string) => post<{ id: number }>(`/gyms/${gymId}/reviews`, { rating, comment: comment.trim() || null }) }

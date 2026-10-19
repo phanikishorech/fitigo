@@ -4,7 +4,7 @@ import { money } from '../services/client'
 import { planDuration, type PlatformPlan } from '../services/platformMembershipService'
 import { useMutation } from '../hooks/useResource'
 import { useAdminResource } from './hooks'
-import { adminMembershipPlans, editablePlan, planAdminError, utcInput, utcValue, type AdminPlanDetail, type OfferInput, type PlanInput } from './membershipPlanService'
+import { adminMembershipPlans, editablePlan, planAdminError, istInput, istValue, type AdminPlanDetail, type OfferInput, type PlanInput } from './membershipPlanService'
 import { Alert, Button, DataCard, EmptyState, Icon, Link, Modal, PageHeader, Resource, StatusBadge, useToast } from './UI'
 
 const basePath = '/admin/membership-plans'
@@ -99,8 +99,8 @@ function OfferEditor({ detail, reload }: { detail: AdminPlanDetail; reload: () =
   const [kind, setKind] = useState<OfferInput['kind']>(existing?.kind || 'PERCENTAGE')
   const [value, setValue] = useState(existing?.value || '')
   const [title, setTitle] = useState(existing?.title || '')
-  const [start, setStart] = useState(existing ? utcInput(existing.starts_at) : '')
-  const [end, setEnd] = useState(existing ? utcInput(existing.ends_at) : '')
+  const [start, setStart] = useState(existing ? istInput(existing.starts_at) : '')
+  const [end, setEnd] = useState(existing ? istInput(existing.ends_at) : '')
   const [enabled, setEnabled] = useState(existing?.is_active || false)
   const [error, setError] = useState(''); const [pending, setPending] = useState<OfferInput | null>(null)
   const toast = useToast(); const errorId = useId()
@@ -108,17 +108,17 @@ function OfferEditor({ detail, reload }: { detail: AdminPlanDetail; reload: () =
     <div className="ad-plan-editor"><DataCard title={existing ? 'Offer configuration' : 'Add an offer'} action={existing && <StatusBadge status={existing.state} />}>
       <form className="ad-plan-form" aria-describedby={error ? errorId : undefined} onSubmit={event => {
         event.preventDefault(); setError('')
-        if (Date.parse(`${end}Z`) <= Date.parse(`${start}Z`)) { setError('Offer end must be after its start. All times are UTC.'); return }
-        setPending({ expected_version: plan.version, kind, value, title: title.trim() || null, starts_at: utcValue(start), ends_at: utcValue(end), is_active: enabled })
+        if (Date.parse(`${end}+05:30`) <= Date.parse(`${start}+05:30`)) { setError('Offer end must be after its start. All times are IST.'); return }
+        setPending({ expected_version: plan.version, kind, value, title: title.trim() || null, starts_at: istValue(start), ends_at: istValue(end), is_active: enabled })
       }}>
         <p>One configured offer per plan. Saving replaces the previous offer settings; discounts do not stack.</p>
         <fieldset className="ad-plan-fields"><legend className="srOnly">Offer settings</legend>
           <Field label="Discount type"><select name="kind" value={kind} onChange={e => setKind(e.target.value as OfferInput['kind'])}><option value="PERCENTAGE">Percentage off</option><option value="FIXED">Fixed amount off</option></select></Field>
           <Field label={kind === 'PERCENTAGE' ? 'Discount percentage' : 'Discount amount (INR)'}><input name="value" type="number" inputMode="decimal" min="0.01" max={kind === 'PERCENTAGE' ? '100' : '9999999999.99'} step="0.01" required value={value} onChange={e => setValue(e.target.value)} /></Field>
-          <Field label="Starts at (UTC)"><input name="starts_at" type="datetime-local" step="1" required value={start} onChange={e => setStart(e.target.value)} /></Field>
-          <Field label="Ends at (UTC)"><input name="ends_at" type="datetime-local" step="1" required value={end} onChange={e => setEnd(e.target.value)} /></Field>
+          <Field label="Starts at (IST)"><input name="starts_at" type="datetime-local" step="1" required value={start} onChange={e => setStart(e.target.value)} /></Field>
+          <Field label="Ends at (IST)"><input name="ends_at" type="datetime-local" step="1" required value={end} onChange={e => setEnd(e.target.value)} /></Field>
         </fieldset>
-        <p className="ad-plan-meta">Enter UTC, not your device’s local time. India Standard Time is UTC +05:30. The backend decides when the offer takes effect and expires.</p>
+        <p className="ad-plan-meta">Enter India Standard Time (IST), regardless of your device’s timezone. The backend decides when the offer takes effect and expires.</p>
         <Field label="Offer title (optional)"><input name="title" maxLength={120} value={title} onChange={e => setTitle(e.target.value)} /></Field>
         <label className="ad-plan-checkbox"><input name="is_active" type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} /><span>Enable offer during its scheduled dates</span></label>
         {!plan.is_active && <Alert tone="warning">This plan is hidden. An enabled offer does not make the plan visible.</Alert>}
@@ -127,7 +127,7 @@ function OfferEditor({ detail, reload }: { detail: AdminPlanDetail; reload: () =
       </form>
     </DataCard><DataCard title="Currently saved price"><PlanPrice plan={plan} /><p className="ad-plan-meta">Final prices are calculated only by the backend. Save and reload to see the effective result.</p><Link to={`${basePath}/${plan.id}`} className="fg-button fg-button--secondary">Edit Plan</Link></DataCard></div>
     {pending && <SaveDialog title={pending.is_active ? 'Save this offer?' : 'Save disabled offer?'} onClose={() => setPending(null)} save={() => adminMembershipPlans.offer(plan.id, pending)} onSaved={() => { toast(pending.is_active ? 'Offer saved. The backend controls its schedule.' : 'Offer disabled.'); setPending(null); reload() }}>
-      {pending.kind === 'PERCENTAGE' ? `${pending.value}% off` : `${money(pending.value, plan.currency)} off`}. {pending.is_active ? `Scheduled from ${utcInput(pending.starts_at).replace('T', ' ')} to ${utcInput(pending.ends_at).replace('T', ' ')} UTC.` : 'The offer will not apply to customer prices.'} External payments remain disabled.
+      {pending.kind === 'PERCENTAGE' ? `${pending.value}% off` : `${money(pending.value, plan.currency)} off`}. {pending.is_active ? `Scheduled from ${istInput(pending.starts_at).replace('T', ' ')} to ${istInput(pending.ends_at).replace('T', ' ')} IST.` : 'The offer will not apply to customer prices.'} External payments remain disabled.
     </SaveDialog>}
   </>
 }

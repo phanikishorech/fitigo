@@ -1,3 +1,5 @@
+import { localDate } from '../../services/client'
+import { istDateTime } from '../../utils/membership'
 import { useEffect, useRef, useState } from 'react'
 import { authFetch } from '../../auth'
 import AccessQr from '../../components/AccessQr'
@@ -11,7 +13,7 @@ type Today =
   | { status: 'PAUSED' | 'NO_ACCESS' | 'EXPIRED' }
 
 export default function AccessPanel({ onCheckin }: { onCheckin: () => void }) {
-  const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7))
+  const [month, setMonth] = useState(() => localDate().slice(0, 7))
   const [calendar, setCalendar] = useState<Calendar | null>(null)
   const [today, setToday] = useState<Today | null>(null)
   const [selected, setSelected] = useState<Day | null>(null)
@@ -90,7 +92,7 @@ export default function AccessPanel({ onCheckin }: { onCheckin: () => void }) {
   return <section className={styles.calWrap} aria-label="Membership access calendar and QR">
     <div className={styles.calHeader}>
       <button type="button" className={styles.secondaryBtn} aria-label="Previous month" disabled={month === '2000-01'} onClick={() => moveMonth(-1)}>←</button>
-      <strong>{new Date(Date.UTC(year, monthNumber - 1, 1)).toLocaleDateString(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' })}</strong>
+      <strong>{new Date(Date.UTC(year, monthNumber - 1, 1)).toLocaleDateString(undefined, { month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' })}</strong>
       <button type="button" className={styles.secondaryBtn} aria-label="Next month" disabled={month === '2100-12'} onClick={() => moveMonth(1)}>→</button>
     </div>
     {error && <p role="alert">{error}</p>}
@@ -109,7 +111,7 @@ export default function AccessPanel({ onCheckin }: { onCheckin: () => void }) {
           </button>
         })}
       </div>
-      {selected && <p role="status">{selected.date}: {selected.qr_status ?? selected.status}{selected.gym_name ? ` — ${selected.gym_name}` : ''}{selected.checkin_time ? ` at ${selected.checkin_time} UTC` : ''}</p>}
+      {selected && <p role="status">{selected.date}: {selected.qr_status ?? selected.status}{selected.gym_name ? ` — ${selected.gym_name}` : ''}{selected.checkin_time ? ` at ${selected.checkin_time} IST` : ''}</p>}
     </>}
     <div className={styles.accessPass}>
       <h3>Today's access</h3>
@@ -118,12 +120,12 @@ export default function AccessPanel({ onCheckin }: { onCheckin: () => void }) {
         <AccessQr token={today.qr_token} />
         <p>Show this QR to gym staff. One check-in per day.</p>
         <small>Refreshes automatically · expires in {Math.max(0, Math.ceil((Date.parse(today.expires_at) - clock) / 1000))} seconds</small>
-      </> : <p role="status">{today?.status === 'USED' ? `Access used at ${today.gym_name ?? 'the gym'} · ${new Date(today.used_at).toLocaleTimeString()}`
+      </> : <p role="status">{today?.status === 'USED' ? `Access used at ${today.gym_name ?? 'the gym'} · ${istDateTime(today.used_at)}`
         : today?.status === 'PAUSED' ? 'This visit has been paused.'
           : today?.status === 'NO_ACCESS' ? 'No active gym access.'
             : today ? 'QR expired. Refresh to check availability.' : error ? 'QR unavailable.' : 'Loading today’s access…'}</p>}
       <button type="button" className={styles.secondaryBtn} disabled={busy} onClick={() => { setToday(null); setRefresh((n) => n + 1) }}>Refresh access</button>
-      <p className={styles.mutedSmall}>Calendar dates and daily access use UTC. Past and future dates cannot issue a QR.</p>
+      <p className={styles.mutedSmall}>Calendar dates and daily access use IST. Past and future dates cannot issue a QR.</p>
     </div>
   </section>
 }

@@ -9,6 +9,7 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.core.time import ist_now, IST
 from app.models.gym import Gym, GymFacility, GymFacilityMapping, GymImage, GymOperatingHours
 from app.schemas.gym import GymDiscoverItem, GymDiscoverResponse, GymListItem, GymResponse
 from app.schemas.gym_details import (
@@ -188,7 +189,7 @@ def _get_dev_customer_id(db: Session) -> int | None:
 def _has_active_membership(db: Session, *, user_id: int, gym_id: int) -> bool:
     from datetime import datetime
 
-    now = datetime.utcnow()
+    now = ist_now()
     gym = db.get(Gym, gym_id)
     return bool(gym and covers(active_memberships(db, user_id, now), gym))
 
@@ -537,7 +538,7 @@ def discover_gyms(
     # Open-now for window (today only)
     from datetime import datetime, timezone
 
-    now = datetime.now(timezone.utc)
+    now = ist_now()
     # 0=Mon...6=Sun
     dow = int((now.weekday()) % 7)
     time_now = now.time()
@@ -805,7 +806,7 @@ def get_gym_details(
         for h in hours_rows
     ]
 
-    now = dt.utcnow()
+    now = ist_now()
     dow = int((now.weekday()) % 7)
     hours_today = next((h for h in hours_rows if int(h.day_of_week) == dow), None)
     open_now: bool | None = None
@@ -951,8 +952,8 @@ def get_gym_details(
         booked = int(av.booked_count or 0)
         remaining = max(0, cap_total - booked - int(av.blocked_count or 0))
         status_badge = "FULL" if remaining <= 0 else "AVAILABLE"
-        start_at = dt.combine(today, s.start_time)
-        end_at = dt.combine(today, s.end_time)
+        start_at = dt.combine(today, s.start_time, tzinfo=IST)
+        end_at = dt.combine(today, s.end_time, tzinfo=IST)
         classes_nearby.append(
             GymClassCard(
                 class_id=int(s.id),
@@ -1101,7 +1102,7 @@ def get_gym_booking_options(
 
     from datetime import datetime
 
-    now = datetime.utcnow()
+    now = ist_now()
 
     # Access types derived from facilities (MVP)
     facs = (
@@ -1246,6 +1247,9 @@ def validate_gym_booking(
     if not slot or int(slot.gym_id) != int(gym.id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Slot not found")
 
+    from app.services.booking_time import require_future_start
+    require_future_start(payload.slot_date, slot.start_time)
+
     # Ensure SlotAvailability exists
     av = (
         db.execute(
@@ -1371,6 +1375,7 @@ def create_access_bookings(
             notes=notes,
             unit_price_override=unit_price_override,
             auto_confirm_if_free=True,
+            access_source="MEMBERSHIP_ACCESS" if validated.membership_eligible and total <= Decimal("0") else "BOOKING_ACCESS",
         )
 
         # Re-load payment for response

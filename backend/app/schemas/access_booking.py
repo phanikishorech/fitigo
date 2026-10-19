@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
+from typing import Literal
+from app.core.time import ist_now
 
 from pydantic import BaseModel, Field
 
@@ -22,6 +24,8 @@ class MembershipStatusBanner(BaseModel):
 
 
 class GymBookingOptionsResponse(BaseModel):
+    server_now: datetime = Field(default_factory=ist_now)
+    booking_timezone: Literal["Asia/Kolkata"] = "Asia/Kolkata"
     gym_id: int
     gym_name: str
     locality: str | None = None

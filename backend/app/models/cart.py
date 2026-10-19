@@ -10,6 +10,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    JSON,
     Numeric,
     String,
     Time,
@@ -51,6 +52,7 @@ class CartItem(Base):
     preferred_end_time: Mapped[time | None] = mapped_column(Time, nullable=True)
 
     member_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    visitor_names: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
 
     price_per_person: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
     total_price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)

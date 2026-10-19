@@ -37,7 +37,7 @@ test('admin plan service sends real endpoints and optimistic version, never fina
   assert.deepEqual(JSON.parse(calls[3][1].body),{name:'Test',base_price:'400.00',expected_version:7})
   assert.equal(JSON.parse(calls[4][1].body).expected_version,8)
 })
-test('explicit UTC editor round trips offsets and seconds without local timezone conversion', () => {
-  assert.equal(services.utcInput('2026-10-10T10:30:45+05:30'),'2026-10-10T05:00:45')
-  assert.equal(services.utcValue('2026-10-10T05:00:45'),'2026-10-10T05:00:45.000Z')
+test('explicit IST editor preserves entered clock time and offset', () => {
+  assert.equal(services.istInput('2026-10-10T10:30:45+05:30'),'2026-10-10T10:30:45')
+  assert.equal(services.istValue('2026-10-10T10:30:45'),'2026-10-10T10:30:45+05:30')
 })

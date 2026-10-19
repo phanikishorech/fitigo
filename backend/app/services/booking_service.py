@@ -11,6 +11,9 @@ from app.models.booking import Booking, BookingStatus, Payment, PaymentStatus
 from app.models.gym import Gym
 from app.models.auth import User
 from app.models.slot import GymSlot, SlotAvailability, SlotAvailabilityStatus
+from app.services.booking_access_service import BookingAccessService, validate_visitors
+from app.services.booking_time import require_future_start
+from app.core.time import stored_instant
 
 
 class BookingService:
@@ -70,9 +73,12 @@ class BookingService:
         idempotency_key: str | None = None,
         unit_price_override: Decimal | None = None,
         auto_confirm_if_free: bool = False,
+        visitor_names: list[str] | None = None,
+        access_source: str = "BOOKING_ACCESS",
     ) -> Booking:
         if quantity <= 0:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="quantity must be >= 1")
+        visitor_names = validate_visitors(visitor_names, quantity)
 
         if idempotency_key:
             existing = (
@@ -92,6 +98,7 @@ class BookingService:
         )
         if not slot:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Slot not found")
+        require_future_start(slot_date, slot.start_time, now=self._now())
 
         gym = self.db.execute(select(Gym).where(Gym.id == slot.gym_id)).scalars().first()
         if not gym or gym.status != "APPROVED" or not gym.is_active:
@@ -165,6 +172,8 @@ class BookingService:
                 currency=currency,
                 status=booking_status,
                 notes=notes,
+                visitor_names=visitor_names,
+                access_source=access_source,
                 expires_at=expires_at,
                 expired_at=None,
                 idempotency_key=idempotency_key,
@@ -182,11 +191,14 @@ class BookingService:
             )
             self.db.add(payment)
 
+            BookingAccessService(self.db).ensure_records(booking)
+
             # Reserve capacity immediately
             av.booked_count += quantity
             if cap_total - av.booked_count - av.blocked_count <= 0 and av.status == SlotAvailabilityStatus.AVAILABLE.value:
                 av.status = SlotAvailabilityStatus.FULL.value
 
+            require_future_start(slot_date, slot.start_time, now=self._now())
             self.db.commit()
         except Exception:
             self.db.rollback()
@@ -196,7 +208,7 @@ class BookingService:
         return booking
 
     def pay_dummy(self, *, user_id: int, booking_id: int, external_ref: str | None = None) -> Booking:
-        booking = self.db.execute(select(Booking).where(Booking.id == booking_id, Booking.user_id == user_id)).scalars().first()
+        booking = self.db.execute(select(Booking).where(Booking.id == booking_id, Booking.user_id == user_id).with_for_update().execution_options(populate_existing=True)).scalars().first()
         if not booking:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
 
@@ -218,9 +230,15 @@ class BookingService:
             if not payment:
                 raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Payment not found")
 
+            slot = self.db.get(GymSlot, booking.gym_slot_id)
+            if not slot:
+                raise HTTPException(status_code=404, detail="Slot not found")
+            require_future_start(booking.slot_date, slot.start_time, now=self._now())
             payment.status = PaymentStatus.PAID.value
             payment.external_ref = external_ref or payment.external_ref
             booking.status = BookingStatus.CONFIRMED.value
+            BookingAccessService(self.db).ensure_records(booking)
+            require_future_start(booking.slot_date, slot.start_time, now=self._now())
             self.db.commit()
         except Exception:
             self.db.rollback()
@@ -230,7 +248,7 @@ class BookingService:
         return booking
 
     def cancel_booking(self, *, user_id: int, booking_id: int, reason: str | None = None) -> Booking:
-        booking = self.db.execute(select(Booking).where(Booking.id == booking_id, Booking.user_id == user_id)).scalars().first()
+        booking = self.db.execute(select(Booking).where(Booking.id == booking_id, Booking.user_id == user_id).with_for_update().execution_options(populate_existing=True)).scalars().first()
         if not booking:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
 
@@ -278,6 +296,7 @@ class BookingService:
             if payment and payment.status == PaymentStatus.PAID.value:
                 payment.status = PaymentStatus.REFUNDED.value
 
+            BookingAccessService(self.db).revoke(booking)
             self.db.commit()
         except Exception:
             self.db.rollback()
@@ -295,9 +314,13 @@ class BookingService:
         new_slot_date,
         note: str | None = None,
     ) -> Booking:
-        booking = self.db.execute(select(Booking).where(Booking.id == booking_id, Booking.user_id == user_id)).scalars().first()
+        booking = self.db.execute(select(Booking).where(Booking.id == booking_id, Booking.user_id == user_id).with_for_update().execution_options(populate_existing=True)).scalars().first()
         if not booking:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
+
+        from app.models.access import Checkin
+        if booking.attendance_status == "ATTENDED" or self.db.scalar(select(Checkin.id).where(Checkin.booking_id == booking.id).limit(1)):
+            raise HTTPException(status_code=409, detail="Used booking access cannot be rescheduled")
 
         if booking.status in {BookingStatus.CANCELLED.value, BookingStatus.EXPIRED.value}:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Cannot reschedule booking in status {booking.status}")
@@ -321,6 +344,7 @@ class BookingService:
         if int(new_gym_slot_id) == int(booking.gym_slot_id) and new_slot_date == booking.slot_date:
             return booking
 
+        require_future_start(new_slot_date, new_slot.start_time, now=self._now())
         # Keep pricing consistent for CONFIRMED bookings (payment already done)
         if booking.status == BookingStatus.CONFIRMED.value:
             if Decimal(str(new_slot.price)) != Decimal(str(booking.unit_price)):
@@ -414,6 +438,15 @@ class BookingService:
             if note:
                 booking.notes = (booking.notes + "\n" if booking.notes else "") + f"Reschedule note: {note}"
 
+            # Rotate references after rescheduling, so screenshots of the old visit fail.
+            from app.models.access import AccessQrToken
+            from app.services.access_service import _sha256_hex
+            import secrets
+            start, end = BookingAccessService(self.db).window(booking)
+            for token in self.db.scalars(select(AccessQrToken).where(AccessQrToken.booking_id == booking.id).with_for_update()):
+                token.token_hash = _sha256_hex(secrets.token_urlsafe(32))
+                token.valid_from, token.expires_at = stored_instant(start), stored_instant(end)
+            require_future_start(new_slot_date, new_slot.start_time, now=self._now())
             self.db.commit()
         except Exception:
             self.db.rollback()
@@ -483,6 +516,7 @@ class BookingService:
                 select(Booking)
                 .join(Gym, Gym.id == Booking.gym_id)
                 .where(Booking.id == booking_id, Gym.owner_user_id == owner_user_id)
+                .with_for_update().execution_options(populate_existing=True)
             )
             .scalars()
             .first()
@@ -529,6 +563,7 @@ class BookingService:
             if payment and payment.status == PaymentStatus.PAID.value:
                 payment.status = PaymentStatus.REFUNDED.value
 
+            BookingAccessService(self.db).revoke(booking)
             self.db.commit()
         except Exception:
             self.db.rollback()
@@ -550,6 +585,7 @@ class BookingService:
                 select(Booking)
                 .join(Gym, Gym.id == Booking.gym_id)
                 .where(Booking.id == booking_id, Gym.owner_user_id == owner_user_id)
+                .with_for_update().execution_options(populate_existing=True)
             )
             .scalars()
             .first()
@@ -567,6 +603,8 @@ class BookingService:
         booking.attendance_marked_at = self._now()
         if note is not None:
             booking.attendance_note = note
+        if attendance_status == "ATTENDED":
+            BookingAccessService(self.db).revoke(booking)
         self.db.commit()
         self.db.refresh(booking)
         return booking

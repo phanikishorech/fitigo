@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime, time
+from app.schemas.time import ISTResponse
 
 from pydantic import BaseModel
 
@@ -34,7 +35,7 @@ class OwnerBookingPayment(BaseModel):
     external_ref: str | None
 
 
-class OwnerBookingResponse(BaseModel):
+class OwnerBookingResponse(ISTResponse):
     id: int
     gym_id: int
     gym_slot_id: int

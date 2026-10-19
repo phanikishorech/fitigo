@@ -23,6 +23,8 @@ from app.schemas.cart import (
 from app.models.wallet import WalletAccount, WalletTransaction, WalletTxnDirection, WalletTxnType
 from app.models.booking import Booking, BookingStatus, Payment, PaymentStatus
 from app.models.slot import GymSlot
+from app.services.booking_access_service import BookingAccessService, validate_visitors
+from app.services.booking_time import require_future_start, gym_visit_end
 
 
 router = APIRouter(prefix="/cart")
@@ -55,7 +57,7 @@ def _get_dev_customer_id(db: Session) -> int | None:
 
 
 def _require_user_id(db: Session, current_user: User | None) -> int:
-    uid = int(current_user.id) if current_user else _get_dev_customer_id(db)
+    uid = int(current_user.id) if current_user else None
     if uid is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
     return uid
@@ -79,6 +81,7 @@ def _to_cart_item_response(
         preferred_start_time=item.preferred_start_time,
         preferred_end_time=item.preferred_end_time,
         member_count=int(item.member_count),
+        visitor_names=item.visitor_names,
         price_per_person=str(Decimal(str(item.price_per_person)).quantize(Decimal("0.01"))),
         total_price=str(Decimal(str(item.total_price)).quantize(Decimal("0.01"))),
         currency=item.currency,
@@ -176,6 +179,8 @@ def add_gym_to_cart(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gym not found")
 
     # Validate times
+    require_future_start(payload.booking_date, payload.preferred_start_time)
+    payload.preferred_end_time = gym_visit_end(payload.preferred_start_time, payload.preferred_end_time)
     if payload.preferred_end_time <= payload.preferred_start_time:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="End time must be after start time")
 
@@ -210,6 +215,7 @@ def add_gym_to_cart(
     )
     if existing:
         existing.member_count = int(payload.member_count)
+        existing.visitor_names = validate_visitors(payload.visitor_names, payload.member_count)
         existing.price_per_person = float(price)
         existing.total_price = float(total)
         db.commit()
@@ -219,6 +225,7 @@ def add_gym_to_cart(
     it = CartItem(
         user_id=uid,
         booking_type=BookingType.GYM.value,
+        visitor_names=validate_visitors(payload.visitor_names, payload.member_count),
         gym_id=int(payload.gym_id),
         class_session_id=None,
         booking_date=payload.booking_date,
@@ -272,6 +279,7 @@ def add_class_to_cart(
     # Date must match
     if sess.session_date != payload.booking_date:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Selected date does not match class session")
+    require_future_start(sess.session_date, sess.start_time)
 
     if sess.status in {ClassSessionStatus.CANCELLED.value, ClassSessionStatus.CLOSED.value}:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Class session is not bookable")
@@ -309,6 +317,7 @@ def add_class_to_cart(
     )
     if existing:
         existing.member_count = int(payload.member_count)
+        existing.visitor_names = validate_visitors(payload.visitor_names, payload.member_count)
         existing.price_per_person = float(price)
         existing.total_price = float(total)
         db.commit()
@@ -325,6 +334,7 @@ def add_class_to_cart(
     it = CartItem(
         user_id=uid,
         booking_type=BookingType.CLASS.value,
+        visitor_names=validate_visitors(payload.visitor_names, payload.member_count),
         gym_id=int(payload.gym_id),
         class_session_id=int(payload.class_session_id),
         booking_date=payload.booking_date,
@@ -399,6 +409,7 @@ def checkout_cart(
                     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Gym is closed for one of the selected dates")
                 if not it.preferred_start_time or not it.preferred_end_time:
                     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Preferred times missing for gym access")
+                require_future_start(it.booking_date, it.preferred_start_time)
                 if it.preferred_start_time < open_time:
                     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Preferred start time must be within opening hours")
                 if it.preferred_end_time > close_time:
@@ -432,6 +443,7 @@ def checkout_cart(
                     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Class does not belong to this gym")
                 if sess.session_date != it.booking_date:
                     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Selected date does not match class session")
+                require_future_start(sess.session_date, sess.start_time)
                 if sess.status in {ClassSessionStatus.CANCELLED.value, ClassSessionStatus.CLOSED.value}:
                     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Class session is not bookable")
 
@@ -464,6 +476,7 @@ def checkout_cart(
             else:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown booking_type {it.booking_type}")
 
+        _validate_checkout_times(db, items)
         db.commit()
     except Exception:
         db.rollback()
@@ -539,6 +552,7 @@ def checkout_cart_with_wallet(
                     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Gym is closed for one of the selected dates")
                 if not it.preferred_start_time or not it.preferred_end_time:
                     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Preferred times missing for gym access")
+                require_future_start(it.booking_date, it.preferred_start_time)
                 if it.preferred_start_time < open_time:
                     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Preferred start time must be within opening hours")
                 if it.preferred_end_time > close_time:
@@ -571,6 +585,7 @@ def checkout_cart_with_wallet(
                     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Class does not belong to this gym")
                 if sess.session_date != it.booking_date:
                     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Selected date does not match class session")
+                require_future_start(sess.session_date, sess.start_time)
                 if sess.status in {ClassSessionStatus.CANCELLED.value, ClassSessionStatus.CLOSED.value}:
                     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Class session is not bookable")
 
@@ -625,6 +640,7 @@ def checkout_cart_with_wallet(
 
         total = total.quantize(Decimal("0.01"))
 
+        _validate_checkout_times(db, items)
         if wallet_before < total:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Insufficient wallet balance")
 
@@ -711,6 +727,7 @@ def checkout_cart_with_wallet(
                 gym_slot_id=int(slot.id),
                 slot_date=it.booking_date,
                 quantity=int(it.member_count),
+                visitor_names=it.visitor_names,
                 unit_price=unit_price,
                 total_price=total_price,
                 currency=str(it.currency or "INR"),
@@ -733,8 +750,12 @@ def checkout_cart_with_wallet(
             )
             db.add(payment)
 
+            BookingAccessService(db).ensure_records(booking)
             booking_ids.append(int(booking.id))
 
+        # Recheck after any slot/QR writes or lock waits. An expired item rolls
+        # back the entire basket, including debit, payment, capacity and QR rows.
+        _validate_checkout_times(db, items)
         db.commit()
         db.refresh(tx)
     except Exception:
@@ -750,3 +771,17 @@ def checkout_cart_with_wallet(
         wallet_transaction_id=int(tx.id),
         booking_ids=booking_ids,
     )
+
+
+def _validate_checkout_times(db: Session, items: list[CartItem]) -> None:
+    for item in items:
+        if item.booking_type == BookingType.GYM.value and item.preferred_start_time is not None:
+            require_future_start(item.booking_date, item.preferred_start_time)
+            gym_visit_end(item.preferred_start_time, item.preferred_end_time)
+        elif item.booking_type == BookingType.CLASS.value:
+            session = db.get(ClassSession, item.class_session_id)
+            if not session or session.session_date != item.booking_date:
+                raise HTTPException(status_code=400, detail="Class session is no longer available")
+            require_future_start(session.session_date, session.start_time)
+        else:
+            raise HTTPException(status_code=400, detail="Booking start time is missing")

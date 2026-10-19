@@ -55,10 +55,10 @@ test('current access uses explicit TODAY and backend flags only', () => {
   for (const qr_status of ['USED','PAUSED','EXPIRED','NO_ACCESS']) assert.equal(state.hasAvailableAccess({ days: [{ ...date, qr_status }] }), false)
   assert.equal(state.hasAvailableAccess({ days: [{ ...date, status: 'FUTURE' }] }), false)
 })
-test('UTC timestamps do not silently become local time', () => {
+test('audit instants display in IST rather than device timezone', () => {
   assert.equal(state.utcTimestamp('2026-10-01T08:15:00'), '2026-10-01T08:15:00Z')
   assert.equal(state.utcTimestamp('2026-10-01T08:15:00+00:00'), '2026-10-01T08:15:00+00:00')
-  assert.match(state.membershipDate('2026-10-01T23:59:59Z'), /01.*Oct.*2026/)
+  assert.match(state.membershipDate('2026-10-01T23:59:59Z'), /02.*Oct.*2026/)
 })
 test('read-only access status never calls credential-minting endpoint', async () => {
   const calls = []; globalThis.__membershipRequest = async (...args) => { calls.push(args); return { days: [] } }

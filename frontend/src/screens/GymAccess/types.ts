@@ -15,6 +15,8 @@ export type AccessTypeOption = {
 }
 
 export type GymBookingOptionsResponse = {
+  server_now?: string
+  booking_timezone?: 'Asia/Kolkata'
   gym_id: number
   gym_name: string
   locality?: string | null
@@ -56,15 +58,17 @@ export type ClassSessionPublicResponse = {
 }
 
 export type CartItemCreateGymRequest = {
+  visitor_names?: string[]
   booking_type: 'GYM'
   gym_id: number
   booking_date: string
   preferred_start_time: string
-  preferred_end_time: string
+  preferred_end_time?: string
   member_count: number
 }
 
 export type CartItemCreateClassRequest = {
+  visitor_names?: string[]
   booking_type: 'CLASS'
   gym_id: number
   class_session_id: number

@@ -1,21 +1,30 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { getAccessToken } from '../../auth'
 import { openAuthModal } from '../../authUi'
 import { useMutation, useResource } from '../../hooks/useResource'
 import { bookingService } from '../../services/bookingService'
-import { localDate, money } from '../../services/client'
+import { money } from '../../services/client'
 import { useBookingDraft } from '../../store/bookingStore'
 import { navigate } from '../../router'
 import { Alert, Button, EmptyState, ErrorState, Heading, Link, Skeleton } from '../../components/common/UI'
 import Icon from '../../components/common/Icon'
-import { isBookableSession } from '../../utils/booking'
+import { isBookableSession, isFutureBookingStart, gymStartOptions, oneHourVisitEnd, istDateKey } from '../../utils/booking'
 import { visitAccessService } from '../../services/visitAccessService'
 import { todayFrom } from '../../utils/membership'
 import { usePendingAction } from '../../session/usePendingAction'
 
 export default function BookingPage({ gymId, schedule, companionsDate }: { gymId: number; schedule: boolean; companionsDate?: string }) {
   const [draft, update] = useBookingDraft(gymId, companionsDate)
-  const options = useResource(() => bookingService.options(gymId), String(gymId))
+  const [visitors, setVisitors] = useState<string[]>([])
+  const options = useResource(async () => ({ ...await bookingService.options(gymId), receivedAt: Date.now() }), String(gymId))
+  const [clock, setClock] = useState(Date.now())
+  useEffect(() => { const timer = setInterval(() => setClock(Date.now()), 1000); return () => clearInterval(timer) }, [])
+  const bookingNow = (at: number) => {
+    const server = Date.parse(options.data?.server_now || '')
+    return Number.isFinite(server) ? server + Math.max(0, at - options.data!.receivedAt) : at
+  }
+  const now = bookingNow(clock)
+  const today = istDateKey(now)
   const availability = useResource(async () => {
     const hours = await bookingService.hours(gymId, draft.date)
     const sessions = draft.accessType === 'CLASS' ? await bookingService.sessions(gymId, draft.date) : []
@@ -29,6 +38,14 @@ export default function BookingPage({ gymId, schedule, companionsDate }: { gymId
   if (options.loading) return <Skeleton cards={2} />
   if (options.error) return <ErrorState message={options.error} retry={options.retry} />
   const selected = availability.data?.sessions.find(s => s.id === draft.classId)
+  const starts = availability.data?.hours.is_closed ? [] : gymStartOptions(draft.date, availability.data?.hours.open_time, availability.data?.hours.close_time, now)
+  const selectedHour = draft.start.slice(0, 2)
+  const selectedMinute = draft.start.slice(3, 5)
+  const hours = [...new Set(starts.map(start => start.slice(0, 2)))]
+  const minutes = starts.filter(start => start.startsWith(`${selectedHour}:`)).map(start => start.slice(3, 5))
+  const endTime = oneHourVisitEnd(draft.start)
+  const startTime = draft.accessType === 'GYM' ? draft.start : selected?.start_time || ''
+  const futureStart = isFutureBookingStart(draft.date, startTime, now)
   const price = draft.accessType === 'GYM' ? options.data?.gym_price_per_person : selected?.price_per_person
   const max = draft.accessType === 'CLASS' && selected ? Math.min(50, selected.available_capacity) : 50
   function add() { return mutation.run(async () => {
@@ -40,17 +57,20 @@ export default function BookingPage({ gymId, schedule, companionsDate }: { gymId
         navigate(`/gyms/${gymId}/book/access`)
         return
       }
-    } else if (draft.date < localDate()) throw new Error('Please choose today or a future date.')
+    }
+    if (!isFutureBookingStart(draft.date, startTime, bookingNow(Date.now()))) throw new Error('Choose a future date and start time (IST).')
     if (!Number.isInteger(draft.memberCount) || draft.memberCount < 1 || draft.memberCount > max) throw new Error('Please check the number of members.')
+    const visitor_names = Array.from({ length: draft.memberCount }, (_, index) => (visitors[index] || '').trim())
+    if (visitor_names.some(name => !name || name.length > 150)) throw new Error('Enter the name of each person who will use the booking.')
     if (draft.accessType === 'GYM') {
       if (!availability.data || availability.data.hours.is_closed) throw new Error('This gym is closed on your selected date.')
-      if (!draft.start || !draft.end || draft.end <= draft.start) throw new Error('Choose an end time after your start time.')
+      if (!starts.includes(draft.start) || !endTime) throw new Error('Choose an available quarter-hour start for a one-hour visit.')
       // In companion mode memberCount contains additional people only. The member's
       // QR entitlement is never submitted as a paid cart item or a fake discount.
-      await bookingService.addGym({ booking_type: 'GYM', gym_id: gymId, booking_date: draft.date, preferred_start_time: draft.start, preferred_end_time: draft.end, member_count: draft.memberCount })
+      await bookingService.addGym({ booking_type: 'GYM', gym_id: gymId, booking_date: draft.date, preferred_start_time: draft.start, member_count: draft.memberCount, visitor_names })
     } else {
       if (!selected || selected.available_capacity < draft.memberCount || !isBookableSession(selected.status, selected.available_capacity)) throw new Error('That session is no longer available. Choose another time.')
-      await bookingService.addClass({ booking_type: 'CLASS', gym_id: gymId, booking_date: draft.date, class_session_id: selected.id, member_count: draft.memberCount })
+      await bookingService.addClass({ booking_type: 'CLASS', gym_id: gymId, booking_date: draft.date, class_session_id: selected.id, member_count: draft.memberCount, visitor_names })
     }
     navigate('/cart')
   }) }
@@ -64,14 +84,20 @@ export default function BookingPage({ gymId, schedule, companionsDate }: { gymId
         {options.data?.has_classes && <button className={`fg-plan ${draft.accessType === 'CLASS' ? 'is-active' : ''}`} aria-pressed={draft.accessType === 'CLASS'} onClick={() => update({ accessType: 'CLASS' })}><div className="fg-row"><Icon name="spark" size={28} />{draft.accessType === 'CLASS' && <Icon name="check" />}</div><h3>Join a class</h3><p className="fg-muted">Move together. Choose an available session.</p></button>}
         <Button onClick={() => navigate(`/gyms/${gymId}/book/schedule`)}>Continue <Icon name="arrow" /></Button>
       </> : <>
-        <label className="fg-field">{companionsDate ? 'Visit date · Today (UTC)' : 'Select date'}<input type="date" min={companionsDate || localDate()} value={draft.date} readOnly={!!companionsDate} onChange={e => { if (!companionsDate && e.target.value) update({ date: e.target.value, classId: null, start: '', end: '' }) }} /></label>
+        <label className="fg-field">{companionsDate ? 'Visit date · Today (IST)' : 'Select date (IST)'}<input type="date" min={today} value={draft.date} readOnly={!!companionsDate} onChange={e => { if (!companionsDate && e.target.value) update({ date: e.target.value, classId: null, start: '', end: '' }) }} /></label>
+        <p className="fg-muted">Booking times are in IST. Choose a start time in the future; availability is checked again before payment.</p>
         {availability.loading ? <Skeleton cards={1} /> : availability.error ? <ErrorState message={availability.error} retry={availability.retry} /> : draft.accessType === 'GYM' ? availability.data?.hours.is_closed ? <Alert>This gym is closed on this date. Choose another day.</Alert> : <>
           <p className="fg-muted">Open {availability.data?.hours.open_time?.slice(0, 5)} – {availability.data?.hours.close_time?.slice(0, 5)}</p>
-          <div className="fg-row"><label className="fg-field">Preferred start<input type="time" required min={availability.data?.hours.open_time?.slice(0, 5)} max={availability.data?.hours.close_time?.slice(0, 5)} value={draft.start} onChange={e => update({ start: e.target.value })} /></label><label className="fg-field">Preferred end<input type="time" required value={draft.end} min={draft.start} max={availability.data?.hours.close_time?.slice(0, 5)} onChange={e => update({ end: e.target.value })} /></label></div>
-        </> : availability.data?.sessions.length ? <div className="fg-stack"><h3>Choose a session</h3>{availability.data.sessions.map(session => <button key={session.id} disabled={!isBookableSession(session.status, session.available_capacity)} aria-pressed={draft.classId === session.id} className={`fg-plan ${draft.classId === session.id ? 'is-active' : ''}`} onClick={() => update({ classId: session.id, memberCount: Math.min(draft.memberCount, session.available_capacity) })}><h3>{session.class_name}</h3><p>{session.start_time.slice(0, 5)} – {session.end_time.slice(0, 5)}</p><p className="fg-muted">{session.available_capacity} seats available · {money(session.price_per_person)}</p></button>)}</div> : <EmptyState title="No classes on this date" description="Choose another date or explore gym access." />}
+          <div className="fg-row"><label className="fg-field">Start hour (IST)<select aria-label="Start hour (IST)" value={hours.includes(selectedHour) ? selectedHour : ''} onChange={event => { const start = starts.find(value => value.startsWith(`${event.target.value}:`)) || ''; update({ start, end: oneHourVisitEnd(start) }) }}><option value="">Select hour</option>{hours.map(hour => <option key={hour} value={hour}>{hour}</option>)}</select></label><label className="fg-field">Minutes<select aria-label="Start minutes" disabled={!hours.includes(selectedHour)} value={minutes.includes(selectedMinute) ? selectedMinute : ''} onChange={event => { const start = `${selectedHour}:${event.target.value}`; update({ start, end: oneHourVisitEnd(start) }) }}><option value="">Select minutes</option>{minutes.map(minute => <option key={minute} value={minute}>{minute}</option>)}</select></label></div>
+          {starts.includes(draft.start) && endTime && <p role="status">Visit: {draft.start}–{endTime} IST · 1 hour (end time set automatically)</p>}
+          {!starts.length && <Alert>No future one-hour visits fit within this day’s opening hours. Choose another date.</Alert>}
+          <p className="fg-muted">Your one-time entry QR allows arrival from one hour before your start time (not before opening) until the gym closes on your visit date.</p>
+        </> : availability.data?.sessions.length ? <div className="fg-stack"><h3>Choose a session</h3>{availability.data.sessions.map(session => <button key={session.id} disabled={!isBookableSession(session.status, session.available_capacity) || !isFutureBookingStart(session.class_date, session.start_time, now)} aria-pressed={draft.classId === session.id} className={`fg-plan ${draft.classId === session.id ? 'is-active' : ''}`} onClick={() => update({ classId: session.id, memberCount: Math.min(draft.memberCount, session.available_capacity) })}><h3>{session.class_name}</h3><p>{session.start_time.slice(0, 5)} – {session.end_time.slice(0, 5)} IST</p><p className="fg-muted">{session.available_capacity} seats available · {money(session.price_per_person)}</p></button>)}</div> : <EmptyState title="No classes on this date" description="Choose another date or explore gym access." />}
         <div className="fg-row"><div><h3>{companionsDate ? 'Additional people' : 'Members'}</h3><small className="fg-muted">{companionsDate ? 'Friends and family only · You are not counted' : 'You and your workout crew'}</small></div><div className="fg-counter"><Button variant="secondary" aria-label="Remove one member" disabled={draft.memberCount <= 1} onClick={() => update({ memberCount: draft.memberCount - 1 })}>−</Button><output aria-live="polite">{draft.memberCount}</output><Button variant="secondary" aria-label="Add one member" disabled={draft.memberCount >= max} onClick={() => update({ memberCount: draft.memberCount + 1 })}>+</Button></div></div>
         {mutation.error && <Alert>{mutation.error}</Alert>}
-        <Button loading={mutation.pending} disabled={availability.loading || !!availability.error || (draft.accessType === 'GYM' ? !draft.start || !draft.end || availability.data?.hours.is_closed : !selected || selected.available_capacity < 1)} onClick={add}>Check availability & add to cart</Button>
+        {startTime && !futureStart && <Alert>This start time has passed. Choose a future date and time.</Alert>}
+        <fieldset className="fg-stack"><legend>Who will use this booking?</legend><p className="fg-muted">Each person receives their own one-time QR after payment. Enter the actual visitors, not just the purchaser.</p>{Array.from({ length: draft.memberCount }, (_, index) => <label className="fg-field" key={index}>Visitor {index + 1} full name<input required maxLength={150} autoComplete="off" value={visitors[index] || ''} onChange={event => setVisitors(previous => { const next = [...previous]; next[index] = event.target.value; return next })} /></label>)}</fieldset>
+        <Button loading={mutation.pending} disabled={!futureStart || availability.loading || !!availability.error || (draft.accessType === 'GYM' ? !starts.includes(draft.start) || !endTime || availability.data?.hours.is_closed : !selected || selected.available_capacity < 1)} onClick={add}>Check availability & add to cart</Button>
         <small className="fg-muted">The gym validates your selection when it is added. Nothing is charged until you confirm payment.</small>
         {!companionsDate && <Link to={`/gyms/${gymId}/book/access`} className="fg-inline-link">Change access type</Link>}
       </>}

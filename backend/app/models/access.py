@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 from datetime import date, datetime
 
-from sqlalchemy import BigInteger, Date, DateTime, ForeignKey, Index, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, CheckConstraint, Date, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
@@ -12,6 +12,11 @@ from app.database.base import Base
 class AccessType(str, enum.Enum):
     SINGLE_GYM = "SINGLE_GYM"
     MULTI_GYM = "MULTI_GYM"
+
+
+class AccessSource(str, enum.Enum):
+    MEMBERSHIP_ACCESS = "MEMBERSHIP_ACCESS"
+    BOOKING_ACCESS = "BOOKING_ACCESS"
 
 
 class DailyAccessStatus(str, enum.Enum):
@@ -81,13 +86,19 @@ class AccessQrToken(Base):
     __tablename__ = "access_qr_tokens"
     __table_args__ = (
         UniqueConstraint("token_hash"),
+        UniqueConstraint("booking_id", "visitor_index", name="uq_access_qr_booking_visitor"),
+        CheckConstraint("(daily_access_id IS NOT NULL AND booking_id IS NULL) OR (daily_access_id IS NULL AND booking_id IS NOT NULL)", name="qr_one_source"),
         Index("ix_access_qr_tokens_daily_access_id", "daily_access_id"),
         Index("ix_access_qr_tokens_status", "status"),
         Index("ix_access_qr_tokens_expires_at", "expires_at"),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    daily_access_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("customer_daily_accesses.id"), nullable=False)
+    daily_access_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("customer_daily_accesses.id"), nullable=True)
+    booking_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("bookings.id"), nullable=True)
+    visitor_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    visitor_name: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    valid_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
 
@@ -110,12 +121,19 @@ class Checkin(Base):
         Index("ix_checkins_daily_access_id", "daily_access_id"),
         Index("ix_checkins_gym_id", "gym_id"),
         Index("ix_checkins_checkin_time", "checkin_time"),
+        UniqueConstraint("booking_id", "visitor_index", name="uq_checkins_booking_visitor"),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False)
 
-    daily_access_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("customer_daily_accesses.id"), nullable=False)
+    daily_access_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("customer_daily_accesses.id"), nullable=True)
+    access_source: Mapped[str] = mapped_column(String(30), nullable=False, default=AccessSource.MEMBERSHIP_ACCESS.value, server_default=AccessSource.MEMBERSHIP_ACCESS.value)
+    booking_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("bookings.id"), nullable=True)
+    membership_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("user_memberships.id"), nullable=True)
+    visitor_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    visitor_name: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    scanned_by: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=True)
     qr_token_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("access_qr_tokens.id"), nullable=False)
     gym_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("gyms.id"), nullable=False)
 

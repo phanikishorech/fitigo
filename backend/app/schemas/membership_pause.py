@@ -53,7 +53,7 @@ class PauseEligibility(BaseModel):
     current_pause: PausePeriod | None
     history: list[PausePeriod]
     reason_code: str | None
-    timezone: str = "UTC"
+    timezone: str = "Asia/Kolkata"
 
 
 class PausePreview(BaseModel):

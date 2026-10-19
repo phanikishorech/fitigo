@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.schemas.time import ISTResponse
 
 from datetime import datetime
 
@@ -25,7 +26,7 @@ class MembershipPlanUpdateRequest(BaseModel):
     is_active: bool | None = None
 
 
-class MembershipPlanResponse(BaseModel):
+class MembershipPlanResponse(ISTResponse):
     pause_policy: PausePolicy = Field(default_factory=PausePolicy)
     id: int
     gym_id: int
@@ -45,7 +46,7 @@ class PurchaseMembershipRequest(BaseModel):
     accepted_quote: str = Field(pattern=r"^[a-f0-9]{64}$")
 
 
-class UserMembershipResponse(BaseModel):
+class UserMembershipResponse(ISTResponse):
     original_end_at: datetime | None = None
     id: int
     user_id: int

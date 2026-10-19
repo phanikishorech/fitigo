@@ -18,9 +18,9 @@ export function MyAccessCard({ data, refresh, generate, generating = false }: { 
     <MembershipPanel className="fm-access-card">
       <div className="fm-panel-heading"><h2>Today’s Access</h2><MembershipStatusBadge status={status} /></div>
       <h3 className="fm-access-title">{available ? 'Your next workout is waiting.' : used ? 'You’ve used your access today.' : paused ? 'Membership Paused' : expired ? 'Membership Expired' : 'Membership is not active.'}</h3>
-      <p className="fm-muted">{membershipDate(day.date)} · Access day uses UTC</p>
+      <p className="fm-muted">{membershipDate(day.date)} · Access day uses IST</p>
       {available && <><p>{type === 'MULTI_GYM' ? 'Your daily access is ready.' : 'Your membership access is ready.'}</p><Button className="fm-full" loading={generating} disabled={!generate} onClick={generate}><Icon name="qr" size={20} />Generate Visit QR</Button></>}
-      {used && <><p>Your daily access has already been used today.</p>{day.gym_name && <div className="fm-visit-mini"><Icon name="gym" /><span><strong>{day.gym_name}</strong>{day.checkin_time && <small>{day.checkin_time.slice(0, 5)} UTC · Validated</small>}</span></div>}<p className="fm-muted">Check your next daily access tomorrow. Your membership must still be eligible.</p></>}
+      {used && <><p>Your daily access has already been used today.</p>{day.gym_name && <div className="fm-visit-mini"><Icon name="gym" /><span><strong>{day.gym_name}</strong>{day.checkin_time && <small>{day.checkin_time.slice(0, 5)} IST · Validated</small>}</span></div>}<p className="fm-muted">Check your next daily access tomorrow. Your membership must still be eligible.</p></>}
       {paused && <MembershipNotice warning><strong>Your membership is currently paused.</strong>{pause?.currently_paused && pause.current_pause && <><p>Your membership is paused until: {membershipDate(pause.current_pause.end_date)}</p><p>Resumes {membershipDate(pause.current_pause.resumes_on)}.</p></>}<p>Your access will automatically resume after the pause period.</p><p>Gym access is unavailable during a pause. Daily access is not consumed.</p></MembershipNotice>}
       {expired && <p>Your membership has expired. View your membership options to continue.</p>}
       {!available && !used && !paused && !expired && <p>Check your membership for available plans and access details.</p>}

@@ -27,7 +27,7 @@ def pause_api(api, monkeypatch):
     client, headers, engine = api
     monkeypatch.setattr(pause_module, 'utcnow', lambda: NOW)
     monkeypatch.setattr(access_service, 'utcnow', lambda: NOW)
-    monkeypatch.setattr(access_service, 'utc_today', lambda: NOW.date())
+    monkeypatch.setattr(access_service, 'access_today', lambda: NOW.date())
     from app.routers.gym_owner import router as owner_router
     from app.routers.customer_access import router as customer_router
     from app.routers.checkins import router as checkin_router
@@ -165,7 +165,7 @@ def test_pause_blocks_qr_every_gym_and_auto_resumes(pause_api,monkeypatch,mid,us
     paused=datetime(2026,10,12,12,tzinfo=timezone.utc)
     monkeypatch.setattr(pause_module,'utcnow',lambda:paused)
     monkeypatch.setattr(access_service,'utcnow',lambda:paused)
-    monkeypatch.setattr(access_service,'utc_today',lambda:paused.date())
+    monkeypatch.setattr(access_service,'access_today',lambda:paused.date())
     assert eligibility(pause_api,mid,user).json()['membership_status']=='PAUSED'
     assert preview(pause_api,mid=mid,user=user).json()['detail']['code']=='MEMBERSHIP_ALREADY_PAUSED'
     response=pause_api[0].get('/api/v1/customer/access/today',headers=pause_api[1][user])
@@ -181,7 +181,7 @@ def test_pause_blocks_qr_every_gym_and_auto_resumes(pause_api,monkeypatch,mid,us
     resumed=datetime(2026,10,15,12,tzinfo=timezone.utc)
     monkeypatch.setattr(pause_module,'utcnow',lambda:resumed)
     monkeypatch.setattr(access_service,'utcnow',lambda:resumed)
-    monkeypatch.setattr(access_service,'utc_today',lambda:resumed.date())
+    monkeypatch.setattr(access_service,'access_today',lambda:resumed.date())
     assert eligibility(pause_api,mid,user).json()['membership_status']=='ACTIVE'
     with Session(pause_api[2]) as db:
         svc=AccessService(db);token=svc.get_today_access(user_id=uid)
@@ -205,7 +205,7 @@ def test_one_paused_single_membership_does_not_disable_other_gym(pause_api,monke
     assert confirm(pause_api,mid=2,user=3).status_code==200
     day=datetime(2026,10,12,12,tzinfo=timezone.utc)
     monkeypatch.setattr(access_service,'utcnow',lambda:day)
-    monkeypatch.setattr(access_service,'utc_today',lambda:day.date())
+    monkeypatch.setattr(access_service,'access_today',lambda:day.date())
     with Session(pause_api[2]) as db:
         plan=GymMembershipPlan(gym_id=2,name='Another single',duration_days=30,price=100)
         db.add(plan);db.flush()
@@ -267,7 +267,7 @@ def test_policy_disable_preserves_accepted_pause_and_latest_allowance(pause_api,
     paused = datetime(2026, 10, 12, 12, tzinfo=timezone.utc)
     monkeypatch.setattr(pause_module, 'utcnow', lambda: paused)
     monkeypatch.setattr(access_service, 'utcnow', lambda: paused)
-    monkeypatch.setattr(access_service, 'utc_today', lambda: paused.date())
+    monkeypatch.setattr(access_service, 'access_today', lambda: paused.date())
     assert eligibility(pause_api).json()['membership_status'] == 'PAUSED'
     with Session(engine) as db:
         assert AccessService(db).get_today_access(user_id=2)['status'] == 'PAUSED'

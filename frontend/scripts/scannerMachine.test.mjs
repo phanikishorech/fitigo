@@ -75,7 +75,7 @@ test('HTTP success alone is never approval',()=>{
  for(const raw of [null,{}, {success:true}, {...approval,status:'VALID'}, {...approval,checkin_time:'invalid'}, {...approval,customer_name:null}, {success:false,status:'SERVER_ERROR',message:'db failure'}])assert.equal(normalizeCheckIn(raw),null)
  assert.deepEqual(normalizeCheckIn(approval),approval)
 })
-for(const code of ['INVALID_QR','QR_EXPIRED','QR_ALREADY_USED','MEMBERSHIP_EXPIRED','MEMBERSHIP_PAUSED','DAILY_ACCESS_ALREADY_CONSUMED','WRONG_GYM','GYM_NOT_ELIGIBLE'])test(`business rejection ${code} is sanitized`,()=>{
+for(const code of ['INVALID_QR','QR_EXPIRED','QR_ALREADY_USED','MEMBERSHIP_EXPIRED','MEMBERSHIP_PAUSED','DAILY_ACCESS_ALREADY_CONSUMED','WRONG_GYM','GYM_NOT_ELIGIBLE','BOOKING_NOT_FOUND','BOOKING_CANCELLED','BOOKING_NOT_CONFIRMED','PAYMENT_NOT_COMPLETED','BOOKING_EXPIRED','BOOKING_ALREADY_USED','WRONG_DATE','OUTSIDE_BOOKING_WINDOW','INVALID_VISITOR','INVALID_BOOKING'])test(`business rejection ${code} is sanitized`,()=>{
  const r=normalizeCheckIn({success:false,status:code,message:'SQL traceback <script>private</script>'})
  assert.equal(r.success,false);assert.equal(r.status,code);assert.doesNotMatch(r.message,/SQL|script|private/)
 })
@@ -83,4 +83,16 @@ test('legacy endpoint rejection messages preserve known paused/used/eligibility 
  assert.match(normalizeCheckIn({success:false,status:'INVALID_QR',message:'This visit has been paused.'}).message,/paused/)
  assert.match(normalizeCheckIn({success:false,status:'QR_ALREADY_USED',message:"Today's gym access has already been used."}).message,/Today/)
  assert.match(normalizeCheckIn({success:false,status:'INVALID_QR',message:"{'code': 'GYM_NOT_ELIGIBLE'}"}).message,/not valid at this gym/)
+})
+
+test('booking approval and replay rejection use the existing scanner cycle',()=>{
+ const result=normalizeCheckIn({...approval,customer_name:'David',access_type:'BOOKING_ACCESS',access_label:'Booking'})
+ assert.equal(result.access_label,'Booking')
+ const pending=reduce(scanning(),{type:'QR_DETECTED',qrValue:'GYMACCESS:booking-opaque',at:100})
+ const approved=reduce(pending,{type:'VALIDATION_APPROVED',cycle:pending.cycle,result,at:500})
+ assert.equal(approved.state,'APPROVED')
+ assert.equal(reduce(approved,{type:'RESULT_TIMEOUT',cycle:pending.cycle}).state,'SCANNING')
+ const rejected=reduce(pending,{type:'VALIDATION_REJECTED',cycle:pending.cycle,result:normalizeCheckIn({success:false,status:'BOOKING_ALREADY_USED',message:'Already used'}),at:500})
+ assert.equal(rejected.state,'REJECTED')
+ assert.equal(reduce(rejected,{type:'RESULT_TIMEOUT',cycle:pending.cycle}).state,'SCANNING')
 })

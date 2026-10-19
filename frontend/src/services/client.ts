@@ -6,6 +6,18 @@ export class ApiError extends Error {
 
 // Only recognized public business codes are exposed; never retain raw error payloads.
 export const accessErrorMessages: Record<string, string> = {
+  BOOKING_TIME_PASSED: 'This visit’s start time has passed. Choose a future date and time. No payment was taken.',
+  INVALID_BOOKING_TIME: 'Choose a quarter-hour start (00, 15, 30 or 45) for a one-hour visit within opening hours (IST).',
+  INVALID_BOOKING_DURATION: 'Gym visits last one hour. Remove this cart item and select a new visit.',
+  GYM_CLOSED: 'The gym is closed on this booking date.',
+  GYM_HOURS_UNAVAILABLE: 'Gym opening hours are unavailable for this visit. Please contact the gym.',
+  MEMBERSHIP_ACCESS_REQUIRED: 'Use My Access for this membership-covered visit.',
+  BOOKING_NOT_FOUND: 'Booking not found.', BOOKING_CANCELLED: 'Booking cancelled.',
+  BOOKING_NOT_CONFIRMED: 'This booking is not confirmed.', PAYMENT_NOT_COMPLETED: 'Payment is not completed or has been refunded.',
+  BOOKING_EXPIRED: 'This booking has expired.', BOOKING_ALREADY_USED: 'This booking has already been used.',
+  INVALID_VISITORS: 'Provide one visitor name for each paid place.',
+  VISITOR_DETAILS_REQUIRED: 'Add the names of the people using this booking.',
+  VISITORS_ALREADY_SET: 'Visitor identities cannot be changed after assignment.',
   PAUSE_NOT_ALLOWED: 'Pause is not available for this membership.',
   PAUSE_LIMIT_EXCEEDED: 'The selected duration exceeds your remaining pause allowance. Refresh to see your current allowance.',
   MEMBERSHIP_ALREADY_PAUSED: 'Your membership is currently paused. Refresh to see when it resumes.',
@@ -103,5 +115,8 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const post = <T,>(path: string, body?: unknown) => request<T>(path, { method: 'POST', ...(body === undefined ? {} : { body: JSON.stringify(body) }) })
 export const money = (value: string | number, currency = 'INR') => new Intl.NumberFormat('en-IN', { style: 'currency', currency, maximumFractionDigits: 2 }).format(Number(value))
-export const localDate = (date = new Date()) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-export const dateLabel = (date: string) => new Date(date.length === 10 ? `${date}T12:00:00` : date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+export const localDate = (date = new Date()) => {
+  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date)
+  return ['year', 'month', 'day'].map(type => parts.find(part => part.type === type)!.value).join('-')
+}
+export const dateLabel = (date: string) => new Date(date.length === 10 ? `${date}T12:00:00+05:30` : /(?:Z|[+-]\d{2}:\d{2})$/i.test(date) ? date : `${date}Z`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' })

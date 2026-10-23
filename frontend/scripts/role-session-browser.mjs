@@ -49,8 +49,8 @@ ws.onmessage=async event=>{
    else if(path==='/api/v1/users/me/roles')body=roles
    else if(path==='/api/v1/gyms/discover')body={gyms:[],page:1,page_size:8,total_count:0,has_more:false}
    else if(['/api/v1/meta/gym-types','/api/v1/facilities','/api/v1/gym-owner/gyms','/api/v1/gym-staff/gyms','/api/v1/admin/gyms','/api/v1/admin/bookings','/api/v1/admin/reports/bookings/daily'].includes(path))body=[]
-   else if(path==='/api/v1/gym-owner/dashboard/summary')body={gyms:{total:0,approved:0,pending_approval:0,draft:0},bookings:{today:0,upcoming:0},revenue:{last_30d:'0.00',currency:'INR'}}
-   else if(path==='/api/v1/admin/dashboard/summary')body={users:{total:0,customers:0,gym_owners:0},gyms:{total:0,pending_approval:0},bookings:{today:0,upcoming:0},revenue:{last_30d:'0.00',currency:'INR'}}
+   else if(path==='/api/v1/gym-owner/dashboard/summary')body={gym_id:null,date:'2026-10-19',date_from:'2026-10-19',date_to:'2026-10-19',visits:{fitigo_member:0,single_gym_membership:0,individual_booking:0,total:0},gyms:{total:0,approved:0,pending_approval:0,draft:0},bookings:{today:0,on_date:0,upcoming:0,in_period:0,confirmed_in_period:0},revenue:{last_30d:'0.00',in_period:'0.00',currency:'INR'}}
+   else if(path==='/api/v1/admin/dashboard/summary')body={date_from:'2026-10-19',date_to:'2026-10-19',users:{total:0,customers:0,gym_owners:0,in_period:0},gyms:{total:0,pending_approval:0,in_period:0},bookings:{today:0,upcoming:0,in_period:0,confirmed_in_period:0},revenue:{last_30d:'0.00',in_period:'0.00',currency:'INR'}}
    else if(path==='/api/v1/profile')body={user_id:1,full_name:'Same Account',profile_image:null,member_since:user.created_at,membership_status:null}
    else if(path==='/api/v1/auth/password-reset/options')body={email_available:false}
    else if(path==='/api/v1/memberships/me')body=[]

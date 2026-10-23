@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import date as Date
+
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
@@ -161,11 +163,29 @@ def set_cover_image(
 
 @router.get("/dashboard/summary", response_model=dict)
 def owner_dashboard_summary(
+    gym_id: int | None = Query(default=None, gt=0),
+    date: Date | None = Query(default=None),
+    date_from: Date | None = Query(default=None),
+    date_to: Date | None = Query(default=None),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role({ROLE_GYM_OWNER})),
 ):
     svc = OwnerDashboardService(db)
-    return svc.summary(owner_user_id=current_user.id)
+    return svc.summary(owner_user_id=current_user.id, gym_id=gym_id, day=date, date_from=date_from, date_to=date_to)
+
+
+@router.get("/gyms/{gym_id}/attendance", response_model=list[dict])
+def owner_dashboard_attendance(
+    gym_id: int,
+    date: Date | None = Query(default=None),
+    date_from: Date | None = Query(default=None),
+    date_to: Date | None = Query(default=None),
+    limit: int = Query(default=4, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role({ROLE_GYM_OWNER})),
+):
+    return OwnerDashboardService(db).attendance(owner_user_id=current_user.id, gym_id=gym_id, day=date, limit=limit,
+                                                date_from=date_from, date_to=date_to)
 
 
 @router.put("/gyms/{gym_id}", response_model=OwnerGymResponse)
@@ -390,23 +410,20 @@ def list_gym_bookings(
     gym_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role({ROLE_GYM_OWNER})),
-    slot_date: str | None = Query(default=None, alias="date"),
+    slot_date: Date | None = Query(default=None, alias="date"),
+    date_from: Date | None = Query(default=None),
+    date_to: Date | None = Query(default=None),
     status_filter: str | None = Query(default=None, alias="status"),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ):
-    # Parse date string if provided to avoid FastAPI type adapter needing date import here.
-    parsed_date = None
-    if slot_date:
-        from datetime import date as _date
-
-        parsed_date = _date.fromisoformat(slot_date)
-
     svc = BookingService(db)
     rows = svc.list_owner_gym_bookings(
         owner_user_id=current_user.id,
         gym_id=gym_id,
-        slot_date=parsed_date,
+        slot_date=slot_date,
+        date_from=date_from,
+        date_to=date_to,
         status_filter=status_filter,
         limit=limit,
         offset=offset,

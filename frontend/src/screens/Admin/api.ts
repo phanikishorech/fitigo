@@ -1,11 +1,14 @@
 import { request, post } from '../../services/client'
+import type { DateRange } from '../../utils/dateRange'
 
 // Verified against backend/app/routers/admin.py; shared transport only.
 export type AdminDashboardSummary = {
-  users: { total: number; customers: number; gym_owners: number }
-  gyms: { total: number; pending_approval: number }
-  bookings: { today: number; upcoming: number }
-  revenue: { last_30d: string; currency: string }
+  date_from: string
+  date_to: string
+  users: { total: number; customers: number; gym_owners: number; in_period: number }
+  gyms: { total: number; pending_approval: number; in_period: number }
+  bookings: { today: number; upcoming: number; in_period: number; confirmed_in_period: number }
+  revenue: { last_30d: string; currency: string; in_period: string }
 }
 export type AdminUserListItem = {
   id: number; first_name: string | null; last_name: string | null; email: string
@@ -24,7 +27,7 @@ export type AdminBooking = {
 }
 export type UserFilters = { q?: string; role?: string; status?: string; limit?: number; offset?: number }
 export type GymFilters = { q?: string; status?: string; owner_user_id?: number; is_active?: boolean; featured?: boolean; limit?: number; offset?: number }
-export type BookingFilters = { q?: string; gym_id?: number; owner_user_id?: number; date?: string; status?: string; payment_status?: string; limit?: number; offset?: number }
+export type BookingFilters = { q?: string; gym_id?: number; owner_user_id?: number; date?: string; status?: string; payment_status?: string; limit?: number; offset?: number } & Partial<DateRange>
 export function query(params: object) {
   const result = new URLSearchParams()
   Object.entries(params).forEach(([key, value]) => { if (value !== undefined && value !== null && value !== '') result.set(key, String(value)) })
@@ -32,7 +35,7 @@ export function query(params: object) {
 }
 type GymResult = { status: string; gym_id: number; new_status: string }
 export const adminPing = () => request<{ status: string; user_id: number }>('/admin/ping')
-export const fetchAdminDashboardSummary = () => request<AdminDashboardSummary>('/admin/dashboard/summary')
+export const fetchAdminDashboardSummary = (params: Partial<DateRange> = {}) => request<AdminDashboardSummary>(`/admin/dashboard/summary${query(params)}`)
 export const fetchAdminUsers = (params: UserFilters = {}) => request<AdminUserListItem[]>(`/admin/users${query(params)}`)
 export const fetchAdminUser = (id: number) => request<AdminUserListItem>(`/admin/users/${id}`)
 export const adminUpdateUserStatus = (id: number, payload: { status: string; reason?: string | null }) => post<{ status: string; user_id: number; new_status: string }>(`/admin/users/${id}/status`, payload)

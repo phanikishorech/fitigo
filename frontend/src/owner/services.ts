@@ -4,8 +4,6 @@ import type { OwnerBooking } from '../screens/GymOwner/api'
 
 export const capabilities = {
   members: { available: false, message: 'Member profiles and membership history are not available in the current owner API.' },
-  checkins: { available: false, message: 'Check-in history is not available in the current owner API. Recorded booking attendance is shown separately.' },
-  gymRevenue: { available: false, message: 'Revenue for an individual gym is not available yet. The backend provides an all-gyms summary only.' },
   trends: { available: false, message: 'Historical analytics are not available yet. No estimated trends or comparisons are shown.' },
   photoManagement: { available: false, message: 'Photos can be uploaded and a cover selected. Removing and reordering saved photos is not supported yet.' },
   bookingActions: { available: false, message: 'The booking API does not provide action eligibility yet. Attendance and cancellation controls are unavailable until the server supplies permitted actions.' }

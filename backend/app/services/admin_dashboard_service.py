@@ -10,7 +10,8 @@ from app.models.booking import Booking, BookingStatus, Payment, PaymentStatus
 from app.models.gym import Gym
 from app.repositories.user_repository import UserRepository
 from app.core.roles import ROLE_CUSTOMER, ROLE_GYM_OWNER
-from app.core.time import ist_today
+from app.core.time import ist_day_bounds, ist_today
+from app.core.reporting_range import reporting_range
 
 
 class AdminDashboardService:
@@ -18,7 +19,9 @@ class AdminDashboardService:
         self.db = db
         self.user_repo = UserRepository(db)
 
-    def summary(self) -> dict:
+    def summary(self, *, date_from: date | None = None, date_to: date | None = None) -> dict:
+        first, last = reporting_range(date_from, date_to) or (ist_today(), ist_today())
+        start, end = ist_day_bounds(first)[0], ist_day_bounds(last)[1]
         # User counts
         users_total = self.db.execute(select(func.count()).select_from(User)).scalar_one()
 
@@ -75,21 +78,39 @@ class AdminDashboardService:
             )
         ).scalar_one()
 
+        users_in_period = self.db.scalar(select(func.count()).select_from(User)
+            .where(User.created_at >= start, User.created_at < end))
+        gyms_in_period = self.db.scalar(select(func.count()).select_from(Gym)
+            .where(Gym.created_at >= start, Gym.created_at < end))
+        period_filter = Booking.slot_date.between(first, last)
+        bookings_in_period = self.db.scalar(select(func.count()).select_from(Booking).where(period_filter))
+        confirmed_in_period = self.db.scalar(select(func.count()).select_from(Booking)
+            .where(period_filter, Booking.status == BookingStatus.CONFIRMED.value))
+        revenue_in_period = self.db.scalar(select(func.coalesce(func.sum(Payment.amount), 0))
+            .select_from(Payment).join(Booking, Booking.id == Payment.booking_id)
+            .where(period_filter, Payment.status == PaymentStatus.PAID.value))
         return {
+            "date_from": first.isoformat(),
+            "date_to": last.isoformat(),
             "users": {
+                "in_period": int(users_in_period or 0),
                 "total": int(users_total or 0),
                 "customers": int(customers_total or 0),
                 "gym_owners": int(owners_total or 0),
             },
             "gyms": {
+                "in_period": int(gyms_in_period or 0),
                 "total": int(gyms_total or 0),
                 "pending_approval": int(gyms_pending or 0),
             },
             "bookings": {
+                "in_period": int(bookings_in_period or 0),
+                "confirmed_in_period": int(confirmed_in_period or 0),
                 "today": int(bookings_today or 0),
                 "upcoming": int(upcoming_bookings or 0),
             },
             "revenue": {
+                "in_period": str(revenue_in_period),
                 "last_30d": str(revenue_30d),
                 "currency": "INR",
             },

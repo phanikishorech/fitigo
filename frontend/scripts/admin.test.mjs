@@ -50,8 +50,16 @@ test('all admin API transport reuses shared client, no raw fetch', () => {
 })
 test('dashboard labels do not misrepresent backend metrics', () => {
   const source = readFileSync(new URL('../src/admin/Dashboard.tsx', import.meta.url), 'utf8')
-  assert.match(source, /Total gyms/); assert.match(source, /Revenue · last 30 days/)
+  assert.match(source, /Total gyms/); assert.match(source, /Booking revenue/)
+  assert.match(source, /revenue.in_period/); assert.match(source, /not date-filtered/)
   assert.doesNotMatch(source, /Today's revenue|title="Active gyms"/)
+})
+test('admin summary and booking list pass the same inclusive date range', async () => {
+  const calls = []; globalThis.__adminRequest = async path => { calls.push(path); return {} }
+  const range = { date_from: '2026-10-01', date_to: '2026-10-19' }
+  await service.fetchAdminDashboardSummary(range)
+  await service.fetchAdminBookings({ ...range, limit: 5 })
+  assert.deepEqual(calls, ['/admin/dashboard/summary?date_from=2026-10-01&date_to=2026-10-19', '/admin/bookings?date_from=2026-10-01&date_to=2026-10-19&limit=5'])
 })
 test('gym review uses the protected admin submission endpoint, never owner or public endpoints', () => {
   const source = readFileSync(new URL('../src/admin/services.ts', import.meta.url), 'utf8')

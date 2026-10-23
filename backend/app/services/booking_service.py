@@ -461,10 +461,15 @@ class BookingService:
         owner_user_id: int,
         gym_id: int,
         slot_date=None,
+        date_from=None,
+        date_to=None,
         status_filter: str | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> list[tuple[Booking, User, GymSlot, Payment | None]]:
+        from app.core.reporting_range import reporting_range
+
+        period = reporting_range(date_from, date_to, day=slot_date)
         gym = self.db.execute(select(Gym).where(Gym.id == gym_id, Gym.owner_user_id == owner_user_id)).scalars().first()
         if not gym:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gym not found")
@@ -479,8 +484,8 @@ class BookingService:
             .limit(limit)
             .offset(offset)
         )
-        if slot_date is not None:
-            stmt = stmt.where(Booking.slot_date == slot_date)
+        if period is not None:
+            stmt = stmt.where(Booking.slot_date.between(*period))
         if status_filter is not None:
             stmt = stmt.where(Booking.status == status_filter)
 

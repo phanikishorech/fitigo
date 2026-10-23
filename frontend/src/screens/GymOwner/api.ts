@@ -1,9 +1,31 @@
 import { request } from '../../services/client'
+import type { DateRange } from '../../utils/dateRange'
 
 export type OwnerDashboardSummary = {
+  gym_id: number | null
+  date: string
+  date_from: string
+  date_to: string
+  visits: { fitigo_member: number; single_gym_membership: number; individual_booking: number; total: number }
   gyms: { total: number; approved: number; pending_approval: number; draft: number }
-  bookings: { today: number; upcoming: number }
-  revenue: { last_30d: string; currency: string }
+  bookings: { today: number; on_date: number; upcoming: number; in_period: number; confirmed_in_period: number }
+  revenue: { last_30d: string; in_period: string; currency: string }
+}
+
+export type OwnerAttendance = {
+  id: string
+  gym_id: number
+  booking_id: number | null
+  category: 'fitigo_member' | 'single_gym_membership' | 'individual_booking'
+  visits: number
+  customer_name: string
+  recorded_at: string | null
+}
+
+export function listOwnerAttendance(gymId: number, date: string | DateRange): Promise<OwnerAttendance[]> {
+  const query = new URLSearchParams(typeof date === 'string' ? { date } : date)
+  query.set('limit', '4')
+  return request(`/gym-owner/gyms/${gymId}/attendance?${query}`)
 }
 
 export type OwnerGymListItem = {
@@ -121,8 +143,13 @@ export async function fetchMyRoles(): Promise<string[]> {
   return r as string[]
 }
 
-export async function fetchOwnerSummary(): Promise<OwnerDashboardSummary> {
-  const r = await request<unknown>('/gym-owner/dashboard/summary')
+export async function fetchOwnerSummary(params: { gymId?: number; date?: string } & Partial<DateRange> = {}): Promise<OwnerDashboardSummary> {
+  const query = new URLSearchParams()
+  if (params.gymId !== undefined) query.set('gym_id', String(params.gymId))
+  if (params.date) query.set('date', params.date)
+  if (params.date_from) query.set('date_from', params.date_from)
+  if (params.date_to) query.set('date_to', params.date_to)
+  const r = await request<unknown>(`/gym-owner/dashboard/summary${query.size ? `?${query}` : ''}`)
   return r as OwnerDashboardSummary
 }
 
@@ -291,9 +318,11 @@ export async function removeStaff(gymId: number, userId: number): Promise<void> 
   void r
 }
 
-export async function listBookings(gymId: number, params?: { date?: string; status?: string; limit?: number; offset?: number }): Promise<OwnerBooking[]> {
+export async function listBookings(gymId: number, params?: { date?: string; status?: string; limit?: number; offset?: number } & Partial<DateRange>): Promise<OwnerBooking[]> {
   const qs = new URLSearchParams()
   if (params?.date) qs.set('date', params.date)
+  if (params?.date_from) qs.set('date_from', params.date_from)
+  if (params?.date_to) qs.set('date_to', params.date_to)
   if (params?.status) qs.set('status', params.status)
   if (params?.limit) qs.set('limit', String(params.limit))
   if (params?.offset) qs.set('offset', String(params.offset))

@@ -45,6 +45,40 @@ test('booking pagination and selected gym are sent to real owner endpoint', asyn
   await service.listBookings(7, { date: '2026-09-30', status: 'CONFIRMED', limit: 20, offset: 40 })
   assert.equal(called[0], '/gym-owner/gyms/7/bookings?date=2026-09-30&status=CONFIRMED&limit=20&offset=40')
 })
+test('dashboard summary separates overall scope from selected gym and date', async () => {
+  const calls = []; globalThis.__ownerRequest = async path => { calls.push(path); return {} }
+  await service.fetchOwnerSummary()
+  await service.fetchOwnerSummary({ date: '2026-10-19' })
+  await service.fetchOwnerSummary({ gymId: 7, date: '2026-10-19' })
+  await service.fetchOwnerSummary({ gymId: 8, date: '2026-10-18' })
+  assert.deepEqual(calls, [
+    '/gym-owner/dashboard/summary',
+    '/gym-owner/dashboard/summary?date=2026-10-19',
+    '/gym-owner/dashboard/summary?gym_id=7&date=2026-10-19',
+    '/gym-owner/dashboard/summary?gym_id=8&date=2026-10-18'
+  ])
+})
+test('recorded attendance requests the selected gym and date without sampling bookings', async () => {
+  const calls = []; globalThis.__ownerRequest = async path => { calls.push(path); return [] }
+  await service.listOwnerAttendance(7, '2026-10-19')
+  await service.listOwnerAttendance(8, '2026-10-18')
+  assert.deepEqual(calls, [
+    '/gym-owner/gyms/7/attendance?date=2026-10-19&limit=4',
+    '/gym-owner/gyms/8/attendance?date=2026-10-18&limit=4'
+  ])
+})
+test('owner summary, attendance and bookings pass matching date ranges and selected gym', async () => {
+  const calls = []; globalThis.__ownerRequest = async path => { calls.push(path); return [] }
+  const range = { date_from: '2026-10-01', date_to: '2026-10-19' }
+  await service.fetchOwnerSummary({ gymId: 7, ...range })
+  await service.listOwnerAttendance(7, range)
+  await service.listBookings(7, { ...range, limit: 6 })
+  assert.deepEqual(calls, [
+    '/gym-owner/dashboard/summary?gym_id=7&date_from=2026-10-01&date_to=2026-10-19',
+    '/gym-owner/gyms/7/attendance?date_from=2026-10-01&date_to=2026-10-19&limit=4',
+    '/gym-owner/gyms/7/bookings?date_from=2026-10-01&date_to=2026-10-19&limit=6'
+  ])
+})
 test('selected gym is used by plans, staff, classes and public availability', async () => {
   const calls = []; globalThis.__ownerRequest = async (path) => { calls.push(path); return [] }
   await service.listOwnerSlots(42); await service.listOwnerMembershipPlans(42); await service.listStaff(42); await service.listPublicSlotAvailability(42, '2026-09-30')

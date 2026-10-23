@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import require_role
+from app.core.reporting_range import reporting_range
 from app.models.auth import User
 from app.core.roles import ROLE_ADMIN, ROLE_SUPER_ADMIN
 from app.database.session import get_db
@@ -89,11 +90,13 @@ def admin_ping(current_user: User = Depends(require_role({ROLE_ADMIN, ROLE_SUPER
 
 @router.get("/dashboard/summary", response_model=dict)
 def admin_dashboard_summary(
+    date_from: date | None = Query(default=None),
+    date_to: date | None = Query(default=None),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role({ROLE_ADMIN, ROLE_SUPER_ADMIN})),
 ):
     svc = AdminDashboardService(db)
-    return svc.summary()
+    return svc.summary(date_from=date_from, date_to=date_to)
 
 
 @router.get("/users", response_model=list[AdminUserListItem])
@@ -303,6 +306,8 @@ def search_bookings(
     gym_id: int | None = Query(default=None),
     owner_user_id: int | None = Query(default=None),
     slot_date: date | None = Query(default=None, alias="date"),
+    date_from: date | None = Query(default=None),
+    date_to: date | None = Query(default=None),
     booking_status: str | None = Query(default=None, alias="status"),
     payment_status: str | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
@@ -314,6 +319,8 @@ def search_bookings(
         gym_id=gym_id,
         owner_user_id=owner_user_id,
         slot_date=slot_date,
+        date_from=date_from,
+        date_to=date_to,
         booking_status=booking_status,
         payment_status=payment_status,
         limit=limit,
@@ -483,6 +490,8 @@ def report_daily_bookings(
     date_to: date | None = Query(default=None),
     limit: int = Query(default=31, ge=1, le=366),
 ):
+    if date_from is not None and date_to is not None:
+        reporting_range(date_from, date_to)
     # Aggregate by slot_date
     stmt = (
         select(

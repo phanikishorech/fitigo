@@ -10,6 +10,7 @@ from app.models.auth import User
 from app.models.booking import Booking, Payment
 from app.models.gym import Gym
 from app.models.slot import GymSlot
+from app.core.reporting_range import reporting_range
 
 
 class AdminBookingService:
@@ -23,11 +24,14 @@ class AdminBookingService:
         gym_id: int | None = None,
         owner_user_id: int | None = None,
         slot_date: date | None = None,
+        date_from: date | None = None,
+        date_to: date | None = None,
         booking_status: str | None = None,
         payment_status: str | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> list[tuple[Booking, User, Gym, GymSlot, Payment | None]]:
+        period = reporting_range(date_from, date_to, day=slot_date)
         stmt = (
             select(Booking, User, Gym, GymSlot, Payment)
             .join(User, User.id == Booking.user_id)
@@ -54,8 +58,8 @@ class AdminBookingService:
             stmt = stmt.where(Booking.gym_id == gym_id)
         if owner_user_id is not None:
             stmt = stmt.where(Gym.owner_user_id == owner_user_id)
-        if slot_date is not None:
-            stmt = stmt.where(Booking.slot_date == slot_date)
+        if period is not None:
+            stmt = stmt.where(Booking.slot_date.between(*period))
         if booking_status is not None:
             stmt = stmt.where(Booking.status == booking_status)
         if payment_status is not None:

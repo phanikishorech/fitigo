@@ -1,5 +1,30 @@
 # FitiGo Owner Portal — implementation contract
 
+## Shared dashboard date ranges — October 19, 2026
+
+- Owner and admin dashboards now share Today, Yesterday, This week (Monday through today), This month (month start through today), Last 30 days (today plus 29 prior days), and Custom presets. All dates use IST; custom ranges include both dates and support up to 366 days. Invalid drafts do not fetch data; Apply range commits a valid custom selection.
+- Summary APIs accept `date_from` and `date_to`. The owner attendance and owner/admin booking-list APIs accept the same pair. Partial, reversed, oversized, malformed, or mixed single-date/range filters return 422. Existing no-filter and single-date contracts remain available.
+- Dashboards use `bookings.in_period`, `bookings.confirmed_in_period`, and `revenue.in_period`, not the legacy fixed-window fields. Revenue sums currently PAID payments for bookings scheduled within the selected range, matching the admin daily report; it is not payment-receipt-date accounting. Visit counts use actual attendance timestamps with inclusive IST day boundaries and existing deduplication rules.
+- Owner overall metrics remain all-owned-gyms only. All other metrics, bookings and attendance use the selected gym and selected range. Switching gyms retains the range. View all booking links carry the range into the booking list, which displays the active filter and lets users replace it.
+- Admin shows users registered and gyms created during the range, plus range-filtered booking counts, revenue, recent bookings and daily chart. All-time platform totals and the current pending approval queue are separately labeled and remain unfiltered.
+- Regression coverage includes preset math/year and leap-year boundaries, IST timestamp boundaries, inclusive SQL filtering, ownership, invalid ranges, revenue/chart consistency, stale-response isolation, custom Apply/validation, booking drill-down, and responsive rendering at 360/390/768/1440px. Browser checks use isolated fixtures, and API tests use disposable SQLite; no schema migration or new package is needed.
+
+This update supersedes the single-date/fixed-revenue dashboard behavior described below.
+
+## Dashboard metrics update — October 19, 2026
+
+- Overall metrics show visits across all owned gyms. All other dashboard metrics, booking lists, recorded attendance, and revenue/analytics pages use the selected gym.
+- Both visit sections use the selected IST date. Switching gyms preserves this date and does not reload the overall summary; keyed resources discard stale gym/date responses.
+- Total visits = FitiGo member visits + single-gym membership visits + individual booking visits. Successful check-ins count actual visitors, not reservations or purchased memberships. Membership access type is taken from its historical daily access record, with the membership record as a fallback; expired memberships still retain their historical visits.
+- Individual booking QR scans count each checked-in visitor, including partially attended group bookings. Confirmed, manually marked attended bookings count their quantity only if no successful check-in exists for that booking. Membership-funded legacy bookings are not re-counted as individual bookings. Rejected scans, unvisited bookings, and no-shows do not add visits.
+- Visit dates use recorded attendance time with IST midnight boundaries; legacy manual records without a timestamp fall back to the booking date. Bookings use their scheduled date. Upcoming bookings and booking revenue retain their existing definitions and are explicitly labeled separately from the selected-date visits.
+- Attendance is queried directly across check-ins and manual attendance, ordered newest first, rather than sampled from 50 bookings. The dashboard displays four recent records, including membership users and named booking visitors.
+- No new dependencies or database migration. The API revalidates gym ownership and rejects other owners' gyms. The no-argument summary API retains its original booking/revenue fields.
+- Verification: frontend unit tests, TypeScript, production build, disposable backend dashboard/check-in regression tests, and isolated browser fixtures. Browser coverage includes gym/date changes, stale responses, error/retry and empty states, and widths 360/390/768/1440.
+- Existing database-backed tests in `test_customer_access_qr_system.py` fail during setup because their legacy `purchase_membership` method now rejects purchases with `MEMBERSHIP_PRICE_CHANGED`. The two attempted tests created their normal local test users/gyms/plans before failing; they were not treated as dashboard regressions. Other verification used disposable databases or intercepted browser fixtures.
+
+The historical acceptance notes below describe the original implementation; the dashboard update above supersedes their attendance and selected-gym reporting limitations.
+
 ## Repository audit
 
 - React 18 / TypeScript strict / Vite; no routing, chart, camera, or state libraries installed.
@@ -16,7 +41,8 @@ All paths below are relative to `/api/v1`. Audited against backend router, schem
 | --- | --- |
 | Login/register/verify | POST `/auth/login`, `/auth/register/gym-owner`, `/auth/email/send-otp`, `/auth/email/verify-otp`; GET `/users/me`, `/users/me/roles` |
 | Session logout | POST `/auth/logout` with refresh token |
-| Owner summary/revenue/analytics | GET `/gym-owner/dashboard/summary` — **all owned gyms**, fixed last-30-day revenue; no selected-gym/date filters |
+| Owner summary/revenue/analytics | GET `/gym-owner/dashboard/summary?gym_id=&date=` — omitted gym means all owned gyms; a selected gym scopes every returned metric; date filters visits and `bookings.on_date` (IST). Revenue retains its existing fixed summary window. |
+| Recorded attendance | GET `/gym-owner/gyms/{id}/attendance?date=&limit=` — successful membership/booking check-ins plus manual booking attendance, newest first, selected gym only. |
 | Gym selector/list | GET `/gym-owner/gyms` |
 | Create/details/edit | POST `/gym-owner/gyms`; GET/PUT `/gym-owner/gyms/{id}` |
 | Approval | POST `/gym-owner/gyms/{id}/submit`; only DRAFT submission supported |
@@ -37,7 +63,7 @@ All paths below are relative to `/api/v1`. Audited against backend router, schem
 
 No mock business data or substitute backend is introduced. Unsupported features display capability explanations rather than fabricated empty success states.
 
-- No owner member directory, membership history, recent check-in list, selected-gym revenue, membership-sales metrics, historical trend series, or account/preferences update APIs.
+- No owner member directory, membership history, membership-sales metrics, historical trend series, or account/preferences update APIs.
 - Owner summary revenue uses the backend MVP payment implementation; not settlement/accounting data.
 - Booking responses do not include allowed actions/cancellation policies. Mutations are integrated at the service layer, but UI actions fail closed unless the backend provides explicit allowed actions. This deliberately leaves attendance/cancellation acceptance blocked rather than inventing eligibility. Existing backend attendance can overwrite prior attendance; backend concurrency/state protection is needed.
 - QR endpoint rejects owner-only accounts. Do not grant roles or assign owners automatically. Assigned staff can use the scanner; owners see the permission limitation.

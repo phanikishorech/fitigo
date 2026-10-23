@@ -38,5 +38,7 @@ function Content({ route }: { route: OwnerRoute }) {
   else if (['memberships', 'classes', 'slots', 'staff', 'staffForm', 'staffDetail'].includes(route.page)) content = <Operations route={route} />
   else if (route.page === 'check-in') content = <CheckIn />
   else content = <Account page={route.page} />
-  return <Suspense fallback={<Skeleton />}><div key={`${route.page}:${route.id || ''}:${route.mode || ''}:${route.gymId || (route.page === 'gymForm' || route.page === 'bookingsDetail' ? '' : gymId) || ''}`}>{content}</div></Suspense>
+  // Dashboard resources already key themselves by gym. Keep its selected date
+  // and overall metrics mounted while only the gym-specific requests change.
+  return <Suspense fallback={<Skeleton />}><div key={`${route.page}:${route.id || ''}:${route.mode || ''}:${route.gymId || (['dashboard', 'gymForm', 'bookingsDetail'].includes(route.page) ? '' : gymId) || ''}`}>{content}</div></Suspense>
 }

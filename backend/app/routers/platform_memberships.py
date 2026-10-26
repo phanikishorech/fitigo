@@ -56,7 +56,7 @@ def get_order(order_id: UUID, db: Session = Depends(get_db), user: User = Depend
 
 @router.post("/memberships/orders/{order_id}/payment-session", dependencies=[Depends(no_store)])
 def payment_session(order_id: UUID, payload: WalletOrderPayment | None = None, db: Session = Depends(get_db), user: User = Depends(customer_access)):
-    from app.services.razorpay_gateway import configured
+    from app.services.payment_providers import configured
     from app.services.payment_checkout_service import PaymentCheckoutService
     from app.schemas.payment_checkout import CheckoutCreate
     PlatformMembershipService(db).get_order(str(order_id), user_id=user.id)

@@ -23,6 +23,13 @@ class CheckoutCreate(BaseModel):
 
 class CheckoutVerify(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    razorpay_order_id: str = Field(pattern=r"^order_[A-Za-z0-9]{1,64}$")
-    razorpay_payment_id: str = Field(pattern=r"^pay_[A-Za-z0-9]{1,64}$")
-    razorpay_signature: str = Field(pattern=r"^[a-fA-F0-9]{64}$")
+    razorpay_order_id: str | None = Field(default=None, pattern=r"^order_[A-Za-z0-9]{1,64}$")
+    razorpay_payment_id: str | None = Field(default=None, pattern=r"^pay_[A-Za-z0-9]{1,64}$")
+    razorpay_signature: str | None = Field(default=None, pattern=r"^[a-fA-F0-9]{64}$")
+
+    @model_validator(mode="after")
+    def complete_callback(self):
+        fields = (self.razorpay_order_id, self.razorpay_payment_id, self.razorpay_signature)
+        if any(fields) and not all(fields):
+            raise ValueError("Provide the complete Razorpay callback or an empty confirmation request")
+        return self

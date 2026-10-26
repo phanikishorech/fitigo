@@ -2,30 +2,23 @@
 import hashlib
 import hmac
 import re
-from decimal import Decimal
 
 import httpx
 from fastapi import HTTPException
 from app.core.config import settings
+from app.services.payment_provider import minor
 
 
 def configured() -> bool:
-    prefix = f"rzp_{settings.payment_mode}_"
-    return bool(settings.razorpay_enabled and settings.razorpay_key_id.startswith(prefix)
+    prefix = f"rzp_{settings.gateway_mode}_"
+    return bool((settings.razorpay_enabled or settings.payment_gateway is not None) and settings.razorpay_key_id.startswith(prefix)
                 and settings.razorpay_key_secret.get_secret_value() and settings.razorpay_webhook_secret.get_secret_value()
-                and (settings.payment_mode == "test" or (settings.razorpay_live_enabled and settings.environment == "production")))
+                and (settings.gateway_mode == "test" or (settings.razorpay_live_enabled and settings.environment == "production")))
 
 
 def require_gateway():
     if not configured():
         raise HTTPException(503, detail="Razorpay payments are not configured for the selected mode")
-
-
-def minor(amount) -> int:
-    value = Decimal(str(amount)) * 100
-    if not value.is_finite() or value < 0 or value != value.to_integral_value():
-        raise HTTPException(409, detail="Invalid payment amount")
-    return int(value)
 
 
 def verify_signature(body: bytes, signature: str, secret: str):

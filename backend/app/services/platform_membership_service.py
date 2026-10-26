@@ -14,7 +14,8 @@ from app.schemas.platform_membership import AdminOfferConfiguration, AdminPlanDe
 from app.models.membership import UserMembership
 from app.models.wallet import WalletAccount
 from app.services.membership_wallet_service import activate, lock_customer, quote_key, wallet_enabled
-from app.services.razorpay_gateway import configured
+from app.services.payment_providers import configured
+from app.core.config import settings
 
 
 def utcnow() -> datetime:
@@ -64,7 +65,7 @@ class PlatformMembershipService:
         now = utcnow()
         return PlatformCatalogResponse(items=[price_plan(p, o, now) for p, o in self.db.execute(query)], server_time=now,
             checkout_available=wallet_enabled() or configured(), checkout_unavailable_reason=None if wallet_enabled() or configured() else "PAYMENT_NOT_CONFIGURED",
-            payment_mode="RAZORPAY" if configured() else "WALLET_TEST_CREDIT" if wallet_enabled() else "DISABLED")
+            payment_mode=settings.gateway_name if configured() else "WALLET_TEST_CREDIT" if wallet_enabled() else "DISABLED")
 
     def _plan(self, plan_id: int, *, lock: bool = False) -> PlatformMembershipPlan:
         query = select(PlatformMembershipPlan).where(PlatformMembershipPlan.id == plan_id)
@@ -177,7 +178,7 @@ class PlatformMembershipService:
             payment_available=(wallet_enabled() or configured()) and current is not None and membership is None,
             membership_id=membership.id if membership else None,
             quote_token=quote_key(current.model_dump(mode="json")) if current else None,
-            payment_mode="RAZORPAY" if configured() else "WALLET_TEST_CREDIT" if wallet_enabled() else "DISABLED",
+            payment_mode=settings.gateway_name if configured() else "WALLET_TEST_CREDIT" if wallet_enabled() else "DISABLED",
             wallet_balance=str(account.balance) if account else "0.00", wallet_currency=account.currency if account else (current.currency if current else snapshot.currency),
             wallet_transaction_id=membership.wallet_transaction_id if membership else None,
         )

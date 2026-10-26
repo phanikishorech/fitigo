@@ -1,6 +1,5 @@
 """One durable checkout per purchase; captured funds and fulfillment commit together."""
 import hashlib
-import json
 from datetime import datetime, timedelta
 from decimal import Decimal
 from uuid import uuid4
@@ -23,13 +22,21 @@ from app.services.booking_access_service import BookingAccessService, validate_v
 from app.services.booking_time import require_future_start
 from app.services.membership_entitlement import active_memberships
 from app.services.membership_wallet_service import expiry, single_terms, quote_key
-from app.services.razorpay_gateway import RazorpayGateway, require_gateway, minor, verify_signature
+from app.services.payment_provider import PaymentProvider, check_order, minor
+from app.services.payment_providers import get_provider, require_gateway
 
 
 class PaymentCheckoutService:
     def __init__(self, db: Session):
         self.db = db
-        self.gateway = RazorpayGateway()
+        self.gateway: PaymentProvider = get_provider()
+
+    def bind(self, checkout):
+        if self.gateway.name != checkout.provider:
+            self.gateway = get_provider(checkout.provider)
+        require_gateway(checkout.provider)
+        if checkout.mode != settings.gateway_mode or checkout.key_id != self.gateway.key_id:
+            raise HTTPException(409, detail="Checkout belongs to a different payment configuration")
 
     def lock_user(self, user_id):
         user = self.db.scalar(select(User).where(User.id == user_id).with_for_update().execution_options(populate_existing=True))
@@ -43,8 +50,7 @@ class PaymentCheckoutService:
             PaymentCheckout.user_id == user_id).with_for_update().execution_options(populate_existing=True))
         if not checkout:
             raise HTTPException(404, detail="Payment checkout not found")
-        if checkout.mode != settings.payment_mode or checkout.key_id != settings.razorpay_key_id:
-            raise HTTPException(409, detail="Checkout belongs to a different payment configuration")
+        self.bind(checkout)
         return checkout
 
     def membership_eligible(self, user_id, terms):
@@ -62,7 +68,7 @@ class PaymentCheckoutService:
 
     def create(self, user_id: int, payload, key: str):
         require_gateway()
-        self.lock_user(user_id)
+        customer = self.lock_user(user_id)
         kind = payload.kind
         items = []
         source = f"{kind}:{key}"
@@ -126,7 +132,8 @@ class PaymentCheckoutService:
                 raise HTTPException(409, detail={"code": "MEMBERSHIP_PRICE_CHANGED"})
             self.membership_eligible(user_id, terms)
         checkout = PaymentCheckout(id=str(uuid4()), user_id=user_id, source_key=source, kind=kind,
-            mode=settings.payment_mode, key_id=settings.razorpay_key_id, amount=0, currency="INR", snapshot=terms, status="CREATED")
+            provider=self.gateway.name, mode=settings.gateway_mode, key_id=self.gateway.key_id,
+            amount=0, currency="INR", snapshot=terms, status="CREATED")
         self.db.add(checkout)
         self.db.flush()
         if kind == "CART":
@@ -137,7 +144,7 @@ class PaymentCheckoutService:
             payment = self.db.scalar(select(Payment).where(Payment.booking_id == booking.id).with_for_update())
             if not payment or payment.status == "PAID":
                 raise HTTPException(409, detail="Booking payment unavailable")
-            payment.provider = "RAZORPAY"
+            payment.provider = checkout.provider
         else:
             checkout.amount, checkout.currency = Decimal(terms["final_price"]), terms["currency"]
             if platform_order:
@@ -145,6 +152,7 @@ class PaymentCheckoutService:
                 platform_order.snapshot = terms
         if checkout.currency != "INR" or minor(checkout.amount) < 0:
             raise HTTPException(409, detail="This checkout supports INR only")
+        self.gateway.validate_purchase(checkout, customer)
         self.db.commit()
         return self.start(checkout.id, user_id)
 
@@ -187,7 +195,7 @@ class PaymentCheckoutService:
                 status="PENDING_PAYMENT", expires_at=datetime.utcnow() + timedelta(minutes=15), notes=notes,
                 idempotency_key=f"cart:{item.id}", checkout_id=checkout.id, access_source="BOOKING_ACCESS")
             self.db.add(booking); self.db.flush()
-            self.db.add(Payment(booking_id=booking.id, provider="RAZORPAY", status="INITIATED", amount=amount, currency="INR"))
+            self.db.add(Payment(booking_id=booking.id, provider=checkout.provider, status="INITIATED", amount=amount, currency="INR"))
             item.status, item.checkout_id = "PAYMENT_PENDING", checkout.id
             total += amount
         checkout.amount = total
@@ -202,13 +210,10 @@ class PaymentCheckoutService:
         require_future_start(booking.slot_date, slot.start_time)
 
     def check_order(self, checkout, order):
-        if (not isinstance(order.get("id"), str) or not order["id"].startswith("order_")
-            or order.get("amount") != minor(checkout.amount) or order.get("currency") != checkout.currency
-            or order.get("receipt") != checkout.id or (checkout.gateway_order_id and order["id"] != checkout.gateway_order_id)):
-            raise HTTPException(409, detail="Gateway order does not match checkout")
+        check_order(checkout, order)
+        checkout.checkout_data = {**order.checkout_data, "payable": order.payable}
 
     def start(self, checkout_id, user_id):
-        require_gateway()
         checkout = self.owned(checkout_id, user_id)
         if checkout.status == "CREATED":
             if minor(checkout.amount) == 0:
@@ -219,10 +224,10 @@ class PaymentCheckoutService:
             # reconciled by receipt; never blindly create another gateway order.
             checkout.status = "CREATING"
             self.db.commit()
-            order = self.gateway.create_order(checkout)
+            order = self.gateway.create_order(checkout, self.db.get(User, user_id))
             checkout = self.owned(checkout_id, user_id)
             self.check_order(checkout, order)
-            checkout.gateway_order_id = order["id"]
+            checkout.gateway_order_id = order.id
             if checkout.status == "CREATING":
                 checkout.status = "PENDING"
             self.db.commit()
@@ -230,53 +235,42 @@ class PaymentCheckoutService:
         return self.reconcile(checkout_id, user_id)
 
     def reconcile(self, checkout_id, user_id, payment_id=None, signature=None, order_id=None, commit=True):
-        require_gateway()
         checkout = self.owned(checkout_id, user_id)
-        if signature is not None:
-            if not checkout.gateway_order_id or checkout.gateway_order_id != order_id:
-                raise HTTPException(400, detail="Payment order mismatch")
-            verify_signature(f"{checkout.gateway_order_id}|{payment_id}".encode(), signature, settings.razorpay_key_secret.get_secret_value())
+        self.gateway.verify_confirmation(checkout, payment_id, signature, order_id)
         if checkout.status == "CREATING" and not checkout.gateway_order_id:
             order = self.gateway.find_order(checkout.id)
             if order:
                 self.check_order(checkout, order)
-                checkout.gateway_order_id, checkout.status = order["id"], "PENDING"
+                checkout.gateway_order_id, checkout.status = order.id, "PENDING"
         if checkout.gateway_order_id:
             order = self.gateway.order(checkout.gateway_order_id)
             self.check_order(checkout, order)
-            payments = [self.gateway.payment(payment_id)] if payment_id else self.gateway.payments(checkout.gateway_order_id)
-            # Fetch each entity again; a signed old failed event cannot downgrade
-            # a captured payment or hide a successful retry on the same order.
-            if payment_id:
-                payments += self.gateway.payments(checkout.gateway_order_id)
+            payments = self.gateway.payments(checkout.gateway_order_id, payment_id)
             verified = []
             for payment in payments:
-                if not isinstance(payment.get("id"), str) or not payment["id"].startswith("pay_") or not payment["id"].replace('_', '').isalnum():
-                    raise HTTPException(409, detail="Invalid gateway payment")
-                payment = self.gateway.payment(payment["id"])
-                if payment.get("order_id") != checkout.gateway_order_id or payment.get("amount") != minor(checkout.amount) or payment.get("currency") != checkout.currency:
+                if payment.order_id != checkout.gateway_order_id or payment.amount != minor(checkout.amount) or payment.currency != checkout.currency:
                     raise HTTPException(409, detail="Payment amount, currency or ownership mismatch")
                 verified.append(payment)
-            captured = next((p for p in verified if p.get("status") == "captured" and p.get("captured") is True and not p.get("amount_refunded")), None)
-            refunded = next((p for p in verified if (not checkout.gateway_payment_id or p.get("id") == checkout.gateway_payment_id)
-                and (p.get("status") == "refunded" or p.get("amount_refunded", 0) > 0)), None)
+            captured = next((p for p in verified if p.status == "SUCCESS" and not p.refunded), None)
+            refunded = next((p for p in verified if (not checkout.gateway_payment_id or p.id == checkout.gateway_payment_id)
+                and p.refunded > 0), None)
             if refunded:
-                checkout.gateway_payment_id = refunded["id"]
-                self.revoke(checkout, full=refunded.get("amount_refunded", 0) == minor(checkout.amount))
+                checkout.gateway_payment_id = refunded.id
+                self.revoke(checkout, full=refunded.refunded == minor(checkout.amount))
             elif captured and checkout.status not in {"PAID", "REVIEW_REQUIRED", "REFUNDED"}:
-                if order.get("status") != "paid" or order.get("amount_paid") != minor(checkout.amount) or order.get("amount_due") != 0:
+                if not order.paid:
                     raise HTTPException(409, detail="Order is not fully paid")
-                checkout.gateway_payment_id = captured["id"]
+                checkout.gateway_payment_id = captured.id
                 try:
                     # Roll back all partial booking/class/QR/membership writes if
                     # access eligibility changed while the payment was in flight.
                     with self.db.begin_nested():
-                        self.fulfill(checkout, captured["id"])
+                        self.fulfill(checkout, captured.id)
                 except HTTPException:
                     checkout.status, checkout.failure_code = "REVIEW_REQUIRED", "FULFILLMENT_UNAVAILABLE"
-                    self.record_paid(checkout, captured["id"])
+                    self.record_paid(checkout, captured.id)
             elif checkout.status not in {"PAID", "REVIEW_REQUIRED", "REFUNDED", "CANCELLED"}:
-                checkout.status = "PENDING" if any(p.get("status") in {"authorized", "created"} for p in verified) else "FAILED" if verified else "PENDING"
+                checkout.status = "PENDING" if any(p.status == "PENDING" for p in verified) else "FAILED" if verified or not order.payable else "PENDING"
                 for payment in self.db.scalars(select(Payment).join(Booking, Booking.id == Payment.booking_id)
                     .where(Booking.checkout_id == checkout.id, Booking.status == "PENDING_PAYMENT")):
                     if payment.status != "PAID":
@@ -287,7 +281,7 @@ class PaymentCheckoutService:
 
     def record_paid(self, checkout, payment_id):
         for payment in self.db.scalars(select(Payment).join(Booking, Booking.id == Payment.booking_id).where(Booking.checkout_id == checkout.id)):
-            payment.status, payment.provider, payment.external_ref = "PAID", "RAZORPAY" if payment_id else "FREE", payment_id
+            payment.status, payment.provider, payment.external_ref = "PAID", checkout.provider if payment_id else "FREE", payment_id
 
     def fulfill(self, checkout, payment_id):
         if checkout.status == "PAID":
@@ -301,9 +295,9 @@ class PaymentCheckoutService:
             end = expiry(now, terms["duration_value"], terms["duration_unit"])
             membership = UserMembership(user_id=checkout.user_id, gym_id=None if multi else terms["gym_id"],
                 plan_id=None if multi else terms["id"], platform_plan_id=terms["id"] if multi else None,
-                membership_type=terms["membership_type"], checkout_key=f"razorpay:{checkout.id}", gateway_checkout_id=checkout.id,
+                membership_type=terms["membership_type"], checkout_key=f"{checkout.provider.lower()}:{checkout.id}", gateway_checkout_id=checkout.id,
                 terms_snapshot=terms, status="ACTIVE", start_at=now, end_at=end, original_end_at=end,
-                paid_amount=checkout.amount, currency=checkout.currency, payment_provider="RAZORPAY" if payment_id else "FREE",
+                paid_amount=checkout.amount, currency=checkout.currency, payment_provider=checkout.provider if payment_id else "FREE",
                 payment_status="PAID", external_ref=payment_id)
             self.db.add(membership); self.db.flush()
             if checkout.kind == "MULTI_GYM":
@@ -351,12 +345,14 @@ class PaymentCheckoutService:
     def present(self, checkout):
         bookings = list(self.db.scalars(select(Booking.id).where(Booking.checkout_id == checkout.id)))
         membership = self.db.scalar(select(UserMembership.id).where(UserMembership.gateway_checkout_id == checkout.id))
-        can_pay = checkout.status in {"PENDING", "FAILED"} and bool(checkout.gateway_order_id)
+        can_pay = checkout.status in {"PENDING", "FAILED"} and bool(checkout.gateway_order_id) and (checkout.checkout_data or {}).get("payable", True)
         if can_pay and bookings:
             can_pay = all(b.status == "PENDING_PAYMENT" and b.expires_at > datetime.utcnow() for b in self.db.scalars(select(Booking).where(Booking.checkout_id == checkout.id)))
         return {"id": checkout.id, "kind": checkout.kind, "status": checkout.status, "mode": checkout.mode, "amount": str(checkout.amount),
-            "amount_minor": minor(checkout.amount), "currency": checkout.currency, "key_id": checkout.key_id,
-            "razorpay_order_id": checkout.gateway_order_id, "booking_ids": bookings, "membership_id": membership,
+            "amount_minor": minor(checkout.amount), "currency": checkout.currency, "provider": checkout.provider,
+            "environment": "sandbox" if checkout.mode == "test" else "production",
+            "gateway_order_id": checkout.gateway_order_id, "booking_ids": bookings, "membership_id": membership,
+            **get_provider(checkout.provider).checkout_info(checkout),
             "can_pay": can_pay, "failure_code": checkout.failure_code}
 
     def cancel(self, checkout_id, user_id):
@@ -383,58 +379,40 @@ class PaymentCheckoutService:
         self.db.commit()
         return self.present(checkout)
 
-    def webhook(self, raw: bytes, signature: str, event_id: str):
-        require_gateway()
-        verify_signature(raw, signature, settings.razorpay_webhook_secret.get_secret_value())
-        try:
-            event = json.loads(raw)
-        except (ValueError, UnicodeDecodeError):
-            raise HTTPException(400, detail="Invalid webhook payload") from None
-        if not isinstance(event, dict):
-            raise HTTPException(400, detail="Invalid webhook payload")
-        name = event.get("event", "")
-        if name not in {"payment.captured", "payment.authorized", "payment.failed", "order.paid", "refund.processed"}:
+    def webhook(self, raw: bytes, signature: str, event_id: str = "", provider="RAZORPAY", timestamp=""):
+        require_gateway(provider)
+        self.gateway = get_provider(provider)
+        event = self.gateway.webhook(raw, signature, timestamp)
+        if event is None:
             return {"status": "ignored"}
-        payload = event.get("payload", {})
-        if not isinstance(payload, dict):
-            raise HTTPException(400, detail="Invalid webhook payload")
-        def entity(key):
-            wrapper = payload.get(key, {})
-            value = wrapper.get("entity", {}) if isinstance(wrapper, dict) else None
-            if not isinstance(value, dict):
-                raise HTTPException(400, detail="Invalid webhook entity")
-            return value
-        payment = entity("payment")
-        order_id = payment.get("order_id") or entity("order").get("id")
-        if not order_id and name == "refund.processed":
-            payment_id = entity("refund").get("payment_id", "")
-            if not isinstance(payment_id, str) or not payment_id.startswith("pay_") or not payment_id.replace('_', '').isalnum():
-                raise HTTPException(400, detail="Invalid refund event")
-            order_id = self.gateway.payment(payment_id).get("order_id")
-        checkout = self.db.scalar(select(PaymentCheckout).where(PaymentCheckout.gateway_order_id == order_id)) if order_id else None
+        checkout = self.db.scalar(select(PaymentCheckout).where(
+            PaymentCheckout.provider == provider, PaymentCheckout.gateway_order_id == event.order_id))
         if not checkout:
-            # Order creation may have succeeded before the local response was saved.
-            receipt = payment.get("notes", {}).get("fitigo_checkout_id") if isinstance(payment.get("notes"), dict) else None
-            if not receipt and isinstance(order_id, str) and order_id.startswith('order_') and order_id.replace('_', '').isalnum():
-                receipt = self.gateway.order(order_id).get("receipt")
+            # Recover the deterministic internal reference if create response was lost.
+            receipt = event.reference or self.gateway.order(event.order_id).reference
             checkout = self.db.get(PaymentCheckout, receipt) if receipt else None
-        if not checkout:
+        if not checkout or checkout.provider != provider:
             return {"status": "ignored"}
         checkout = self.owned(checkout.id, checkout.user_id)
         digest = hashlib.sha256(raw).hexdigest()
-        previous = self.db.get(PaymentWebhookReceipt, event_id)
+        # Cashfree event headers vary by webhook version. Signed-body identity is
+        # stable across retries; business fulfillment is independently idempotent.
+        receipt_id = event_id if provider == "RAZORPAY" else f"cashfree:{digest}"
+        previous = self.db.get(PaymentWebhookReceipt, receipt_id)
         if previous:
             if previous.body_hash != digest:
                 raise HTTPException(409, detail="Webhook event ID conflict")
+            if checkout.status in {"CREATING", "PENDING", "FAILED"}:
+                self.reconcile(checkout.id, checkout.user_id)
             return {"status": "duplicate"}
         if not checkout.gateway_order_id:
-            order = self.gateway.order(order_id)
+            order = self.gateway.order(event.order_id)
             self.check_order(checkout, order)
-            checkout.gateway_order_id = order_id
+            checkout.gateway_order_id = event.order_id
             if checkout.status == "CREATING":
                 checkout.status = "PENDING"
         self.db.flush()
         self.reconcile(checkout.id, checkout.user_id, commit=False)
-        self.db.add(PaymentWebhookReceipt(id=event_id, body_hash=digest, event=name))
+        self.db.add(PaymentWebhookReceipt(id=receipt_id, body_hash=digest, event=event.name))
         self.db.commit()
         return {"status": "processed"}

@@ -378,7 +378,7 @@ def checkout_cart(
     """
 
     from app.core.config import settings
-    if settings.razorpay_enabled or settings.environment != "development":
+    if settings.gateway_required or settings.environment != "development":
         raise HTTPException(409, detail="Use verified gateway checkout")
     uid = _require_user_id(db, current_user)
 
@@ -508,7 +508,7 @@ def checkout_cart_with_wallet(
     uid = _require_user_id(db, current_user)
 
     from app.core.config import settings
-    if settings.razorpay_enabled or settings.environment != "development":
+    if settings.gateway_required or settings.environment != "development":
         raise HTTPException(409, detail="Use verified gateway checkout")
     # Lock cart items first (consistent lock ordering for this flow)
     items = (

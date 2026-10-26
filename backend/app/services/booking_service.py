@@ -81,7 +81,7 @@ class BookingService:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="quantity must be >= 1")
         visitor_names = validate_visitors(visitor_names, quantity)
 
-        if settings.razorpay_enabled:
+        if settings.gateway_required:
             self.db.scalar(select(User).where(User.id == user_id).with_for_update())
         if idempotency_key:
             existing = (
@@ -189,7 +189,7 @@ class BookingService:
 
             payment = Payment(
                 booking_id=booking.id,
-                provider="RAZORPAY" if settings.razorpay_enabled and payment_status != PaymentStatus.PAID.value else "DUMMY",
+                provider=settings.gateway_name if settings.gateway_required and payment_status != PaymentStatus.PAID.value else "DUMMY",
                 status=payment_status,
                 amount=total_price,
                 currency=currency,
@@ -215,7 +215,7 @@ class BookingService:
 
     def pay_dummy(self, *, user_id: int, booking_id: int, external_ref: str | None = None) -> Booking:
         from app.core.config import settings
-        if settings.razorpay_enabled or settings.environment != "development":
+        if settings.gateway_required or settings.environment != "development":
             raise HTTPException(409, detail="Use verified gateway checkout")
         booking = self.db.execute(select(Booking).where(Booking.id == booking_id, Booking.user_id == user_id).with_for_update().execution_options(populate_existing=True)).scalars().first()
         if not booking:
@@ -304,7 +304,7 @@ class BookingService:
                 .scalars()
                 .first()
             )
-            if payment and payment.status == PaymentStatus.PAID.value and payment.provider != "RAZORPAY":
+            if payment and payment.status == PaymentStatus.PAID.value and payment.provider not in {"RAZORPAY", "CASHFREE"} and not booking.checkout_id:
                 payment.status = PaymentStatus.REFUNDED.value
 
             BookingAccessService(self.db).revoke(booking)
@@ -578,7 +578,7 @@ class BookingService:
                 .scalars()
                 .first()
             )
-            if payment and payment.status == PaymentStatus.PAID.value and payment.provider != "RAZORPAY":
+            if payment and payment.status == PaymentStatus.PAID.value and payment.provider not in {"RAZORPAY", "CASHFREE"} and not booking.checkout_id:
                 payment.status = PaymentStatus.REFUNDED.value
 
             BookingAccessService(self.db).revoke(booking)

@@ -13,6 +13,8 @@ class PaymentCheckout(Base):
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), index=True)
     source_key: Mapped[str] = mapped_column(String(120))
     kind: Mapped[str] = mapped_column(String(20))
+    provider: Mapped[str] = mapped_column(String(20), default="RAZORPAY", server_default="RAZORPAY")
+    checkout_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     mode: Mapped[str] = mapped_column(String(10))
     key_id: Mapped[str] = mapped_column(String(80))
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2))

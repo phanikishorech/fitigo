@@ -38,9 +38,9 @@ export default function CartPage({ checkout = false }: { checkout?: boolean }) {
     if (id) navigate(`/booking/${id}/success`)
     else navigate('/bookings')
   })
-  if (checkout && gateway?.gateway_required && !gateway.enabled) return <><Heading title="Payments unavailable" /><Alert>Razorpay is selected but not configured for this mode. No payment has been taken. Contact the administrator or retry later.</Alert><Link to="/cart">Return to cart</Link></>
+  if (checkout && gateway?.gateway_required && !gateway.enabled) return <><Heading title="Payments unavailable" /><Alert>The selected payment provider is not configured for this mode. No payment has been taken. Contact the administrator or retry later.</Alert><Link to="/cart">Return to cart</Link></>
   if (checkout && gateway?.enabled) return <>
-    <Heading title="Review & checkout" subtitle={gateway.mode === 'test' ? 'Razorpay Test Mode · No real money is charged.' : 'Razorpay Live Mode · Real payments.'} />
+    <Heading title="Review & checkout" subtitle={`${gateway.provider === 'CASHFREE' ? 'Cashfree' : 'Razorpay'} · ${gateway.mode === 'test' ? 'Test Mode · No real money is charged.' : 'Live Mode · Real payments.'}`} />
     <div className="fg-two-column"><div className="fg-stack">{cart.map(item => <article className="fg-panel fg-stack" key={item.id}><h3>{item.gym_name || 'Gym visit'}</h3><p>{dateLabel(item.booking_date)} · {(item.start_time || item.preferred_start_time)?.slice(0, 5)} IST</p><p>{item.member_count} visitors · {money(item.total_price, item.currency)}</p></article>)}
       {!cart.length && <p>Your cart has no new items. Resume or refresh a recent payment below, or view My Bookings.</p>}
       <Link to="/bookings" className="fg-inline-link">My Bookings</Link><Link to="/cart" className="fg-inline-link">Edit cart</Link>

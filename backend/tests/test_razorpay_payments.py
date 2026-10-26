@@ -73,6 +73,8 @@ def api(booking_api, monkeypatch):
     client.app.dependency_overrides[get_db] = database
     for router in [payments.router, memberships.router, platform_memberships.router]:
         client.app.include_router(router, prefix='/api/v1')
+    monkeypatch.setattr(settings, 'payment_gateway', None)
+    monkeypatch.setattr(settings, 'payment_env', None)
     monkeypatch.setattr(settings, 'razorpay_enabled', True)
     monkeypatch.setattr(settings, 'payment_mode', 'test')
     monkeypatch.setattr(settings, 'razorpay_key_id', 'rzp_test_fixture')
@@ -84,7 +86,7 @@ def api(booking_api, monkeypatch):
             return stored_instant(NOW.replace(hour=9))
     monkeypatch.setattr(payment_checkout_service, 'datetime', Clock)
     gateway = FakeGateway()
-    monkeypatch.setattr(payment_checkout_service, 'RazorpayGateway', lambda: gateway)
+    monkeypatch.setattr('app.services.razorpay_provider.RazorpayGateway', lambda: gateway)
     with Session(engine) as db:
         db.get(Gym, 1).multi_gym_enabled = True
         db.add(GymMembershipPlan(id=1, gym_id=1, name='Single', duration_days=30, price=500))

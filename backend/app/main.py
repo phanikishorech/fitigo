@@ -1,4 +1,5 @@
 from pathlib import Path
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,7 +28,15 @@ from app.routers.payments import router as payments_router
 
 
 def create_app() -> FastAPI:
+    @asynccontextmanager
+    async def lifespan(app):
+        from starlette.concurrency import run_in_threadpool
+        from app.services.payment_providers import validate_startup
+        await run_in_threadpool(validate_startup)
+        yield
+
     app = FastAPI(
+        lifespan=lifespan,
         title=settings.app_name,
         debug=settings.debug,
         openapi_url=f"{settings.api_v1_prefix}/openapi.json",

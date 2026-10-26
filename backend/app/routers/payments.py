@@ -11,7 +11,7 @@ from app.models.auth import User
 from app.models.payment_checkout import PaymentCheckout
 from app.schemas.payment_checkout import CheckoutCreate, CheckoutVerify
 from app.services.payment_checkout_service import PaymentCheckoutService
-from app.services.razorpay_gateway import configured
+from app.services.payment_providers import configured
 
 
 def no_store(response: Response):
@@ -24,7 +24,8 @@ customer = require_role({ROLE_CUSTOMER})
 
 @router.get("/config")
 def configuration(user: User = Depends(customer)):
-    return {"enabled": configured(), "gateway_required": settings.razorpay_enabled, "mode": settings.payment_mode, "provider": "RAZORPAY"}
+    return {"enabled": configured(), "gateway_required": settings.gateway_required, "mode": settings.gateway_mode,
+            "environment": settings.gateway_environment, "provider": settings.gateway_name}
 
 
 @router.post("/checkouts")
@@ -38,8 +39,8 @@ def create_checkout(payload: CheckoutCreate,
 def recent_checkouts(db: Session = Depends(get_db), user: User = Depends(customer)):
     service = PaymentCheckoutService(db)
     return [service.present(row) for row in db.scalars(select(PaymentCheckout).where(
-        PaymentCheckout.user_id == user.id, PaymentCheckout.mode == settings.payment_mode,
-        PaymentCheckout.key_id == settings.razorpay_key_id).order_by(PaymentCheckout.created_at.desc()).limit(20))]
+        PaymentCheckout.user_id == user.id, PaymentCheckout.mode == settings.gateway_mode
+        ).order_by(PaymentCheckout.created_at.desc()).limit(20))]
 
 
 @router.get("/checkouts/{checkout_id}")
@@ -73,3 +74,15 @@ async def webhook(request: Request, x_razorpay_signature: str = Header(default="
         if len(raw) > 262144:
             raise HTTPException(413, detail="Webhook body too large")
     return await run_in_threadpool(PaymentCheckoutService(db).webhook, bytes(raw), x_razorpay_signature, x_razorpay_event_id)
+
+
+@router.post("/webhooks/cashfree")
+async def cashfree_webhook(request: Request, x_webhook_signature: str = Header(default="", max_length=128),
+                          x_webhook_timestamp: str = Header(default="", max_length=32), db: Session = Depends(get_db)):
+    raw = bytearray()
+    async for chunk in request.stream():
+        raw.extend(chunk)
+        if len(raw) > 262144:
+            raise HTTPException(413, detail="Webhook body too large")
+    return await run_in_threadpool(PaymentCheckoutService(db).webhook, bytes(raw), x_webhook_signature,
+                                  "", "CASHFREE", x_webhook_timestamp)

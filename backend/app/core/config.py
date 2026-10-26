@@ -19,22 +19,48 @@ class Settings(BaseSettings):
         env_file=(str(_PROJECT_ROOT / ".env"), str(_BACKEND_DIR / ".env")),
         env_file_encoding="utf-8",
         extra="ignore",
+        hide_input_in_errors=True,
     )
 
     app_name: str = "FitiGo"
     environment: str = "development"
     debug: bool = True
     payment_mode: Literal["test", "live"] = "test"
+    # None retains the legacy RAZORPAY_ENABLED / PAYMENT_MODE configuration.
+    payment_gateway: Literal["razorpay", "cashfree"] | None = None
+    payment_env: Literal["sandbox", "production"] | None = None
+    cashfree_client_id: str = ""
+    cashfree_client_secret: SecretStr = SecretStr("")
+    cashfree_api_version: Literal["2026-01-01"] = "2026-01-01"
+    payment_return_url: str = "http://localhost:5173/checkout"
     razorpay_enabled: bool = False
     razorpay_live_enabled: bool = False
     razorpay_key_id: str = ""
     razorpay_key_secret: SecretStr = SecretStr("")
     razorpay_webhook_secret: SecretStr = SecretStr("")
 
-    @field_validator("payment_mode", mode="before")
+    @field_validator("payment_mode", "payment_gateway", "payment_env", mode="before")
     @classmethod
     def normalize_payment_mode(cls, value):
         return value.strip().lower() if isinstance(value, str) else value
+
+    @property
+    def gateway_required(self) -> bool:
+        return self.payment_gateway is not None or self.razorpay_enabled
+
+    @property
+    def gateway_name(self) -> str:
+        return (self.payment_gateway or "razorpay").upper()
+
+    @property
+    def gateway_mode(self) -> str:
+        if self.payment_env is not None:
+            return "test" if self.payment_env == "sandbox" else "live"
+        return self.payment_mode
+
+    @property
+    def gateway_environment(self) -> str:
+        return "sandbox" if self.gateway_mode == "test" else "production"
 
     api_v1_prefix: str = "/api/v1"
 

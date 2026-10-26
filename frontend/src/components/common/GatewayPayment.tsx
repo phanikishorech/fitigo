@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { paymentService, type PaymentCheckout, type PaymentSource } from '../../services/paymentService'
-import { openRazorpay } from '../../utils/razorpay'
+import { openPayment } from '../../utils/paymentGateway'
 import { useMutation } from '../../hooks/useResource'
 import { money } from '../../services/client'
 import { Alert, Button, Link } from './UI'
@@ -21,28 +21,33 @@ export default function GatewayPayment({ source, initial, onPaid }: { source?: P
   useEffect(() => {
     if (!checkout || !['PENDING', 'CREATING'].includes(checkout.status)) return
     let active = true
-    const timer = window.setInterval(() => { void paymentService.status(checkout.id).then(next => { if (active && next.status !== checkout.status) accept(next) }).catch(() => {}) }, 5000)
+    let checking = false
+    const timer = window.setInterval(() => {
+      if (checking || mutation.pending) return
+      checking = true
+      void paymentService.refresh(checkout.id).then(next => { if (active && next.status !== checkout.status) accept(next) }).catch(() => {}).finally(() => { checking = false })
+    }, 15000)
     return () => { active = false; clearInterval(timer) }
-  }, [checkout?.id, checkout?.status])
+  }, [checkout?.id, checkout?.status, mutation.pending])
   const pay = () => mutation.run(async () => {
     const next = checkout ? await paymentService.refresh(checkout.id) : source ? await paymentService.create(source, key.current) : null
     if (!next) throw new Error('Choose a purchase first.')
     accept(next)
     if (!next.can_pay) return
-    const result = await openRazorpay(next)
-    if (result.type === 'success') {
+    const result = await openPayment(next)
+    if (result.type === 'success' || result.type === 'returned') {
       // Only backend capture verification can turn this into success.
-      try { accept(await paymentService.verify(next.id, result.callback)) }
+      try { accept(await paymentService.verify(next.id, result.type === 'success' ? result.callback : undefined)) }
       catch (error) { setMessage('Checkout returned, but verification was interrupted. Do not pay again; refresh payment status.'); throw error }
     } else {
-      setMessage(result.type === 'cancelled' ? 'Checkout closed. Payment is not confirmed. Refresh status or retry the same checkout.' : 'Payment failed. Refresh status, then retry this checkout.')
+      setMessage(result.type === 'failed' ? 'Payment failed. Refresh status before retrying this checkout.' : 'Checkout closed or reported an error. Payment is not confirmed. Refresh status before retrying this checkout.')
       const reconciled = await paymentService.refresh(next.id)
       if (['PAID', 'REVIEW_REQUIRED', 'REFUNDED'].includes(reconciled.status)) accept(reconciled)
       else setCheckout(reconciled)
     }
   })
   return <div className="fg-stack">
-    <p>Secure Razorpay checkout. Access is granted only after FitiGo confirms payment.</p>
+    <p>Secure {checkout?.provider === 'CASHFREE' ? 'Cashfree' : checkout?.provider === 'RAZORPAY' ? 'Razorpay' : 'payment'} checkout. Access is granted only after FitiGo confirms payment.</p>
     {checkout && <><p><strong>{checkout.mode === 'test' ? 'TEST MODE · No real money' : 'LIVE MODE · Real payment'}</strong></p><p>{money(checkout.amount, checkout.currency)} · {checkout.status.replaceAll('_', ' ').toLowerCase()}</p><small>Checkout: {checkout.id}</small></>}
     {message && <p role="status">{message}</p>}
     {mutation.error && <Alert>{mutation.error}</Alert>}

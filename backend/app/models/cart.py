@@ -59,6 +59,7 @@ class CartItem(Base):
     currency: Mapped[str] = mapped_column(String(10), nullable=False, default="INR")
 
     status: Mapped[str] = mapped_column(String(20), nullable=False, default=CartItemStatus.ACTIVE.value)
+    checkout_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("payment_checkouts.id"), index=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)

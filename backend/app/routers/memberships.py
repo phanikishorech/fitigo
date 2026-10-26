@@ -19,6 +19,7 @@ from app.models.wallet import WalletAccount
 from sqlalchemy import select
 from app.services.membership_pause_service import MembershipPauseService, membership_status
 from app.schemas.membership_pause import PauseRequest, PauseConfirm, PauseEligibility, PausePreview
+from app.services.razorpay_gateway import configured
 
 
 router = APIRouter(prefix="/memberships")
@@ -53,9 +54,9 @@ def wallet_quote(gym_id: int, plan_id: int, response: Response, db: Session = De
     response.headers["Cache-Control"] = "no-store"
     terms = single_terms(db, gym_id, plan_id)
     wallet = db.scalars(select(WalletAccount).where(WalletAccount.user_id == current_user.id)).first()
-    return {"plan": terms, "quote_token": quote_key(terms), "payment_available": wallet_enabled(),
+    return {"plan": terms, "quote_token": quote_key(terms), "payment_available": wallet_enabled() or configured(),
             "wallet_balance": str(wallet.balance) if wallet else "0.00", "wallet_currency": wallet.currency if wallet else terms["currency"],
-            "payment_mode": "WALLET_TEST_CREDIT" if wallet_enabled() else "DISABLED"}
+            "payment_mode": "RAZORPAY" if configured() else "WALLET_TEST_CREDIT" if wallet_enabled() else "DISABLED"}
 
 
 @router.post("/gyms/{gym_id}/plans", response_model=MembershipPlanResponse)

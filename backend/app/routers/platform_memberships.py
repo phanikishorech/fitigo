@@ -55,10 +55,16 @@ def get_order(order_id: UUID, db: Session = Depends(get_db), user: User = Depend
 
 
 @router.post("/memberships/orders/{order_id}/payment-session", dependencies=[Depends(no_store)])
-def payment_disabled(order_id: UUID, db: Session = Depends(get_db), user: User = Depends(customer_access)):
-    # Deliberately no configurable bypass, wallet charge, dummy success or activation.
+def payment_session(order_id: UUID, payload: WalletOrderPayment | None = None, db: Session = Depends(get_db), user: User = Depends(customer_access)):
+    from app.services.razorpay_gateway import configured
+    from app.services.payment_checkout_service import PaymentCheckoutService
+    from app.schemas.payment_checkout import CheckoutCreate
     PlatformMembershipService(db).get_order(str(order_id), user_id=user.id)
-    fail("PAYMENT_NOT_CONFIGURED", 409)
+    if not configured():
+        fail("PAYMENT_NOT_CONFIGURED", 409)
+    if payload is None:
+        fail("MEMBERSHIP_PRICE_CHANGED")
+    return PaymentCheckoutService(db).create(user.id, CheckoutCreate(kind="MULTI_GYM", order_id=str(order_id), accepted_quote=payload.accepted_quote), str(order_id))
 
 
 @router.post("/memberships/orders/{order_id}/pay-wallet", response_model=PlatformOrderResponse, dependencies=[Depends(no_store)])

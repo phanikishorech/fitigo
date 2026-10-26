@@ -1,4 +1,6 @@
 .env
+.env.*
+!.env.example
 .venv/
 **/.venv/
 __pycache__/
@@ -25,3 +27,4 @@ Desktop.ini
 # Uploads (local dev)
 backend/uploads/
 /.tools
+~$paymet_test.xlsx

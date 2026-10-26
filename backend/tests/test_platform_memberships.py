@@ -38,6 +38,7 @@ def api(monkeypatch):
     monkeypatch.setattr(settings, "environment", "production")
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     metadata = MetaData()
+    Base.metadata.tables["payment_checkouts"].to_metadata(metadata)
     for name in ("gym_slots", "bookings", "payments"):
         table = Base.metadata.tables[name].to_metadata(metadata)
         table.c.id.type = Integer()

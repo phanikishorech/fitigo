@@ -54,6 +54,7 @@ class PlatformMembershipOrder(Base):
     idempotency_key: Mapped[str] = mapped_column(String(64))
     status: Mapped[str] = mapped_column(String(30), default="PAYMENT_DISABLED")
     snapshot: Mapped[dict] = mapped_column(JSON)
+    checkout_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("payment_checkouts.id"), unique=True)
     membership_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("user_memberships.id"), nullable=True, unique=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 

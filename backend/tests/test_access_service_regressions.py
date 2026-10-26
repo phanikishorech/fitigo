@@ -30,6 +30,7 @@ def access(monkeypatch):
     # Production metadata and the configured database remain untouched.
     engine = create_engine("sqlite://")
     metadata = MetaData()
+    Base.metadata.tables["payment_checkouts"].to_metadata(metadata)
     for name in (
         "gym_slots", "bookings",
         "users", "gyms", "gym_membership_plans", "user_memberships",

@@ -56,7 +56,7 @@ class AdminBookingOpsService:
                 .scalars()
                 .first()
             )
-            if payment and payment.status == PaymentStatus.PAID.value:
+            if payment and payment.status == PaymentStatus.PAID.value and payment.provider != "RAZORPAY":
                 payment.status = PaymentStatus.REFUNDED.value
 
             BookingAccessService(self.db).revoke(booking)
@@ -88,6 +88,8 @@ class AdminBookingOpsService:
             )
             if not payment:
                 raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Payment not found")
+            if payment.provider == "RAZORPAY" or booking.checkout_id:
+                raise HTTPException(409, detail="Gateway payment status must be reconciled with Razorpay")
 
             confirming = new_status == PaymentStatus.PAID.value and booking.status == BookingStatus.PENDING_PAYMENT.value
             if confirming:

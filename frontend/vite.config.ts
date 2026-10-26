@@ -25,7 +25,7 @@ export default defineConfig(() => ({
   server: {
     port: 5173,
     strictPort: true,
-    allowedHosts: ['integrate-copy-walt-issued.trycloudflare.com'],    
+    allowedHosts: ['concept-moisture-reload-array.trycloudflare.com'],    
     proxy: {
       '/api': {
         target: 'http://localhost:8000',

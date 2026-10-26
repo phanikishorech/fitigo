@@ -14,6 +14,7 @@ from app.models.slot import GymSlot, SlotAvailability, SlotAvailabilityStatus
 from app.services.booking_access_service import BookingAccessService, validate_visitors
 from app.services.booking_time import require_future_start
 from app.core.time import stored_instant
+from app.core.config import settings
 
 
 class BookingService:
@@ -80,6 +81,8 @@ class BookingService:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="quantity must be >= 1")
         visitor_names = validate_visitors(visitor_names, quantity)
 
+        if settings.razorpay_enabled:
+            self.db.scalar(select(User).where(User.id == user_id).with_for_update())
         if idempotency_key:
             existing = (
                 self.db.execute(
@@ -89,6 +92,9 @@ class BookingService:
                 .first()
             )
             if existing:
+                if (existing.gym_slot_id != gym_slot_id or existing.slot_date != slot_date
+                        or existing.quantity != quantity or existing.visitor_names != visitor_names):
+                    raise HTTPException(409, detail="Idempotency key belongs to another booking")
                 return existing
 
         slot = (
@@ -183,7 +189,7 @@ class BookingService:
 
             payment = Payment(
                 booking_id=booking.id,
-                provider="DUMMY",
+                provider="RAZORPAY" if settings.razorpay_enabled and payment_status != PaymentStatus.PAID.value else "DUMMY",
                 status=payment_status,
                 amount=total_price,
                 currency=currency,
@@ -208,10 +214,15 @@ class BookingService:
         return booking
 
     def pay_dummy(self, *, user_id: int, booking_id: int, external_ref: str | None = None) -> Booking:
+        from app.core.config import settings
+        if settings.razorpay_enabled or settings.environment != "development":
+            raise HTTPException(409, detail="Use verified gateway checkout")
         booking = self.db.execute(select(Booking).where(Booking.id == booking_id, Booking.user_id == user_id).with_for_update().execution_options(populate_existing=True)).scalars().first()
         if not booking:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
 
+        if booking.checkout_id:
+            raise HTTPException(409, detail="Use verified gateway checkout")
         if booking.status != BookingStatus.PENDING_PAYMENT.value:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Booking is not pending payment")
 
@@ -293,7 +304,7 @@ class BookingService:
                 .scalars()
                 .first()
             )
-            if payment and payment.status == PaymentStatus.PAID.value:
+            if payment and payment.status == PaymentStatus.PAID.value and payment.provider != "RAZORPAY":
                 payment.status = PaymentStatus.REFUNDED.value
 
             BookingAccessService(self.db).revoke(booking)
@@ -326,6 +337,8 @@ class BookingService:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Cannot reschedule booking in status {booking.status}")
 
         # Only allow reschedule for pending/confirmed
+        if booking.checkout_id:
+            raise HTTPException(409, detail="Gateway-paid or pending bookings cannot be rescheduled; cancel and contact support if needed")
         if booking.status not in {BookingStatus.PENDING_PAYMENT.value, BookingStatus.CONFIRMED.value}:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Cannot reschedule booking in status {booking.status}")
 
@@ -565,7 +578,7 @@ class BookingService:
                 .scalars()
                 .first()
             )
-            if payment and payment.status == PaymentStatus.PAID.value:
+            if payment and payment.status == PaymentStatus.PAID.value and payment.provider != "RAZORPAY":
                 payment.status = PaymentStatus.REFUNDED.value
 
             BookingAccessService(self.db).revoke(booking)

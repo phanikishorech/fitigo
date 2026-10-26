@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
+from pydantic import SecretStr, field_validator
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 _THIS_FILE = Path(__file__).resolve()
 # .../Fitigo/backend/app/core/config.py
-_PROJECT_ROOT = _THIS_FILE.parents[4]  # .../Fitigo
-_BACKEND_DIR = _THIS_FILE.parents[3]  # .../Fitigo/backend
+_PROJECT_ROOT = _THIS_FILE.parents[3]  # .../Fitigo
+_BACKEND_DIR = _THIS_FILE.parents[2]  # .../Fitigo/backend
 
 
 class Settings(BaseSettings):
@@ -22,6 +24,17 @@ class Settings(BaseSettings):
     app_name: str = "FitiGo"
     environment: str = "development"
     debug: bool = True
+    payment_mode: Literal["test", "live"] = "test"
+    razorpay_enabled: bool = False
+    razorpay_live_enabled: bool = False
+    razorpay_key_id: str = ""
+    razorpay_key_secret: SecretStr = SecretStr("")
+    razorpay_webhook_secret: SecretStr = SecretStr("")
+
+    @field_validator("payment_mode", mode="before")
+    @classmethod
+    def normalize_payment_mode(cls, value):
+        return value.strip().lower() if isinstance(value, str) else value
 
     api_v1_prefix: str = "/api/v1"
 

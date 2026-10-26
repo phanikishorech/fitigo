@@ -158,6 +158,8 @@ def remove_cart_item(
     it = db.execute(select(CartItem).where(CartItem.id == item_id, CartItem.user_id == uid)).scalars().first()
     if not it:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cart item not found")
+    if it.checkout_id:
+        raise HTTPException(409, detail="Cancel the pending payment checkout before removing this purchase")
     it.status = CartItemStatus.REMOVED.value
     it.updated_at = datetime.utcnow()
     db.commit()
@@ -375,6 +377,9 @@ def checkout_cart(
     This provides a usable "Proceed to Book" step without implementing full payments/wallet.
     """
 
+    from app.core.config import settings
+    if settings.razorpay_enabled or settings.environment != "development":
+        raise HTTPException(409, detail="Use verified gateway checkout")
     uid = _require_user_id(db, current_user)
 
     items = (
@@ -502,6 +507,9 @@ def checkout_cart_with_wallet(
 
     uid = _require_user_id(db, current_user)
 
+    from app.core.config import settings
+    if settings.razorpay_enabled or settings.environment != "development":
+        raise HTTPException(409, detail="Use verified gateway checkout")
     # Lock cart items first (consistent lock ordering for this flow)
     items = (
         db.execute(

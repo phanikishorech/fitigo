@@ -67,7 +67,7 @@ def _to_booking_response(b: Booking) -> BookingResponse:
 @router.post("", response_model=BookingResponse)
 def create_booking(
     payload: BookingCreateRequest,
-    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key", min_length=8, max_length=64, pattern=r"^[A-Za-z0-9_-]+$"),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role({ROLE_CUSTOMER})),
 ):

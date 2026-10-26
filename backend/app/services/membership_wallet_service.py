@@ -18,7 +18,7 @@ from app.services.membership_entitlement import active_memberships
 
 
 def wallet_enabled() -> bool:
-    return settings.environment == "development"
+    return settings.environment == "development" and not settings.razorpay_enabled
 
 
 def fail(code: str, status: int = 409):

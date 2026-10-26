@@ -14,6 +14,7 @@ from app.schemas.platform_membership import AdminOfferConfiguration, AdminPlanDe
 from app.models.membership import UserMembership
 from app.models.wallet import WalletAccount
 from app.services.membership_wallet_service import activate, lock_customer, quote_key, wallet_enabled
+from app.services.razorpay_gateway import configured
 
 
 def utcnow() -> datetime:
@@ -45,7 +46,7 @@ def price_plan(plan: PlatformMembershipPlan, offer: PlatformMembershipOffer | No
         base_price=base, final_price=base - discount, discount_amount=discount,
         discount_percentage=percentage, currency=plan.currency, offer=promotion,
         benefits=plan.benefits, badge=plan.badge, display_order=plan.display_order,
-        is_active=plan.is_active, version=plan.version, purchase_available=wallet_enabled() and plan.is_active,
+        is_active=plan.is_active, version=plan.version, purchase_available=(wallet_enabled() or configured()) and plan.is_active,
         pause_rule={"allowed": bool(plan.pause_allowed), "max_pause_days": plan.max_pause_days or 0},
     )
 
@@ -62,8 +63,8 @@ class PlatformMembershipService:
             query = query.where(PlatformMembershipPlan.is_active.is_(True))
         now = utcnow()
         return PlatformCatalogResponse(items=[price_plan(p, o, now) for p, o in self.db.execute(query)], server_time=now,
-            checkout_available=wallet_enabled(), checkout_unavailable_reason=None if wallet_enabled() else "WALLET_MVP_DISABLED",
-            payment_mode="WALLET_TEST_CREDIT" if wallet_enabled() else "DISABLED")
+            checkout_available=wallet_enabled() or configured(), checkout_unavailable_reason=None if wallet_enabled() or configured() else "PAYMENT_NOT_CONFIGURED",
+            payment_mode="RAZORPAY" if configured() else "WALLET_TEST_CREDIT" if wallet_enabled() else "DISABLED")
 
     def _plan(self, plan_id: int, *, lock: bool = False) -> PlatformMembershipPlan:
         query = select(PlatformMembershipPlan).where(PlatformMembershipPlan.id == plan_id)
@@ -171,12 +172,12 @@ class PlatformMembershipService:
         return PlatformOrderResponse(
             id=order.id, plan=snapshot, created_at=aware(order.created_at), current_plan=current,
             requires_review=not membership and (current is None or current.model_dump(mode="json") != snapshot.model_dump(mode="json")),
-            status="PAID" if membership else "AWAITING_WALLET" if wallet_enabled() else "PAYMENT_DISABLED",
+            status="PAID" if membership else "AWAITING_PAYMENT" if configured() else "AWAITING_WALLET" if wallet_enabled() else "PAYMENT_DISABLED",
             payment_status="PAID" if membership else "NOT_STARTED", eligibility_status="VALIDATED" if membership else "NOT_EVALUATED",
-            payment_available=wallet_enabled() and current is not None and membership is None,
+            payment_available=(wallet_enabled() or configured()) and current is not None and membership is None,
             membership_id=membership.id if membership else None,
             quote_token=quote_key(current.model_dump(mode="json")) if current else None,
-            payment_mode="WALLET_TEST_CREDIT" if wallet_enabled() else "DISABLED",
+            payment_mode="RAZORPAY" if configured() else "WALLET_TEST_CREDIT" if wallet_enabled() else "DISABLED",
             wallet_balance=str(account.balance) if account else "0.00", wallet_currency=account.currency if account else (current.currency if current else snapshot.currency),
             wallet_transaction_id=membership.wallet_transaction_id if membership else None,
         )
@@ -190,6 +191,8 @@ class PlatformMembershipService:
             if not order:
                 fail("ORDER_NOT_FOUND", 404)
             if not order.membership_id:
+                if order.checkout_id:
+                    fail("PAYMENT_NOT_CONFIGURED")
                 current = self.detail(order.plan_id, lock=True).model_dump(mode="json")
                 if quote_key(current) != accepted_quote:
                     fail("MEMBERSHIP_PRICE_CHANGED")

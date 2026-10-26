@@ -7,6 +7,7 @@ import { istDateTime } from '../../utils/membership'
 import { dateLabel } from '../../services/client'
 import Icon from '../../components/common/Icon'
 import { hasBookingCheckin, reconcileBookingQr } from '../../utils/bookingQr'
+import GatewayPayment from '../../components/common/GatewayPayment'
 
 export default function BookingAccess({ booking, gymName, refresh }: { booking: Booking; gymName: string; refresh: () => void }) {
   const [open, setOpen] = useState(false)
@@ -16,6 +17,7 @@ export default function BookingAccess({ booking, gymName, refresh }: { booking: 
   if (!access) return <Alert>Refresh this booking to check QR availability.</Alert>
   const checkedIn = access.status === 'BOOKING_ALREADY_USED' && access.passes.length > 0 && access.passes.every(hasBookingCheckin)
   return <section className="fg-stack" aria-label="Booking access">
+    {booking.status === 'PENDING_PAYMENT' && booking.payment?.provider === 'RAZORPAY' && <GatewayPayment source={{ kind: 'BOOKING', booking_id: booking.id }} onPaid={refresh} />}
     <div className="fg-row"><h3>Booking access</h3><strong>{checkedIn ? 'Your access is approved' : access.message}</strong></div>
     {access.valid_from && access.expires_at && <p>Entry allowed: {istDateTime(access.valid_from)} – {istDateTime(access.expires_at)} · One entry only</p>}
     {booking.visitor_names && <p>Visitors: {booking.visitor_names.join(', ')}</p>}

@@ -19,6 +19,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
+from app.models.payment_checkout import PaymentCheckout  # register FK target
 
 
 class BookingStatus(str, enum.Enum):
@@ -71,6 +72,7 @@ class Booking(Base):
 
     # Optional request-level idempotency. Uniqueness scoped per-user.
     idempotency_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    checkout_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("payment_checkouts.id"), index=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)

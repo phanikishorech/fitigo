@@ -2,10 +2,8 @@ import { istDateTime } from '../utils/membership'
 import { useState } from 'react'
 import { useOwner } from './context'
 import { capabilities, ownerService } from './services'
-import { fetchOwnerSummary } from '../screens/GymOwner/api'
 import { useMutation, useResource } from '../hooks/useResource'
-import { Button, Card, ConfirmDialog, EmptyState, ErrorState, Link, MetricCard, Notice, PageHeader, Pagination, Skeleton, StatusBadge, Unavailable } from './UI'
-import { money } from '../services/client'
+import { Button, Card, ConfirmDialog, EmptyState, ErrorState, Link, Notice, PageHeader, Pagination, Skeleton, StatusBadge, Unavailable } from './UI'
 import { logoutSession } from '../session/store'
 import { navigate } from '../router'
 import Icon from '../components/common/Icon'
@@ -13,19 +11,12 @@ import { ownerLinks } from './OwnerLayout'
 import ChangePassword from './ChangePassword'
 
 export default function Account({ page }: { page: string }) {
-  if (page === 'revenue' || page === 'analytics') return <Reports page={page} />
   if (page === 'notifications') return <Notifications />
   if (page === 'settings') return <Settings />
   if (page === 'more') return <More />
   if (page.startsWith('members')) return <div className="ow-stack"><PageHeader title="Members" description="Your gym community, with privacy at its core." /><Card><Unavailable title="Member directory unavailable" message={capabilities.members.message} /><div className="ow-actions"><Link to="/owner/bookings" className="fg-button fg-button--secondary">View customers in bookings</Link></div></Card></div>
   if (page === 'help') return <div className="ow-stack"><PageHeader title="Help & support" description="A few things to know about your workspace." /><Card title="Managing your gym"><div className="ow-help"><h3>How do I get my gym live?</h3><p>Create a gym, complete the setup steps and submit the draft for approval. The review status appears in My gyms. No approval timeline is provided.</p><h3>Who can scan QR codes?</h3><p>The current backend requires an assigned GYM_STAFF account. Owner permissions alone do not grant scanner access.</p><h3>Why are some features unavailable?</h3><p>This portal only displays data provided by the existing APIs. Member directories, account editing and detailed financial reports are not exposed yet.</p><h3>Need help with your account?</h3><p>No support contact is configured in the API. Contact the administrator through your existing support channel.</p></div></Card></div>
   return <EmptyState title="Page not found" description="This page may have moved or is not available." action={<Link to="/owner/dashboard" className="fg-button fg-button--primary">Back to dashboard</Link>} />
-}
-function Reports({ page }: { page: string }) {
-  const { gymId, gym } = useOwner()
-  const resource = useResource(() => gymId ? fetchOwnerSummary({ gymId }) : Promise.resolve(null), `report:${page}:${gymId}`)
-  if (!gymId) return <EmptyState title="Select a gym" action={<Link to="/owner/gyms">View gyms</Link>} />
-  return <div className="ow-stack"><PageHeader title={page === 'revenue' ? 'Revenue overview' : 'Business overview'} description={`Selected gym: ${gym?.name}. All figures below apply only to this gym.`} />{resource.loading ? <Skeleton cards={4} /> : resource.error ? <ErrorState message={resource.error} retry={resource.retry} /> : resource.data && <><div className="ow-metric-grid"><MetricCard icon="wallet" label="Booking revenue" value={money(resource.data.revenue.last_30d, resource.data.revenue.currency)} note="Last 30 days · selected gym" /><MetricCard icon="calendar" label="Today's bookings" value={resource.data.bookings.today} note="Selected gym" /><MetricCard icon="clock" label="Upcoming bookings" value={resource.data.bookings.upcoming} note="Selected gym · includes today" /><MetricCard icon="check" label="Today's total visits" value={resource.data.visits.total} note="Selected gym · recorded attendance" /></div>{page === 'revenue' && Number(resource.data.revenue.last_30d) === 0 && <Card><EmptyState title="No revenue data for this period" description="The backend has returned zero booking revenue for this gym's last-30-day summary." /></Card>}{page === 'analytics' && <Card title="Today's visits"><dl className="ow-details"><div><dt>FitiGo member visits</dt><dd>{resource.data.visits.fitigo_member}</dd></div><div><dt>Single-gym membership visits</dt><dd>{resource.data.visits.single_gym_membership}</dd></div><div><dt>Individual booking visits</dt><dd>{resource.data.visits.individual_booking}</dd></div></dl></Card>}</>}<Card><Unavailable title={page === 'revenue' ? 'Detailed revenue reports are not available yet' : 'Trend analytics are not available yet'} message={capabilities.trends.message} /></Card><p className="ow-caption">Booking revenue is the backend payment summary, not a settlement, payout or membership-sales report. Custom revenue date ranges are not supported.</p></div>
 }
 function Notifications() {
   const [page, setPage] = useState(0); const resource = useResource(() => ownerService.notifications(page * 20), `notifications:${page}`)

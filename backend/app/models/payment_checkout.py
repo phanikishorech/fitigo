@@ -34,3 +34,17 @@ class PaymentWebhookReceipt(Base):
     body_hash: Mapped[str] = mapped_column(String(64))
     event: Mapped[str] = mapped_column(String(60))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class PaymentAttempt(Base):
+    __tablename__ = "payment_attempts"
+    __table_args__ = (UniqueConstraint("checkout_id", "external_id"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    checkout_id: Mapped[str] = mapped_column(String(36), ForeignKey("payment_checkouts.id"), index=True)
+    external_id: Mapped[str] = mapped_column(String(80))
+    status: Mapped[str] = mapped_column(String(30))
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    currency: Mapped[str] = mapped_column(String(3))
+    refunded_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0)
+    first_seen_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -9,6 +9,7 @@ import './owner.css'
 
 const AuthPage = lazy(() => import('./AuthPage'))
 const Dashboard = lazy(() => import('./Dashboard'))
+const Analytics = lazy(() => import('./Analytics'))
 const Gyms = lazy(() => import('./Gyms'))
 const Bookings = lazy(() => import('./Bookings'))
 const Operations = lazy(() => import('./Operations'))
@@ -33,6 +34,7 @@ function Content({ route }: { route: OwnerRoute }) {
   if (!owner && !['check-in', 'settings', 'notifications', 'help', 'more'].includes(route.page)) return <EmptyState title="Staff workspace" description="Your role provides check-in access for assigned gyms." action={<Link to="/owner/check-in" className="fg-button fg-button--primary">Open check-in</Link>} />
   let content
   if (route.page === 'dashboard') content = <Dashboard />
+  else if (route.page === 'analytics' || route.page === 'revenue') content = <Analytics revenueOnly={route.page === 'revenue'} />
   else if (['gyms', 'gym', 'gymForm'].includes(route.page)) content = <Gyms gymId={route.gymId} form={route.page === 'gymForm'} />
   else if (route.page === 'bookings' || route.page === 'bookingsDetail') content = <Bookings id={route.id} />
   else if (['memberships', 'classes', 'slots', 'staff', 'staffForm', 'staffDetail'].includes(route.page)) content = <Operations route={route} />
@@ -40,5 +42,5 @@ function Content({ route }: { route: OwnerRoute }) {
   else content = <Account page={route.page} />
   // Dashboard resources already key themselves by gym. Keep its selected date
   // and overall metrics mounted while only the gym-specific requests change.
-  return <Suspense fallback={<Skeleton />}><div key={`${route.page}:${route.id || ''}:${route.mode || ''}:${route.gymId || (['dashboard', 'gymForm', 'bookingsDetail'].includes(route.page) ? '' : gymId) || ''}`}>{content}</div></Suspense>
+  return <Suspense fallback={<Skeleton />}><div key={`${route.page}:${route.id || ''}:${route.mode || ''}:${route.gymId || (['dashboard', 'analytics', 'revenue', 'gymForm', 'bookingsDetail'].includes(route.page) ? '' : gymId) || ''}`}>{content}</div></Suspense>
 }

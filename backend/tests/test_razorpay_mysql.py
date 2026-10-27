@@ -93,6 +93,11 @@ def test_concurrent_new_keys_create_one_order_and_capture_activates_once(databas
     with ThreadPoolExecutor(max_workers=2) as pool:
         first, second = list(pool.map(create, ['concurrent-key-1', 'concurrent-key-2']))
     assert first['id'] == second['id'] and gateway.creations == 1
+    # A competing caller may observe CREATING during the committed external
+    # request window. Refresh that same checkout; never assume map order wins.
+    with Session(engine, autoflush=False) as db:
+        first = payment_checkout_service.PaymentCheckoutService(db).start(first['id'], uid)
+    assert first['gateway_order_id'] and gateway.creations == 1
     gateway.pay(first)
     barrier = Barrier(2)
     def reconcile(_):
@@ -105,3 +110,36 @@ def test_concurrent_new_keys_create_one_order_and_capture_activates_once(databas
     with Session(engine) as db:
         assert db.scalar(select(func.count(PaymentCheckout.id))) == 1
         assert db.scalar(select(func.count(UserMembership.id))) == 1
+
+
+def test_concurrent_wallet_recharge_is_credited_exactly_once(database):
+    from app.models.wallet import WalletAccount, WalletTransaction
+    from app.services.customer_payment_history import history
+    engine, gateway, uid, _ = database
+    source = CheckoutCreate(kind='WALLET_TOPUP', amount='500.25')
+    barrier = Barrier(2)
+    def create(key):
+        with Session(engine, autoflush=False) as db:
+            barrier.wait(timeout=10)
+            return payment_checkout_service.PaymentCheckoutService(db).create(uid, source, key)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first, second = list(pool.map(create, ['recharge-key-one', 'recharge-key-two']))
+    assert first['id'] == second['id'] and gateway.creations == 1
+    with Session(engine, autoflush=False) as db:
+        first = payment_checkout_service.PaymentCheckoutService(db).start(first['id'], uid)
+    assert first['gateway_order_id'] and gateway.creations == 1
+    gateway.pay(first)
+    barrier = Barrier(2)
+    def refresh(_):
+        with Session(engine, autoflush=False) as db:
+            barrier.wait(timeout=10)
+            return payment_checkout_service.PaymentCheckoutService(db).reconcile(first['id'], uid)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(refresh, range(2)))
+    assert all(row['status'] == 'PAID' for row in results)
+    with Session(engine) as db:
+        assert db.scalar(select(WalletAccount.balance)) == Decimal('500.25')
+        assert db.scalar(select(func.count(WalletTransaction.id))) == 1
+        result = history(db, uid, 20, 0)
+        assert result['total'] == 1
+        assert len(result['items'][0]['attempts']) == 1

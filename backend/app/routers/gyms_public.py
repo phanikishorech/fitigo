@@ -714,7 +714,7 @@ def create_gym_review(
     current_user: User = Depends(require_role({ROLE_CUSTOMER})),
 ):
     svc = ReviewService(db)
-    r = svc.create_review(user_id=current_user.id, gym_id=gym_id, rating=payload.rating, comment=payload.comment)
+    r = svc.create_review(user_id=current_user.id, gym_id=gym_id, rating=payload.rating, comment=payload.comment, booking_id=payload.booking_id)
     return ReviewResponse(
         id=r.id,
         gym_id=r.gym_id,

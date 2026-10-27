@@ -59,11 +59,20 @@ class StaffService:
         self.db.refresh(assignment)
         return {"assignment_id": assignment.id, "staff_user_id": staff.id, "temp_password": temp_password}
 
-    def list_gym_staff(self, *, owner_user_id: int, gym_id: int) -> list[GymStaffAssignment]:
+    def list_gym_staff(self, *, owner_user_id: int, gym_id: int) -> list[dict]:
         gym = self.db.execute(select(Gym).where(Gym.id == gym_id, Gym.owner_user_id == owner_user_id)).scalars().first()
         if not gym:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gym not found")
-        return list(self.db.execute(select(GymStaffAssignment).where(GymStaffAssignment.gym_id == gym_id)).scalars().all())
+        # Explicit public fields only. Keep orphaned legacy assignments visible
+        # so an owner can revoke them without exposing unrelated user accounts.
+        rows = self.db.execute(select(
+            GymStaffAssignment.id, GymStaffAssignment.gym_id, GymStaffAssignment.user_id,
+            GymStaffAssignment.role, GymStaffAssignment.created_at.label('assigned_at'),
+            User.first_name, User.last_name, User.email, User.phone, User.status.label('account_status'),
+        ).outerjoin(User, User.id == GymStaffAssignment.user_id)
+            .where(GymStaffAssignment.gym_id == gym_id)
+            .order_by(GymStaffAssignment.created_at.desc(), GymStaffAssignment.id.desc())).mappings()
+        return [dict(row) for row in rows]
 
     def remove_staff(self, *, owner_user_id: int, gym_id: int, user_id: int) -> None:
         gym = self.db.execute(select(Gym).where(Gym.id == gym_id, Gym.owner_user_id == owner_user_id)).scalars().first()

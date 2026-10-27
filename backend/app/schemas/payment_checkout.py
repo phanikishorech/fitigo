@@ -1,10 +1,12 @@
 from typing import Literal
+from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class CheckoutCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    kind: Literal["CART", "BOOKING", "SINGLE_GYM", "MULTI_GYM"]
+    kind: Literal["CART", "BOOKING", "SINGLE_GYM", "MULTI_GYM", "WALLET_TOPUP"]
+    amount: Decimal | None = Field(default=None, ge=1, le=100000, max_digits=8, decimal_places=2)
     booking_id: int | None = Field(default=None, gt=0)
     gym_id: int | None = Field(default=None, gt=0)
     plan_id: int | None = Field(default=None, gt=0)
@@ -13,10 +15,10 @@ class CheckoutCreate(BaseModel):
 
     @model_validator(mode="after")
     def source(self):
-        required = {"CART": [], "BOOKING": ["booking_id"], "SINGLE_GYM": ["gym_id", "plan_id", "accepted_quote"], "MULTI_GYM": ["order_id", "accepted_quote"]}[self.kind]
+        required = {"CART": [], "BOOKING": ["booking_id"], "SINGLE_GYM": ["gym_id", "plan_id", "accepted_quote"], "MULTI_GYM": ["order_id", "accepted_quote"], "WALLET_TOPUP": ["amount"]}[self.kind]
         if any(getattr(self, name) is None for name in required):
             raise ValueError("Missing checkout source fields")
-        if any(getattr(self, name) is not None for name in {"booking_id", "gym_id", "plan_id", "order_id", "accepted_quote"} - set(required)):
+        if any(getattr(self, name) is not None for name in {"amount", "booking_id", "gym_id", "plan_id", "order_id", "accepted_quote"} - set(required)):
             raise ValueError("Unexpected checkout source fields")
         return self
 

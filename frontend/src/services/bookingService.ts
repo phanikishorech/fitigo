@@ -5,6 +5,7 @@ import { post, request } from './client'
 export type BookingAccess = { access_type: string; status: string; message: string; qr_available: boolean; can_set_visitors: boolean; valid_from?: string | null; expires_at?: string | null; passes: { qr_id: number; status: string; visitor_name?: string | null; checked_in_at?: string | null }[] }
 export type BookingQr = { booking_id: number; access_type: string; passes: { qr_id: number; visitor_name: string; status: string; qr_token: string | null; valid_from: string; expires_at: string; checked_in_at?: string | null }[] }
 export type Visit = {
+  can_review?: boolean; review_id?: number | null; review_rating?: number | null; review_status?: string | null
   booking_access?: BookingAccess
   booking_id: number; booking_status: string; attendance_status: string | null; gym_id: number; gym_name: string;
   gym_location: string; access_type: string; class_name: string | null; visit_date: string; start_time: string;
@@ -25,7 +26,8 @@ export const bookingService = {
   cart: () => request<CartItemResponse[]>('/cart/items'),
   remove: (id: number) => request<{ deleted?: boolean }>(`/cart/items/${id}`, { method: 'DELETE' }),
   pay: () => post<CartWalletCheckoutResponse>('/cart/checkout/wallet'),
-  visits: (status: 'all' | 'upcoming' | 'past' | 'cancelled' = 'all') => request<Visit[]>(`/profile/bookings?status=${status}`),
+  visits: (status: 'all' | 'upcoming' | 'past' | 'cancelled' = 'all') => request<Visit[]>(`/profile/bookings?status=${status}&source=individual`, { cache: 'no-store' }),
+  visit: (id: number) => request<Visit[]>(`/profile/bookings?status=all&source=individual&booking_id=${id}`, { cache: 'no-store' }),
   detail: (id: number) => request<Booking>(`/bookings/${id}`),
   qr: (id: number) => post<BookingQr>(`/bookings/${id}/qr`),
   visitors: (id: number, visitor_names: string[]) => post<Booking>(`/bookings/${id}/visitors`, { visitor_names }),

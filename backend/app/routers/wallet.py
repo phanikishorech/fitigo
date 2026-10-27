@@ -60,6 +60,7 @@ def _require_user_id(db: Session, current_user: User | None) -> int:
 
 
 def _get_or_create_account(db: Session, *, user_id: int) -> WalletAccount:
+    db.scalar(select(User).where(User.id == user_id).with_for_update())
     acct = db.execute(select(WalletAccount).where(WalletAccount.user_id == user_id)).scalars().first()
     if acct:
         return acct
@@ -133,51 +134,5 @@ def topup_wallet(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    try:
-        if settings.environment != "development":
-            raise HTTPException(status_code=403, detail={"code": "WALLET_MVP_DISABLED"})
-        uid = _require_user_id(db, current_user)
-
-        # Lock account row for safe increment
-        acct = (
-            db.execute(select(WalletAccount).where(WalletAccount.user_id == uid).with_for_update())
-            .scalars()
-            .first()
-        )
-        if not acct:
-            acct = WalletAccount(user_id=uid, balance=0, currency=payload.currency or "INR")
-            db.add(acct)
-            db.flush()
-
-        if payload.currency != acct.currency:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Wallet currency mismatch. Expected {acct.currency}",
-            )
-
-        amt = Decimal(str(payload.amount)).quantize(Decimal("0.01"))
-        if amt <= 0:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Amount must be positive")
-
-        acct.balance = float((Decimal(str(acct.balance or 0)) + amt).quantize(Decimal("0.01")))
-
-        tx = WalletTransaction(
-            account_id=int(acct.id),
-            user_id=uid,
-            direction=WalletTxnDirection.IN_.value,
-            txn_type=WalletTxnType.TOPUP.value,
-            amount=float(amt),
-            currency=acct.currency,
-            reference=None,
-            description=payload.description or "Wallet recharge",
-        )
-        db.add(tx)
-        db.commit()
-        db.refresh(acct)
-        db.refresh(tx)
-
-        bal = Decimal(str(acct.balance or 0)).quantize(Decimal("0.01"))
-        return WalletTopupResponse(transaction=_txn_to_response(tx), balance=str(bal), currency=acct.currency)
-    except Exception as e:
-        _maybe_raise_migration_hint(e)
-        raise
+    # Compatibility endpoint intentionally cannot mint development credits.
+    raise HTTPException(status_code=409, detail="Use verified gateway checkout to recharge your wallet.")

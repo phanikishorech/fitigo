@@ -11,6 +11,7 @@ const BookingPage = lazy(() => import('./booking/BookingPage'))
 const CompanionBooking = lazy(() => import('./booking/CompanionBooking'))
 const CartPage = lazy(() => import('./booking/CartPage'))
 const WalletPage = lazy(() => import('./wallet/WalletPage'))
+const PaymentHistory = lazy(() => import('./profile/PaymentHistory'))
 const BookingsPage = lazy(() => import('./booking/BookingsPage'))
 const BookingDetailPage = lazy(() => import('./booking/BookingDetailPage'))
 const MyMembershipPage = lazy(() => import('./membership/MembershipOverview'))
@@ -19,10 +20,11 @@ const MultiGymPlansPage = lazy(() => import('./membership/MultiGymPlansPage'))
 const MembershipOrderPage = lazy(() => import('./membership/MembershipOrderPage'))
 const ConfirmVisitPage = lazy(() => import('./access/ConfirmVisitPage'))
 const MembershipCalendar = lazy(() => import('./access/MembershipCalendar'))
+const MembershipVisitHistory = lazy(() => import('./access/MembershipVisitHistory'))
 const MembershipPausePage = lazy(() => import('./membership/MembershipPausePage'))
 const MembershipPlansPage = lazy(() => import('./membership/MembershipPage').then(module => ({ default: module.MembershipPlansPage })))
 const ProfilePage = lazy(() => import('./profile/ProfilePage'))
-const SettingsPage = lazy(() => import('./profile/ProfilePage').then(module => ({ default: module.SettingsPage })))
+const SettingsPage = lazy(() => import('./profile/SettingsPage'))
 const AccessPage = lazy(() => import('./access/AccessPage'))
 const ReviewPage = lazy(() => import('./reviews/ReviewPage'))
 const StaffPage = lazy(() => import('./staff/StaffPage'))
@@ -48,7 +50,7 @@ export default function CustomerApp({ path }: { path: string }) {
     case 'cart': case 'checkout': page = <CartPage checkout={route.page === 'checkout'} />; break
     case 'wallet': case 'recharge': page = <WalletPage recharge={route.page === 'recharge'} />; break
     case 'bookings': case 'reviews': page = <BookingsPage reviews={route.page === 'reviews'} />; break
-    case 'visits': case 'history': page = <MembershipCalendar history />; break
+    case 'visits': case 'history': page = <MembershipVisitHistory />; break
     case 'bookingDetail': case 'bookingSuccess': page = <BookingDetailPage id={route.id} success={route.page === 'bookingSuccess'} />; break
     case 'plans': page = <MembershipPlansPage gymId={route.id} />; break
     case 'membershipCheckout': {
@@ -65,6 +67,7 @@ export default function CustomerApp({ path }: { path: string }) {
     case 'confirmVisit': page = query.get('entry') === 'book' ? <GymPage gymId={route.id} resumeBook /> : <ConfirmVisitPage gymId={route.id} />; break
     case 'profile': page = <ProfilePage />; break
     case 'settings': page = <SettingsPage />; break
+    case 'payments': page = <PaymentHistory />; break
     case 'access': {
       const gymId = Number(query.get('gymId'))
       page = path.replace(/\/+$/, '') === '/my-access' && Number.isSafeInteger(gymId) && gymId > 0 ? <ConfirmVisitPage gymId={gymId} /> : <AccessPage />; break

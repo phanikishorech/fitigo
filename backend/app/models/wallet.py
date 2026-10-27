@@ -32,6 +32,8 @@ class WalletAccount(Base):
     balance: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False, default=0)
     currency: Mapped[str] = mapped_column(String(10), nullable=False, default="INR")
 
+    payment_mode: Mapped[str | None] = mapped_column(String(10), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -55,6 +57,7 @@ class WalletTransaction(Base):
     currency: Mapped[str] = mapped_column(String(10), nullable=False, default="INR")
 
     reference: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    checkout_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("payment_checkouts.id"), nullable=True, unique=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)

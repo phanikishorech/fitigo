@@ -106,3 +106,20 @@ test('all owner business APIs use the existing shared request client', () => {
 test('unsupported capabilities are explicit, never mocked business values', () => {
   for (const capability of Object.values(owner.capabilities)) { assert.equal(capability.available, false); assert.ok(capability.message.length > 20) }
 })
+
+test('dashboard booking links use server attendance classification before pagination', async () => {
+  let path; globalThis.__ownerRequest = async value => { path = value; return [] }
+  await service.listBookings(7, { date_from: '2026-10-01', date_to: '2026-10-19', attendance_category: 'attended', limit: 20, offset: 20 })
+  assert.equal(path, '/gym-owner/gyms/7/bookings?date_from=2026-10-01&date_to=2026-10-19&attendance_category=attended&limit=20&offset=20')
+})
+test('dashboard preserves filters and scan action and makes accounting basis explicit', () => {
+  const source = readFileSync(new URL('../src/owner/Dashboard.tsx', import.meta.url), 'utf8')
+  for (const text of ['Overall Metrics', 'Selected Gym', 'View more metrics', 'Show fewer metrics', 'DateRangePicker', 'Scan member QR', 'aria-expanded', 'aria-controls']) assert.ok(source.includes(text), text)
+  assert.doesNotMatch(source, /listBookings|listOwnerAttendance|BookingTable/)
+  const metrics = readFileSync(new URL('../src/owner/ReportMetrics.tsx', import.meta.url), 'utf8')
+  assert.match(metrics, /exact net amounts are not stored/)
+  assert.equal(metrics.split('export function RevenueBasis')[0].match(/<MetricCard /g).length, 3)
+  assert.doesNotMatch(source, /font-family|reduce\(/)
+  const hook = readFileSync(new URL('../src/owner/useOwnerReport.ts', import.meta.url), 'utf8')
+  assert.match(hook, /visibilityState/); assert.match(hook, /current.current.loading/); assert.match(hook, /removeEventListener/)
+})

@@ -54,7 +54,7 @@ test('wallet comparisons use minor units', () => {
   for (const value of ['invalid', -1, Infinity]) assert.throws(() => amountInMinorUnits(value))
 })
 test('only attended real bookings can submit a review', () => {
-  assert.equal(canReview({ booking_id: 1, booking_status: 'COMPLETED', attendance_status: 'ATTENDED' }), true)
+  assert.equal(canReview({ booking_id: 1, booking_status: 'CONFIRMED', attendance_status: 'ATTENDED', can_review: true }), true)
   assert.equal(canReview({ booking_id: 1, booking_status: 'CONFIRMED', attendance_status: null }), false)
   assert.equal(canReview({ booking_id: -3, booking_status: 'COMPLETED', attendance_status: 'ATTENDED' }), false)
   assert.equal(canReview({ booking_id: 1, booking_status: 'CANCELLED', attendance_status: 'ATTENDED' }), false)

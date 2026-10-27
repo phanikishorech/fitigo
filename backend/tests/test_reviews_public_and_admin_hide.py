@@ -1,98 +1,28 @@
-from __future__ import annotations
-
-import uuid
-from datetime import date
-
-from fastapi.testclient import TestClient
-
-from app.core.roles import ROLE_ADMIN, ROLE_CUSTOMER, ROLE_GYM_OWNER
+"""Disposable review/moderation API regression; scanner proof is required."""
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 from app.core.security import create_access_token
-from app.database.session import SessionLocal
-from app.main import app
-from app.services.auth_service import AuthService
-from app.services.booking_service import BookingService
-from app.services.gym_service import GymService
-from app.services.slot_service import SlotService
+from app.models.auth import Role, UserRole
+from app.routers import admin
+from test_customer_reviews_history import api, booking_api, create, qr, scan, submit
 
 
-client = TestClient(app)
-
-
-def test_customer_can_review_after_confirmed_booking_and_admin_can_hide():
-    if SessionLocal is None:
-        return
-
-    db = SessionLocal()
-    try:
-        auth = AuthService(db)
-        admin = auth.register_user(
-            first_name="A",
-            last_name="Admin",
-            email=f"rev_admin_{uuid.uuid4().hex[:8]}@example.com",
-            phone=None,
-            password="password1234",
-            role_name=ROLE_ADMIN,
-        )
-        owner = auth.register_user(
-            first_name="O",
-            last_name="Owner",
-            email=f"rev_owner_{uuid.uuid4().hex[:8]}@example.com",
-            phone=None,
-            password="password1234",
-            role_name=ROLE_GYM_OWNER,
-        )
-        customer = auth.register_user(
-            first_name="C",
-            last_name="Customer",
-            email=f"rev_customer_{uuid.uuid4().hex[:8]}@example.com",
-            phone=None,
-            password="password1234",
-            role_name=ROLE_CUSTOMER,
-        )
-
-        gym_svc = GymService(db)
-        gym = gym_svc.create_gym(owner_user_id=owner.id, data={"name": "RevGym", "city": "X"})
-        gym.status = "APPROVED"
-        db.commit()
-
-        slot_svc = SlotService(db)
-        slot = slot_svc.create_slot(
-            owner_user_id=owner.id,
-            gym_id=gym.id,
-            data={"name": "AM", "start_time": "06:00:00", "end_time": "07:00:00", "capacity": 10, "price": "100.00"},
-        )
-
-        bsvc = BookingService(db)
-        b = bsvc.create_booking(user_id=customer.id, gym_slot_id=slot.id, slot_date=date.today(), quantity=1, notes=None)
-        bsvc.pay_dummy(user_id=customer.id, booking_id=b.id)
-
-        # Visit must be verified/completed by the gym (attendance marked).
-        # Use the owner-facing attendance mark method (used by gym_owner router) to simulate a completed visit.
-        bsvc.owner_mark_attendance(owner_user_id=owner.id, booking_id=b.id, attendance_status="ATTENDED", note="ok")
-
-        cust_token = create_access_token(str(customer.id))
-        rr = client.post(
-            f"/api/v1/gyms/{gym.id}/reviews",
-            json={"rating": 5, "comment": "great"},
-            headers={"Authorization": f"Bearer {cust_token}"},
-        )
-        assert rr.status_code == 200
-        review_id = rr.json()["id"]
-
-        # visible publicly
-        rpub = client.get(f"/api/v1/gyms/{gym.id}/reviews")
-        assert rpub.status_code == 200
-        assert any(x["id"] == review_id for x in rpub.json())
-
-        admin_token = create_access_token(str(admin.id))
-        rh = client.post(
-            f"/api/v1/admin/reviews/{review_id}/hide",
-            headers={"Authorization": f"Bearer {admin_token}"},
-        )
-        assert rh.status_code == 200
-
-        rpub2 = client.get(f"/api/v1/gyms/{gym.id}/reviews")
-        assert rpub2.status_code == 200
-        assert all(x["id"] != review_id for x in rpub2.json())
-    finally:
-        db.close()
+def test_customer_can_review_after_confirmed_booking_and_admin_can_hide(api):
+    client, headers, engine = api
+    client.app.include_router(admin.router, prefix='/api/v1')
+    with Session(engine) as db:
+        role = Role(name='ADMIN'); db.add(role); db.flush()
+        db.add(UserRole(user_id=5, role_id=role.id)); db.commit()
+    booked = create(api, ['Customer'])
+    assert submit(api, booked).status_code == 400
+    assert scan(api, qr(api, booked)[0]['qr_token'])['success']
+    response = submit(api, booked)
+    assert response.status_code == 200, response.text
+    review_id = response.json()['id']
+    assert any(row['id'] == review_id for row in client.get('/api/v1/gyms/1/reviews').json())
+    assert client.post(f'/api/v1/admin/reviews/{review_id}/hide', headers=headers[1]).status_code == 403
+    assert client.post(f'/api/v1/admin/reviews/{review_id}/hide', headers=headers[5]).status_code == 200
+    assert client.get('/api/v1/gyms/1/reviews').json() == []
+    assert submit(api, booked, rating=4).json()['status'] == 'HIDDEN'
+    assert client.post(f'/api/v1/admin/reviews/{review_id}/publish', headers=headers[5]).status_code == 200
+    assert client.get('/api/v1/gyms/1/reviews').json()[0]['rating'] == 4

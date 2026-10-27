@@ -1,9 +1,6 @@
 import AccessQr from '../../components/AccessQr'
-import { useEffect, useRef, useState } from 'react'
-import { myAccessService } from '../../services/myAccessService'
 import { MyAccessCard } from '../../components/membership/MyAccessCard'
-import { navigate } from '../../router'
-import { useMembershipResource } from '../../hooks/useMembershipResource'
+import TodayMembershipAccess from '../../components/membership/TodayMembershipAccess'
 import { useAccessQr } from '../../hooks/useAccessQr'
 import { membershipDate, membershipTime, todayFrom, utcTimestamp } from '../../utils/membership'
 import { Button, Heading, Link, Skeleton } from '../../components/common/UI'
@@ -16,24 +13,7 @@ export default function AccessPage() {
   const gymId = Number(rawId)
   const selectedGym = Number.isSafeInteger(gymId) && gymId > 0 ? gymId : undefined
   const qr = !!selectedGym || query.get('generate') === '1'
-  return <div className="fm-page fm-narrow">{qr ? <MembershipBack to="/my-access">My Access</MembershipBack> : <MembershipBack />}<Heading title={qr ? 'Your Access QR' : 'My Access'} subtitle={qr ? 'Your workout starts at the entrance.' : 'Your membership. Your access today.'} />{qr ? <QrCard key={selectedGym || 'daily'} gymId={selectedGym} /> : <AccessOverview />}</div>
-}
-function AccessOverview() {
-  const resource = useMembershipResource(myAccessService.current, 'access-overview')
-  const lock = useRef(false)
-  const [generating, setGenerating] = useState(false)
-  useEffect(() => {
-    const refresh = () => { if (!document.hidden) resource.retry() }
-    window.addEventListener('focus', refresh); document.addEventListener('visibilitychange', refresh)
-    return () => { window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh) }
-  }, [resource.retry])
-  if (resource.loading) return <Skeleton cards={1} />
-  if (resource.error || !resource.data) return <MembershipPanel><h2>Unable to load access status.</h2><p role="alert">{resource.error || 'Please try again.'}</p><Button onClick={resource.retry}>Retry</Button></MembershipPanel>
-  return <MyAccessCard data={resource.data} refresh={resource.retry} generating={generating} generate={() => {
-    if (lock.current) return
-    lock.current = true; setGenerating(true)
-    navigate('/access/qr?generate=1')
-  }} />
+  return <div className="fm-page fm-narrow">{qr ? <MembershipBack to="/my-access">My Access</MembershipBack> : <MembershipBack />}<Heading title={qr ? 'Your Access QR' : 'My Access'} subtitle={qr ? 'Your workout starts at the entrance.' : 'Your membership. Your access today.'} />{qr ? <QrCard key={selectedGym || 'daily'} gymId={selectedGym} /> : <TodayMembershipAccess />}</div>
 }
 function QrCard({ gymId }: { gymId?: number }) {
   const state = useAccessQr(gymId)

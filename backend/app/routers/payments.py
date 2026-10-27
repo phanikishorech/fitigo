@@ -1,5 +1,6 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, Query
+from typing import Literal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
@@ -20,6 +21,15 @@ def no_store(response: Response):
 
 router = APIRouter(prefix="/payments", dependencies=[Depends(no_store)])
 customer = require_role({ROLE_CUSTOMER})
+
+
+@router.get('/history')
+def payment_history(limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0),
+                    status: str | None = Query(None, max_length=30),
+                    kind: Literal['BOOKING', 'CART', 'SINGLE_GYM', 'MULTI_GYM', 'WALLET_TOPUP', 'WALLET_LEDGER'] | None = None,
+                    db: Session = Depends(get_db), user: User = Depends(customer)):
+    from app.services.customer_payment_history import history
+    return history(db, user.id, limit, offset, status, kind)
 
 
 @router.get("/config")

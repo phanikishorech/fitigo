@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from datetime import date as Date
+from typing import Literal
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status, Response
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import require_role
@@ -38,6 +39,8 @@ from app.services.membership_service import MembershipService
 
 
 router = APIRouter(prefix="/gym-owner")
+from app.routers.owner_analytics import router as analytics_router
+router.include_router(analytics_router)
 
 
 def _to_membership_plan_response(p) -> MembershipPlanResponse:
@@ -163,6 +166,7 @@ def set_cover_image(
 
 @router.get("/dashboard/summary", response_model=dict)
 def owner_dashboard_summary(
+    response: Response,
     gym_id: int | None = Query(default=None, gt=0),
     date: Date | None = Query(default=None),
     date_from: Date | None = Query(default=None),
@@ -171,12 +175,14 @@ def owner_dashboard_summary(
     current_user: User = Depends(require_role({ROLE_GYM_OWNER})),
 ):
     svc = OwnerDashboardService(db)
+    response.headers["Cache-Control"] = "no-store"
     return svc.summary(owner_user_id=current_user.id, gym_id=gym_id, day=date, date_from=date_from, date_to=date_to)
 
 
 @router.get("/gyms/{gym_id}/attendance", response_model=list[dict])
 def owner_dashboard_attendance(
     gym_id: int,
+    response: Response,
     date: Date | None = Query(default=None),
     date_from: Date | None = Query(default=None),
     date_to: Date | None = Query(default=None),
@@ -184,6 +190,7 @@ def owner_dashboard_attendance(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role({ROLE_GYM_OWNER})),
 ):
+    response.headers["Cache-Control"] = "no-store"
     return OwnerDashboardService(db).attendance(owner_user_id=current_user.id, gym_id=gym_id, day=date, limit=limit,
                                                 date_from=date_from, date_to=date_to)
 
@@ -385,12 +392,14 @@ def invite_staff(
 @router.get("/gyms/{gym_id}/staff", response_model=list[StaffAssignmentResponse])
 def list_staff(
     gym_id: int,
+    response: Response,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role({ROLE_GYM_OWNER})),
 ):
     svc = StaffService(db)
     items = svc.list_gym_staff(owner_user_id=current_user.id, gym_id=gym_id)
-    return [StaffAssignmentResponse(id=a.id, gym_id=a.gym_id, user_id=a.user_id, role=a.role) for a in items]
+    response.headers['Cache-Control'] = 'no-store'
+    return [StaffAssignmentResponse(**item) for item in items]
 
 
 @router.delete("/gyms/{gym_id}/staff/{user_id}", response_model=dict)
@@ -414,6 +423,7 @@ def list_gym_bookings(
     date_from: Date | None = Query(default=None),
     date_to: Date | None = Query(default=None),
     status_filter: str | None = Query(default=None, alias="status"),
+    attendance_category: Literal["upcoming", "attended", "cancelled", "no_show", "pending_payment", "expired", "unresolved"] | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ):
@@ -425,6 +435,7 @@ def list_gym_bookings(
         date_from=date_from,
         date_to=date_to,
         status_filter=status_filter,
+        attendance_category=attendance_category,
         limit=limit,
         offset=offset,
     )

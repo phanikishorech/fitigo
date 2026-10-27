@@ -15,8 +15,8 @@ export function StatusBadge({ status }: { status: string }) {
   const warning = ['PENDING_APPROVAL', 'PENDING_PAYMENT', 'PENDING'].includes(status)
   return <span className={`ow-badge ow-badge--${positive ? 'success' : negative ? 'danger' : warning ? 'warning' : status === 'CONFIRMED' ? 'info' : 'neutral'}`}><Icon name={positive ? 'check' : negative ? 'close' : warning ? 'clock' : 'ticket'} size={13} />{status.replace(/_/g, ' ').toLowerCase()}</span>
 }
-export function MetricCard({ icon, label, value, note }: { icon: IconName; label: string; value: ReactNode; note: string }) {
-  return <section className="ow-card ow-metric"><div className="ow-metric-top"><span>{label}</span><span className="ow-icon-tile"><Icon name={icon} /></span></div><strong>{value}</strong><p>{note}</p></section>
+export function MetricCard({ icon, label, value, note, emphasis = false, to }: { icon: IconName; label: string; value: ReactNode; note: string; emphasis?: boolean; to?: string }) {
+  return <section className={`ow-card ow-metric${emphasis ? ' ow-metric--total' : ''}`}><div className="ow-metric-top"><span>{label}</span><span className="ow-icon-tile"><Icon name={icon} /></span></div><strong>{typeof value === 'number' ? value.toLocaleString('en-IN') : value}</strong><p>{note}</p>{to && <Link className="ow-text-link" to={to}>View bookings <Icon name="arrow" size={14} /></Link>}</section>
 }
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return <label className="ow-field"><span>{label}</span>{children}{hint && <small>{hint}</small>}</label>

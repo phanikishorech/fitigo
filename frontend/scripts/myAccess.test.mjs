@@ -56,10 +56,21 @@ test('network failures and malformed/unknown availability remain errors', async 
 })
 test('My Access and QR remain personal-only and generation is explicitly locked', () => {
   const page = read('../src/pages/access/AccessPage.tsx'), card = read('../src/components/membership/MyAccessCard.tsx'), hook = read('../src/hooks/useAccessQr.ts')
-  assert.match(page, /navigate\('\/access\/qr\?generate=1'\)/)
-  assert.match(page, /if \(lock.current\) return/); assert.match(hook, /if \(lock.current\) return/)
+  const shared = read('../src/components/membership/TodayMembershipAccess.tsx')
+  assert.match(page, /TodayMembershipAccess/)
+  assert.match(shared, /navigate\('\/access\/qr\?generate=1'\)/)
+  assert.match(shared, /if \(lock.current\) return/); assert.match(hook, /if \(lock.current\) return/)
   assert.match(card, /available && type === 'MULTI_GYM'/)
   assert.match(hook, /accessService.today\(\)/)
   assert.doesNotMatch(page + card, /Book for Others|Guest Booking|Add to Cart|for=others|\/book\//i)
   assert.doesNotMatch(source, /setDate\(|getDate\(|86400000|fetch\(/)
+})
+
+test('membership overview reuses direct My Access QR action without repeated membership reads', async () => {
+  reset()
+  const result = await myAccessService.current({ memberships, summary })
+  assert.equal(result.type, 'MULTI_GYM')
+  const page = read('../src/pages/membership/MembershipOverview.tsx')
+  assert.match(page, /TodayMembershipAccess known=\{\{ memberships, summary \}\}/)
+  assert.doesNotMatch(page, /DailyAccessCard|accessService.today/)
 })

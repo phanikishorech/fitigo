@@ -477,6 +477,7 @@ class BookingService:
         date_from=None,
         date_to=None,
         status_filter: str | None = None,
+        attendance_category: str | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> list[tuple[Booking, User, GymSlot, Payment | None]]:
@@ -501,6 +502,10 @@ class BookingService:
             stmt = stmt.where(Booking.slot_date.between(*period))
         if status_filter is not None:
             stmt = stmt.where(Booking.status == status_filter)
+
+        if attendance_category is not None:
+            from app.services.owner_metric_rules import booking_category
+            stmt = stmt.where(booking_category() == attendance_category)
 
         rows = self.db.execute(stmt).all()
         return [(b, u, s, p) for (b, u, s, p) in rows]

@@ -24,7 +24,7 @@ class Settings(BaseSettings):
 
     app_name: str = "FitiGo"
     environment: str = "development"
-    debug: bool = True
+    debug: bool = False
     payment_mode: Literal["test", "live"] = "test"
     # None retains the legacy RAZORPAY_ENABLED / PAYMENT_MODE configuration.
     payment_gateway: Literal["razorpay", "cashfree"] | None = None

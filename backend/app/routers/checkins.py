@@ -43,6 +43,10 @@ def validate_checkin(
 
         if isinstance(e, HTTPException):
             code = getattr(e, "status_code", 400)
+            if code >= 500:
+                # Operational failures are not QR rejections and must use the
+                # central safe-error handler rather than echoing detail as 200.
+                raise
             msg = getattr(e, "detail", "Invalid")
             if isinstance(msg, dict) and msg.get("code") and msg.get("message"):
                 return ValidateCheckinFailureResponse(success=False, status=msg["code"], message=msg["message"])

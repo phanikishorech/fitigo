@@ -1,4 +1,4 @@
-import { accessService, membershipService, profileService, type AccessCalendar } from './accountService'
+import { accessService, membershipService, profileService, type AccessCalendar, type Membership, type MembershipSummary } from './accountService'
 import { gymService } from './gymService'
 import { membershipPauseService } from './membershipPauseService'
 import { dayPresentation, todayFrom } from '../utils/membership'
@@ -14,9 +14,10 @@ export function validateAccessCalendar(calendar: AccessCalendar) {
 }
 
 export const myAccessService = {
-  current: async () => {
+  current: async (known?: { memberships: Membership[]; summary: MembershipSummary }) => {
     const [calendar, summary, memberships, customer] = await Promise.all([
-      accessService.current(), membershipService.summary(), membershipService.mine(), profileService.me(),
+      accessService.current(), known ? Promise.resolve(known.summary) : membershipService.summary(),
+      known ? Promise.resolve(known.memberships) : membershipService.mine(), profileService.me(),
     ])
     const day = validateAccessCalendar(calendar)
     const membership = memberships.find(item => item.id === summary.membership_id)

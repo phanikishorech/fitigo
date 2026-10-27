@@ -9,7 +9,11 @@ export function dateRangeLabel(range: DateRange) {
 }
 
 export default function DateRangePicker({ value, onChange }: { value: DateRange; onChange: (range: DateRange) => void }) {
-  const [preset, setPreset] = useState<DatePreset>('today')
+  const [preset, setPreset] = useState<DatePreset>(() => datePresets.find(option => {
+    if (option.value === 'custom') return false
+    const candidate = presetRange(option.value, localDate())
+    return candidate.date_from === value.date_from && candidate.date_to === value.date_to
+  })?.value || 'custom')
   const [draft, setDraft] = useState(value)
   const id = useId()
   const error = rangeError(draft)

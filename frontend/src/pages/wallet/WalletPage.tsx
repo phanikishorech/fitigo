@@ -1,22 +1,24 @@
 import { useState } from 'react'
-import { useMutation, useResource } from '../../hooks/useResource'
+import { useResource } from '../../hooks/useResource'
 import { walletService } from '../../services/accountService'
+import { paymentService } from '../../services/paymentService'
 import { dateLabel, money } from '../../services/client'
-import { Alert, Badge, Button, EmptyState, ErrorState, Heading, Link, Modal, Skeleton } from '../../components/common/UI'
-import Icon from '../../components/common/Icon'
-import { safeReturnTo } from '../../customerRoutes'
+import { Alert, Button, EmptyState, ErrorState, Heading, Link, Skeleton } from '../../components/common/UI'
+import GatewayPayment from '../../components/common/GatewayPayment'
 
 export default function WalletPage({ recharge = false }: { recharge?: boolean }) {
-  const result = useResource(walletService.transactions, 'wallet')
+  const wallet = useResource(walletService.transactions, 'wallet')
+  const config = useResource(paymentService.config, 'wallet-gateway')
   const [amount, setAmount] = useState('1000')
-  const [confirm, setConfirm] = useState(false)
-  const [success, setSuccess] = useState('')
-  const mutation = useMutation()
-  const requestedReturn = safeReturnTo(new URLSearchParams(window.location.search).get('returnTo'))
-  const returnTo = requestedReturn.startsWith('/membership/checkout?') || requestedReturn === '/checkout' ? requestedReturn : '/wallet'
-  if (result.loading) return <Skeleton cards={2} />
-  if (result.error) return <ErrorState message={result.error} retry={result.retry} />
-  const wallet = result.data!
-  const valid = /^\d+(\.\d{1,2})?$/.test(amount) && Number(amount) > 0 && Number(amount) <= 100000
-  return <><Heading eyebrow="READY WHEN YOU ARE" title={recharge ? 'Recharge your wallet' : 'FitiGo wallet'} subtitle="One wallet. A world of workouts." /><div className="fg-two-column"><div className="fg-stack"><div className="fg-wallet-card"><div className="fg-row"><p>Available balance</p><Icon name="wallet" size={28} /></div><div className="fg-price">{money(wallet.balance, wallet.currency)}</div><Link to="/wallet/recharge" className="fg-button fg-button--secondary">Recharge wallet <Icon name="arrow" size={16} /></Link></div>{success && <p className="fg-success" role="status">{success} <Link to={returnTo} className="fg-inline-link">{returnTo === '/checkout' ? 'Return to checkout' : 'View wallet'}</Link></p>}{recharge && <div className="fg-panel fg-stack"><h2>Add to your balance</h2><div className="fg-facility-options">{[500, 1000, 2000, 5000].map(value => <Button variant={amount === String(value) ? 'primary' : 'secondary'} key={value} onClick={() => setAmount(String(value))}>{money(value)}</Button>)}</div><label className="fg-field">Custom amount<input type="number" min="1" max="100000" step="0.01" inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} /></label>{import.meta.env.DEV ? <><Badge tone="warning">Development only · MVP wallet credit</Badge><p className="fg-muted">This backend directly credits your wallet. No bank account or card is charged. This is not a real payment gateway.</p><Button disabled={!valid} onClick={() => setConfirm(true)}>Review development recharge</Button></> : <Alert>Online recharge is not available yet. No payment has been taken. A supported payment gateway is required.</Alert>}{mutation.error && <Alert>{mutation.error}</Alert>}</div>}</div><section className="fg-panel fg-stack"><h2>Transaction history</h2><small className="fg-muted">Your latest 100 transactions</small>{wallet.transactions.length ? wallet.transactions.map(transaction => <div className="fg-list-row" key={transaction.id}><Icon name={transaction.direction === 'IN' ? 'arrow' : 'wallet'} /><span><strong>{transaction.description || (transaction.direction === 'IN' ? 'Wallet credit' : 'Wallet payment')}</strong><small>{dateLabel(transaction.created_at)}</small></span><strong className={transaction.direction === 'IN' ? 'fg-open' : ''}>{transaction.direction === 'IN' ? '+' : '−'}{money(transaction.amount, transaction.currency)}</strong></div>) : <EmptyState title="No transactions yet" description="Your wallet activity will appear here." />}</section></div>{confirm && <Modal title="Confirm development credit" onClose={() => { if (!mutation.pending) setConfirm(false) }}><div className="fg-stack"><p>Add {money(amount)} to your development wallet? No real payment will be taken.</p>{mutation.error && <Alert>{mutation.error}</Alert>}<Button loading={mutation.pending} onClick={() => mutation.run(async () => { await walletService.recharge(Number(amount)); setConfirm(false); setSuccess('Wallet recharged.'); result.retry() })}>Confirm MVP credit</Button><Button variant="text" disabled={mutation.pending} onClick={() => setConfirm(false)}>Cancel</Button></div></Modal>}</>
+  const [review, setReview] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
+  const valid = /^\d+(\.\d{1,2})?$/.test(amount) && Number(amount) >= 1 && Number(amount) <= 100000
+  return <><Heading title={recharge ? 'Recharge your wallet' : 'FitiGo wallet'} subtitle="Recharge securely through your configured payment gateway." /><div className="fg-two-column"><div className="fg-stack">
+    {wallet.loading ? <Skeleton cards={1} /> : wallet.error ? <ErrorState message={wallet.error} retry={wallet.retry} /> : <div className="fg-wallet-card"><p>Available balance</p><strong className="fg-price">{money(wallet.data!.balance, wallet.data!.currency)}</strong><Link to="/wallet/recharge" className="fg-button fg-button--secondary">Recharge wallet</Link></div>}
+    {success && <p role="status" className="fg-success">Payment verified and wallet credited. <Link to="/wallet">View wallet</Link></p>}
+    {recharge && <section className="fg-panel fg-stack"><h2>Add to your balance</h2>{config.loading ? <Skeleton cards={1} /> : config.error ? <ErrorState message={config.error} retry={config.retry} /> : !config.data?.enabled ? <Alert>Payment gateway is unavailable. No credit has been added.</Alert> : <>
+      <p>{config.data.mode === 'test' ? 'Test mode: sandbox payment, no real money. Credits cannot be mixed with a live wallet.' : 'Live mode: real gateway payment.'}</p>
+      {review === null ? <><div className="fg-facility-options">{[500, 1000, 2000, 5000].map(value => <Button key={value} variant={amount === String(value) ? 'primary' : 'secondary'} onClick={() => setAmount(String(value))}>{money(value)}</Button>)}</div><label className="fg-field">Recharge amount (INR)<input type="number" min="1" max="100000" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} /></label><Button disabled={!valid} onClick={() => setReview(Number(amount).toFixed(2))}>Review secure recharge</Button></> : <><h3>{money(review)}</h3><GatewayPayment source={{ kind: 'WALLET_TOPUP', amount: review }} onPaid={() => { setSuccess(true); wallet.retry() }} /><p className="fg-muted">If interrupted, resume the existing recharge in payment history. Do not create another payment.</p></>}
+    </>}</section>}
+  </div><section className="fg-panel fg-stack"><h2>Wallet ledger</h2><Link to="/profile/payments" className="fg-inline-link">All payments, failures and refunds</Link><p className="fg-muted">Latest 100 wallet entries. A gateway recharge appears only after verified success.</p>{wallet.data?.transactions.length ? wallet.data.transactions.map(row => <div className="fg-list-row" key={row.id}><span><strong>{row.description || row.txn_type}</strong><small>{dateLabel(row.created_at)} · {row.txn_type} · #{row.id}</small></span><strong>{row.direction === 'IN' ? '+' : '−'}{money(row.amount, row.currency)}</strong></div>) : !wallet.loading && <EmptyState title="No wallet transactions yet" />}</section></div></>
 }

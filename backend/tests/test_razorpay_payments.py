@@ -179,7 +179,11 @@ def test_wrong_amount_currency_or_order_rejected(api, updates):
     record = checkout(api)
     entity = api[3].pay(record, **updates)
     response = verify(api, record, entity)
-    assert response.status_code == 409, response.text
+    if 'amount' in updates:
+        assert response.status_code == 200, response.text
+        assert response.json()['status'] == 'REVIEW_REQUIRED'
+    else:
+        assert response.status_code == 409, response.text
     with Session(api[2]) as db:
         assert db.get(Booking, record['booking_ids'][0]).status == 'PENDING_PAYMENT'
         assert db.scalar(select(func.count(AccessQrToken.id))) == 0

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from collections import Counter
+from typing import Literal
 from datetime import date, datetime, time, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import func, select
+from sqlalchemy import func, select, exists
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -15,6 +16,8 @@ from app.services.access_service import AccessService
 from app.services.booking_access_service import BookingAccessService
 from app.services.membership_entitlement import membership_name, included_ids, scope, active_memberships as resolve_memberships, covers
 from app.models.access import Checkin
+from app.models.review import GymReview
+from app.services.review_service import ReviewService, review_eligible
 from app.database.session import get_db
 from app.models.auth import User
 from app.models.booking import Booking, BookingStatus
@@ -213,6 +216,7 @@ def get_profile(db: Session = Depends(get_db), current_user: User | None = Depen
         profile_image=None,
         member_since=user.created_at,
         membership_status=membership_status,
+        has_membership_history=db.scalar(select(UserMembership.id).where(UserMembership.user_id == uid).limit(1)) is not None,
     )
 
 
@@ -320,23 +324,33 @@ def get_membership_summary(
 @router.get("/bookings", response_model=list[BookingItemResponse])
 def list_profile_bookings(
     status_filter: str | None = Query(default="upcoming", alias="status"),
+    source: Literal['all', 'individual'] = Query(default='all'),
+    booking_id: int | None = Query(default=None, gt=0),
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_optional_user),
+    current_user: User = Depends(require_role({ROLE_CUSTOMER})),
 ):
     uid = _require_user_id(db, current_user)
     today = ist_today()
 
     stmt = (
-        select(Booking, Gym, GymSlot)
+        select(Booking, Gym, GymSlot, review_eligible().label('can_review'))
         .join(Gym, Gym.id == Booking.gym_id)
         .join(GymSlot, GymSlot.id == Booking.gym_slot_id)
         .where(Booking.user_id == uid)
         .order_by(Booking.slot_date.desc(), GymSlot.start_time.desc(), Booking.id.desc())
     )
 
+    if source == 'individual':
+        stmt = stmt.where(Booking.access_source == 'BOOKING_ACCESS')
+    if booking_id is not None:
+        stmt = stmt.where(Booking.id == booking_id)
+
     rows = list(db.execute(stmt).all())
     items: list[BookingItemResponse] = []
-    for b, g, s in rows:
+    reviews = {r.gym_id: r for r in db.scalars(select(GymReview).where(GymReview.user_id == uid))}
+    checked_ids = set(db.scalars(select(Checkin.booking_id).where(Checkin.user_id == uid,
+        Checkin.access_source == 'BOOKING_ACCESS', Checkin.status == 'SUCCESS', Checkin.booking_id.is_not(None))))
+    for b, g, s, eligible in rows:
         if status_filter == "cancelled":
             if b.status != BookingStatus.CANCELLED.value:
                 continue
@@ -364,7 +378,7 @@ def list_profile_bookings(
             # MVP: use slot name as class name.
             class_name = s.name
 
-        membership_covered = (str(b.total_price) == "0" or float(b.total_price) <= 0.0) and b.status == BookingStatus.CONFIRMED.value
+        membership_covered = b.access_source == 'MEMBERSHIP_ACCESS'
         amount_paid = None
         if not membership_covered and float(b.total_price) > 0:
             amount_paid = str(b.total_price)
@@ -374,7 +388,7 @@ def list_profile_bookings(
 
         # Booking status shown to user: attendance overrides.
         shown_status = b.status
-        if b.status == BookingStatus.CONFIRMED.value and b.attendance_status == "ATTENDED":
+        if b.status == BookingStatus.CONFIRMED.value and b.id in checked_ids and b.attendance_status != 'NO_SHOW':
             shown_status = "COMPLETED"
         elif b.status == BookingStatus.CONFIRMED.value and b.attendance_status == "NO_SHOW":
             shown_status = "MISSED"
@@ -382,6 +396,10 @@ def list_profile_bookings(
         items.append(
             BookingItemResponse(
                 booking_id=int(b.id),
+                can_review=bool(eligible and g.status == 'APPROVED' and g.is_active),
+                review_id=reviews[g.id].id if g.id in reviews else None,
+                review_rating=reviews[g.id].rating if g.id in reviews else None,
+                review_status=reviews[g.id].status if g.id in reviews else None,
                 booking_access=BookingAccessService(db).summary(b),
                 booking_status=shown_status,
                 attendance_status=b.attendance_status,
@@ -404,7 +422,7 @@ def list_profile_bookings(
     # Include membership QR scans as visit items (shown under Past/All).
     # NOTE: These are not "bookings" in the bookings table, but they represent
     # an actual gym access via membership daily QR.
-    if status_filter in {"past", "all", None, ""}:
+    if source == 'all' and booking_id is None and status_filter in {"past", "all", None, ""}:
         scan_stmt = (
             select(MembershipDailyAccess, Gym)
             .join(Gym, Gym.id == MembershipDailyAccess.gym_id)
@@ -450,7 +468,7 @@ def list_profile_bookings(
                 )
             )
 
-    if status_filter in {"past", "all", None, ""}:
+    if source == 'all' and booking_id is None and status_filter in {"past", "all", None, ""}:
         rows = db.execute(select(Checkin, Gym).join(Gym, Gym.id == Checkin.gym_id).where(
             Checkin.user_id == uid, Checkin.booking_id.is_(None), Checkin.status == "SUCCESS",
         )).all()
@@ -469,6 +487,32 @@ def list_profile_bookings(
     items.sort(key=lambda x: (x.visit_date, x.start_time, x.booking_id), reverse=True)
 
     return items
+
+
+@router.get('/bookings/{booking_id}/review')
+def booking_review_details(booking_id: int, response: Response, db: Session = Depends(get_db),
+                           current_user: User = Depends(require_role({ROLE_CUSTOMER}))):
+    response.headers['Cache-Control'] = 'no-store'
+    return ReviewService(db).booking_review(user_id=current_user.id, booking_id=booking_id)
+
+
+@router.get('/membership-visits')
+def membership_visits(response: Response, year: int = Query(..., ge=2000, le=2100), month: int = Query(..., ge=1, le=12),
+                      limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0),
+                      db: Session = Depends(get_db), current_user: User = Depends(require_role({ROLE_CUSTOMER}))):
+    from app.core.time import ist_day_bounds
+    response.headers['Cache-Control'] = 'no-store'
+    first, last = _month_bounds(f'{year:04d}-{month:02d}')
+    start, end = ist_day_bounds(first)[0], ist_day_bounds(last)[1]
+    owned_membership = exists(select(UserMembership.id).where(UserMembership.id == Checkin.membership_id,
+        UserMembership.user_id == current_user.id))
+    query = select(Checkin, Gym).join(Gym, Gym.id == Checkin.gym_id).where(Checkin.user_id == current_user.id,
+        Checkin.access_source == 'MEMBERSHIP_ACCESS', Checkin.status == 'SUCCESS', owned_membership,
+        Checkin.checkin_time >= start, Checkin.checkin_time < end)
+    total = db.scalar(select(func.count()).select_from(query.subquery()))
+    rows = db.execute(query.order_by(Checkin.checkin_time.desc(), Checkin.id.desc()).limit(limit).offset(offset))
+    return {'total': int(total), 'items': [{'id': c.id, 'gym_id': g.id, 'gym_name': g.name,
+        'membership_id': c.membership_id, 'checkin_time': as_ist(c.checkin_time).isoformat()} for c, g in rows]}
 
 
 @router.get("/activity", response_model=ProfileActivityResponse)

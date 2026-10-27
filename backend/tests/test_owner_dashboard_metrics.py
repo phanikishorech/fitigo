@@ -1,5 +1,6 @@
 """Owner dashboard API regression tests using a disposable SQLite database."""
 from datetime import date, datetime, time, timedelta
+from uuid import uuid4
 
 import pytest
 from fastapi import FastAPI
@@ -17,10 +18,12 @@ from app.models.auth import Role, User, UserRole
 from app.models.booking import Booking, Payment
 from app.models.gym import Gym
 from app.models.membership import UserMembership
+from app.models.payment_checkout import PaymentCheckout
 from app.models.platform_membership import PlatformMembershipPlan  # Register referenced tables for the disposable schema.
 from app.models.slot import GymSlot
 from app.routers import gym_owner
 from app.services import owner_dashboard_service
+from app.services import owner_metric_rules
 
 
 DAY = date(2026, 10, 19)
@@ -37,6 +40,17 @@ def booking(db, gym_id, *, quantity=1, attended=False, source="BOOKING_ACCESS", 
     db.add(row)
     db.flush()
     return row
+
+
+def paid_booking(db, row, amount, at=NOW, status="PAID", mode="live"):
+    identifier = str(uuid4())
+    checkout = PaymentCheckout(id=identifier, user_id=3, source_key=identifier, kind="BOOKING", mode=mode,
+        key_id="fixture", amount=amount, currency="INR", snapshot={}, status=status, provider="RAZORPAY",
+        gateway_payment_id=f"pay_{identifier}", created_at=at)
+    db.add(checkout); db.flush()
+    row.checkout_id = identifier
+    db.add(Payment(booking_id=row.id, provider="RAZORPAY", amount=amount, status=status, created_at=at))
+    return checkout
 
 
 def checkin(db, gym_id, *, access_type="MULTI_GYM", at=NOW, status="SUCCESS", booked=None, visitor_index=0):
@@ -74,6 +88,9 @@ def checkin(db, gym_id, *, access_type="MULTI_GYM", at=NOW, status="SUCCESS", bo
 
 @pytest.fixture
 def api(monkeypatch):
+    from app.core.config import settings
+    # Existing reporting fixtures deliberately seed live sales.
+    monkeypatch.setattr(settings, 'payment_mode', 'live')
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     metadata = MetaData()
     for table in Base.metadata.sorted_tables:
@@ -82,6 +99,8 @@ def api(monkeypatch):
             clone.c.id.type = Integer()
     metadata.create_all(engine)
     monkeypatch.setattr(owner_dashboard_service, "ist_today", lambda: DAY)
+    monkeypatch.setattr(owner_dashboard_service, "ist_now", lambda: datetime(2026, 10, 19, 12, tzinfo=IST))
+    monkeypatch.setattr(owner_metric_rules, "ist_now", lambda: datetime(2026, 10, 19, 12, tzinfo=IST))
     with Session(engine) as db:
         for role_id, name in enumerate(["GYM_OWNER", "CUSTOMER", "GYM_STAFF"], 1):
             db.add(Role(id=role_id, name=name))
@@ -136,8 +155,8 @@ def test_overall_equals_owned_gym_totals_and_group_scans_are_not_double_counted(
         checkin(db, 3)  # A different owner's gym is never included.
         db.commit()
     first, second, overall = summary(api, 1), summary(api, 2), summary(api)
-    assert first["visits"] == {"fitigo_member": 1, "single_gym_membership": 1, "individual_booking": 5, "total": 7}
-    assert second["visits"] == {"fitigo_member": 1, "single_gym_membership": 0, "individual_booking": 2, "total": 3}
+    assert first["visits"] == {"fitigo_member": 1, "single_gym_membership": 1, "individual_booking": 2, "total": 4}
+    assert second["visits"] == {"fitigo_member": 1, "single_gym_membership": 0, "individual_booking": 0, "total": 1}
     for category in first["visits"]:
         assert overall["visits"][category] == first["visits"][category] + second["visits"][category]
     assert overall["gym_id"] is None and overall["gyms"]["total"] == 2
@@ -154,8 +173,8 @@ def test_visit_dates_use_ist_midnight_and_actual_attendance_time(api):
         old = booking(db, 1, attended=True)
         old.attendance_marked_at = start - timedelta(microseconds=1)
         db.commit()
-    assert summary(api, 1)["visits"] == {"fitigo_member": 2, "single_gym_membership": 0, "individual_booking": 1, "total": 3}
-    assert summary(api, 1, DAY - timedelta(days=1))["visits"]["total"] == 2
+    assert summary(api, 1)["visits"] == {"fitigo_member": 2, "single_gym_membership": 0, "individual_booking": 0, "total": 2}
+    assert summary(api, 1, DAY - timedelta(days=1))["visits"]["total"] == 1
     assert summary(api, 1, DAY + timedelta(days=1))["visits"]["total"] == 1
 
 
@@ -176,11 +195,11 @@ def test_attendance_includes_memberships_and_visitors_sorted_without_booking_sam
     response = client.get("/api/v1/gym-owner/gyms/1/attendance", params={"date": str(DAY)}, headers=headers[1])
     assert response.status_code == 200, response.text
     rows = response.json()
-    assert len(rows) == 4 and all(row["gym_id"] == 1 for row in rows)
-    assert [row["category"] for row in rows] == ["individual_booking", "fitigo_member", "single_gym_membership", "individual_booking"]
+    assert len(rows) == 3 and all(row["gym_id"] == 1 for row in rows)
+    assert [row["category"] for row in rows] == ["individual_booking", "fitigo_member", "single_gym_membership"]
     assert rows[0]["customer_name"] == "Visitor 1"
     assert rows[1]["booking_id"] is None and rows[1]["customer_name"] == "User 3"
-    assert rows[3]["booking_id"] == manual_id and rows[3]["visits"] == 3
+    assert all(row["booking_id"] != manual_id for row in rows)
     assert all(row["recorded_at"].endswith("+05:30") for row in rows)
     response = client.get("/api/v1/gym-owner/gyms/1/attendance", params={"date": str(DAY), "limit": 1}, headers=headers[1])
     assert response.json() == rows[:1]
@@ -190,15 +209,16 @@ def test_booking_and_revenue_metrics_follow_gym_selection(api):
     with Session(api[2]) as db:
         for gym_id, amount in [(1, 100), (2, 200), (3, 900)]:
             row = booking(db, gym_id)
-            db.add(Payment(booking_id=row.id, status="PAID", amount=amount))
+            paid_booking(db, row, amount)
+            checkin(db, gym_id, booked=row)
         booking(db, 2, day=DAY + timedelta(days=1))
         db.commit()
     first, second, overall = summary(api, 1), summary(api, 2), summary(api)
     assert float(first["revenue"]["last_30d"]) == 100
     assert float(second["revenue"]["last_30d"]) == 200
     assert float(overall["revenue"]["last_30d"]) == 300
-    assert first["bookings"] == {"today": 1, "on_date": 1, "upcoming": 1, "in_period": 1, "confirmed_in_period": 1}
-    assert second["bookings"] == {"today": 1, "on_date": 1, "upcoming": 2, "in_period": 1, "confirmed_in_period": 1}
+    assert first["bookings"] == {"today": 1, "on_date": 1, "upcoming": 0, "in_period": 1, "confirmed_in_period": 1}
+    assert second["bookings"] == {"today": 1, "on_date": 1, "upcoming": 0, "in_period": 1, "confirmed_in_period": 1}
     assert summary(api, 2, DAY + timedelta(days=1))["bookings"]["on_date"] == 1
 
 
@@ -212,7 +232,7 @@ def test_empty_owner_and_empty_gym_return_zero_and_defaults_remain_compatible(ap
     assert client.get("/api/v1/gym-owner/gyms/1/attendance", headers=headers[1]).json() == []
 
 
-def test_legacy_manual_attendance_without_time_uses_visit_date_and_rejections_do_not_hide_it(api):
+def test_manual_attendance_and_rejected_scans_never_become_completed_visits(api):
     with Session(api[2]) as db:
         manual = booking(db, 1, quantity=2, attended=True)
         manual.attendance_marked_at = None
@@ -221,10 +241,9 @@ def test_legacy_manual_attendance_without_time_uses_visit_date_and_rejections_do
         missing.attendance_status = "NO_SHOW"
         missing.attendance_marked_at = NOW
         db.commit()
-    assert summary(api, 1)["visits"]["individual_booking"] == 2
+    assert summary(api, 1)["visits"]["individual_booking"] == 0
     response = api[0].get("/api/v1/gym-owner/gyms/1/attendance", headers=api[1][1])
-    assert len(response.json()) == 1
-    assert response.json()[0]["recorded_at"] is None
+    assert response.json() == []
 
 
 def test_historical_scan_cannot_be_counted_again_as_manual_attendance_on_another_date(api):

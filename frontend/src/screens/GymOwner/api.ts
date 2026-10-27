@@ -2,6 +2,7 @@ import { request } from '../../services/client'
 import type { DateRange } from '../../utils/dateRange'
 
 export type OwnerDashboardSummary = {
+  upcoming_visits: number
   gym_id: number | null
   date: string
   date_from: string
@@ -9,7 +10,9 @@ export type OwnerDashboardSummary = {
   visits: { fitigo_member: number; single_gym_membership: number; individual_booking: number; total: number }
   gyms: { total: number; approved: number; pending_approval: number; draft: number }
   bookings: { today: number; on_date: number; upcoming: number; in_period: number; confirmed_in_period: number }
-  revenue: { last_30d: string; in_period: string; currency: string }
+  attendance: Record<'upcoming' | 'attended' | 'cancelled' | 'no_show' | 'pending_payment' | 'expired' | 'unresolved', number>
+  generated_at: string
+  revenue: { mode: 'test' | 'live'; last_30d: string; in_period: string; currency: string; single_gym_membership: string; individual_booking: string; total: string; basis: string; fully_refunded_sales: string; partial_refund_count: number; excluded_paid_records: number; multi_gym_allocation: string }
 }
 
 export type OwnerAttendance = {
@@ -92,7 +95,9 @@ export type OwnerSlot = {
   is_active: boolean
 }
 
-export type StaffAssignment = { id: number; gym_id: number; user_id: number; role: string }
+export type StaffAssignment = { id: number; gym_id: number; user_id: number; role: string;
+  first_name: string | null; last_name: string | null; email: string | null; phone: string | null;
+  account_status: string | null; assigned_at: string }
 
 export type SlotAvailability = OwnerSlot & { availability: { slot_date: string; status: string; capacity_total: number; booked_count: number; blocked_count: number; remaining_capacity: number } }
 export const listPublicSlotAvailability = (gymId: number, date: string) => request<SlotAvailability[]>(`/gyms/${gymId}/slots?date=${encodeURIComponent(date)}`)
@@ -302,7 +307,7 @@ export async function deactivateOwnerSlot(slotId: number): Promise<void> {
 }
 
 export async function listStaff(gymId: number): Promise<StaffAssignment[]> {
-  return request(`/gym-owner/gyms/${gymId}/staff`)
+  return request(`/gym-owner/gyms/${gymId}/staff`, { cache: 'no-store' })
 }
 
 export async function inviteStaff(gymId: number, payload: { email: string; first_name?: string | null; last_name?: string | null }): Promise<{ status: string; assignment_id: number; staff_user_id: number; temp_password: string | null }> {
@@ -318,12 +323,13 @@ export async function removeStaff(gymId: number, userId: number): Promise<void> 
   void r
 }
 
-export async function listBookings(gymId: number, params?: { date?: string; status?: string; limit?: number; offset?: number } & Partial<DateRange>): Promise<OwnerBooking[]> {
+export async function listBookings(gymId: number, params?: { date?: string; status?: string; attendance_category?: string; limit?: number; offset?: number } & Partial<DateRange>): Promise<OwnerBooking[]> {
   const qs = new URLSearchParams()
   if (params?.date) qs.set('date', params.date)
   if (params?.date_from) qs.set('date_from', params.date_from)
   if (params?.date_to) qs.set('date_to', params.date_to)
   if (params?.status) qs.set('status', params.status)
+  if (params?.attendance_category) qs.set('attendance_category', params.attendance_category)
   if (params?.limit) qs.set('limit', String(params.limit))
   if (params?.offset) qs.set('offset', String(params.offset))
   const suffix = qs.toString() ? `?${qs.toString()}` : ''

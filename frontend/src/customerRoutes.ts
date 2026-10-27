@@ -1,7 +1,7 @@
 export type CustomerRoute =
   | { page: 'home' | 'explore' | 'location' | 'cart' | 'checkout' | 'wallet' | 'recharge' | 'bookings' | 'membership' | 'membershipCheckout' | 'membershipSuccess' | 'profile' | 'access' | 'calendar' | 'history' | 'visits' | 'reviews' | 'settings' | 'auth' | 'staff' | 'notFound' }
   | { page: 'gym' | 'bookingAccess' | 'bookingSchedule' | 'plans' | 'bookingDetail' | 'bookingSuccess' | 'review' | 'membershipRecord' | 'membershipDetails' | 'confirmVisit'; id: number }
-  | { page: 'membershipPause' | 'membershipGyms' | 'multiGymPlans' | 'forgotPassword' | 'resetPassword' }
+  | { page: 'membershipPause' | 'membershipGyms' | 'multiGymPlans' | 'forgotPassword' | 'resetPassword' | 'payments' }
 
 export function customerRoute(path: string): CustomerRoute {
   const normalized = path.replace(/\/+$/, '') || '/'
@@ -11,6 +11,7 @@ export function customerRoute(path: string): CustomerRoute {
     '/bookings': 'bookings', '/membership': 'membership', '/profile/membership': 'membership',
     '/gyms': 'membershipGyms', '/membership/gyms': 'membershipGyms', '/membership/pause': 'membershipPause',
     '/membership/multi-gym/plans': 'multiGymPlans',
+    '/profile/payments': 'payments',
     '/auth/forgot-password': 'forgotPassword', '/auth/reset-password': 'resetPassword',
     '/membership/checkout': 'membershipCheckout', '/membership/success': 'membershipSuccess', '/profile': 'profile',
     '/access/qr': 'access', '/my-access': 'access', '/profile/access/today': 'access', '/profile/access': 'calendar',

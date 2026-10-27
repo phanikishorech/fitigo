@@ -13,6 +13,7 @@ class ProfileResponse(ISTResponse):
     profile_image: str | None = None
     member_since: datetime
     membership_status: str | None = None
+    has_membership_history: bool = False
 
 
 class MembershipSummaryResponse(ISTResponse):
@@ -41,6 +42,10 @@ class MembershipSummaryResponse(ISTResponse):
 
 
 class BookingItemResponse(ISTResponse):
+    can_review: bool = False
+    review_id: int | None = None
+    review_rating: int | None = None
+    review_status: str | None = None
     booking_access: BookingAccessResponse | None = None
     booking_id: int
     booking_status: str

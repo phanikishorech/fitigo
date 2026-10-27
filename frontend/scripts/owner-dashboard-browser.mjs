@@ -34,10 +34,12 @@ function fixture(path, query) {
   const gymId = Number(query.get('gym_id') || path.match(/\/gyms\/(\d+)/)?.[1] || 0)
   if (path.endsWith('/dashboard/summary')) {
     const count = query.get('date_from') === '2026-10-01' ? 0 : gymId === 1 ? 1 : gymId === 2 ? 2 : 3
-    return { gym_id: gymId || null, date: query.get('date'),
+    return { gym_id: gymId || null, date: query.get('date'), upcoming_visits: count * 2, generated_at: '2026-10-27T12:00:00+05:30',
       visits: { fitigo_member: count, single_gym_membership: count * 2, individual_booking: count * 3, total: count * 6 },
       gyms: { total: gymId ? 1 : 2, approved: gymId ? 1 : 2, draft: 0, pending_approval: 0 },
-      bookings: { today: count, on_date: count, upcoming: count, in_period: count, confirmed_in_period: count }, revenue: { last_30d: String(count * 100), in_period: String(count * 100), currency: 'INR' } }
+      bookings: { today: count, on_date: count, upcoming: count, in_period: count, confirmed_in_period: count },
+      attendance: { upcoming: count, attended: count, cancelled: count, no_show: count, pending_payment: 0, expired: 0, unresolved: 0 },
+      revenue: { mode: 'test', last_30d: String(count * 100), in_period: String(count * 100), currency: 'INR', single_gym_membership: String(count * 60), individual_booking: String(count * 40), total: String(count * 100), fully_refunded_sales: '0', partial_refund_count: 0, excluded_paid_records: 0 } }
   }
   if (path.endsWith('/attendance')) return query.get('date_from') === '2026-10-01' ? [] : [
     { id: `checkin:${gymId}`, gym_id: gymId, booking_id: null, category: 'fitigo_member', visits: 1,
@@ -71,7 +73,7 @@ ws.onmessage = async event => {
     } catch (error) { errors.push(error.message); await command('Fetch.failRequest', { requestId, errorReason: 'Failed' }) }
   }
 }
-const totals = `Array.from(document.querySelectorAll('.ow-metric')).filter(el=>el.querySelector('.ow-metric-top')?.textContent==='Total visits').map(el=>el.querySelector('strong').textContent)`
+const totals = `Array.from(document.querySelectorAll('.ow-metric')).filter(el=>el.querySelector('.ow-metric-top')?.textContent==='Visits completed').map(el=>el.querySelector('strong').textContent)`
 async function selectGym(id) {
   await evaluate(`(() => { const el=document.querySelector('select[aria-label="Selected gym"]');el.value='${id}';el.dispatchEvent(new Event('change',{bubbles:true})) })()`)
 }
@@ -80,11 +82,20 @@ try {
   await command('Fetch.enable', { patterns: [{ urlPattern: '*/api/v1/*' }] })
   await command('Page.addScriptToEvaluateOnNewDocument', { source: "localStorage.setItem('fitigo:access_token','isolated-dashboard-fixture')" })
   await command('Page.navigate', { url: `${origin}/owner/dashboard` })
-  await until(`JSON.stringify(${totals})==='["18","6"]' && document.body.innerText.includes('Member Gym 1')`)
-  assert.ok(await evaluate(`document.body.innerText.includes('Booking Gym 1')`))
+  await until(`JSON.stringify(${totals})==='["18","6"]'`)
+  assert.equal(await evaluate(`document.querySelectorAll('main .ow-metric').length`), 6)
+  assert.equal(await evaluate(`document.querySelectorAll('main table').length`), 0)
+  assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.ow-report-heading h2')).map(el=>el.textContent)`), ['Overall Metrics', 'Selected Gym'])
+  const beforeExpand = calls.length
+  await evaluate(`document.querySelectorAll('.ow-report-heading button')[0].click()`)
+  assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.ow-secondary-panel')).map(el=>el.hidden)`), [false, true])
+  await evaluate(`document.querySelectorAll('.ow-report-heading button')[1].click()`)
+  await evaluate(`document.querySelectorAll('.ow-report-heading button')[0].click()`)
+  assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.ow-secondary-panel')).map(el=>el.hidden)`), [true, false])
+  assert.equal(calls.length, beforeExpand)
   const overallCalls = calls.filter(path => path.includes('/dashboard/summary') && !path.includes('gym_id=')).length
   await selectGym(2)
-  await until(`JSON.stringify(${totals})==='["18","12"]' && document.body.innerText.includes('Member Gym 2')`)
+  await until(`JSON.stringify(${totals})==='["18","12"]'`)
   assert.equal(await evaluate(`document.querySelector('main').innerText.includes('Member Gym 1') || document.querySelector('main').innerText.includes('Booking Gym 1')`), false)
   assert.equal(calls.filter(path => path.includes('/dashboard/summary') && !path.includes('gym_id=')).length, overallCalls)
   delayGymOne = true
@@ -92,7 +103,7 @@ try {
   assert.deepEqual(await evaluate(totals), ['18', '12'])
   assert.equal(await evaluate(`document.querySelector('main').innerText.includes('Member Gym 1')`), false)
   delayGymOne = false
-  for (const width of [360, 390, 768, 1440]) {
+  for (const width of [320, 360, 390, 768, 1024, 1440]) {
     await command('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width < 640 })
     await wait(80)
     assert.equal(await evaluate('document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1'), true, `Overflow at ${width}`)
@@ -100,9 +111,8 @@ try {
   await evaluate(`Array.from(document.querySelectorAll('.fg-date-presets button')).find(el=>el.textContent==='Custom').click()`)
   for (const label of ['Start date', 'End date']) await evaluate(`(() => {const el=document.querySelector('input[aria-label="${label}"]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,'2026-10-01');el.dispatchEvent(new Event('input',{bubbles:true}))})()`)
   await evaluate(`document.querySelector('.fg-date-custom button').click()`)
-  await until(`JSON.stringify(${totals})==='["0","0"]' && document.body.innerText.includes('No recorded attendance') && document.body.innerText.includes('No bookings yet')`)
-  assert.ok(calls.some(path => path.includes('/gyms/2/bookings?date_from=2026-10-01&date_to=2026-10-01')))
-  assert.ok(calls.some(path => path.includes('/gyms/2/attendance?date_from=2026-10-01&date_to=2026-10-01')))
+  await until(`JSON.stringify(${totals})==='["0","0"]'`)
+  assert.equal(calls.some(path => /\/(bookings|attendance)\?/.test(path)), false)
   failGymTwo = true
   await selectGym(1); await until(`document.body.innerText.includes('Fixture Gym 1') && ${totals}.length===2`)
   await selectGym(2); await until(`document.querySelector('main').innerText.includes('Something went wrong')`)
@@ -111,5 +121,5 @@ try {
   await evaluate(`Array.from(document.querySelectorAll('main button')).find(el=>/try again/i.test(el.textContent)).click()`)
   await until(`${totals}.length===2`)
   assert.deepEqual(errors, [])
-  console.log('PASS overall/selected totals, gym-scoped bookings and membership attendance, stale-response isolation, date/empty/error/retry states, mobile/desktop layout')
+  console.log('PASS compact dashboard: six primary cards, independent expansion/collapse without requests, no tables, scope/date/error recovery and responsive layout')
 } finally { ws.close(); await target.dispose() }

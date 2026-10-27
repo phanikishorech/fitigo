@@ -15,7 +15,7 @@ export function ownerLinks(gymId?: number): { label: string; icon: IconName; to:
     { label: 'Classes & slots', icon: 'clock', to: gymId ? `/owner/gyms/${gymId}/classes` : '/owner/gyms' },
     { label: 'Membership plans', icon: 'ticket', to: gymId ? `/owner/gyms/${gymId}/memberships` : '/owner/gyms' },
     { label: 'Staff', icon: 'shield', to: '/owner/staff' }, { label: 'Check-in', icon: 'qr', to: '/owner/check-in' },
-    { label: 'Revenue', icon: 'wallet', to: '/owner/revenue' }, { label: 'Analytics', icon: 'chart', to: '/owner/analytics' },
+    { label: 'Revenue', icon: 'wallet', to: '/owner/revenue' }, { label: 'Analytics & Reports', icon: 'chart', to: '/owner/analytics' },
     { label: 'Settings', icon: 'settings', to: '/owner/settings' }
   ]
 }

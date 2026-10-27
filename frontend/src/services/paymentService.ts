@@ -5,7 +5,7 @@ export type PaymentCheckout = {
   id: string; kind: string; status: string; mode: 'test' | 'live'; amount: string; amount_minor: number; currency: string
   key_id: string; razorpay_order_id: string | null; booking_ids: number[]; membership_id: number | null; can_pay: boolean; failure_code: string | null
 }
-export type PaymentSource = { kind: 'CART' } | { kind: 'BOOKING'; booking_id: number } |
+export type PaymentSource = { kind: 'WALLET_TOPUP'; amount: string } | { kind: 'CART' } | { kind: 'BOOKING'; booking_id: number } |
   { kind: 'SINGLE_GYM'; gym_id: number; plan_id: number; accepted_quote: string } |
   { kind: 'MULTI_GYM'; order_id: string; accepted_quote: string }
 export type GatewayCallback = { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }

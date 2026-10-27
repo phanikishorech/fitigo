@@ -29,5 +29,3 @@ export const gymService = {
   facilities: () => cachedRead('facilities', () => request<GymFacility[]>('/facilities'), 300000),
   locations: (search = '') => request<(LocationContext & { gym_count: number })[]>(`/meta/locations?limit=40&search=${encodeURIComponent(search)}`)
 }
-// Deliberately not mapped to /profile/favorites: that endpoint means frequent visits.
-export const favoritesService = { supported: false, explanation: 'Saving gyms is not available yet. You can bookmark a gym page in your browser.' }

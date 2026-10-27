@@ -4,6 +4,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from app.core.errors import SafeErrorsMiddleware, http_error, validation_error, unexpected_error
 
 from app.core.config import settings
 from app.routers.admin import router as admin_router
@@ -38,11 +41,17 @@ def create_app() -> FastAPI:
     app = FastAPI(
         lifespan=lifespan,
         title=settings.app_name,
-        debug=settings.debug,
+        # Never expose traceback/source/SQL to HTTP clients, even in local DEV.
+        debug=False,
         openapi_url=f"{settings.api_v1_prefix}/openapi.json",
         docs_url="/docs",
         redoc_url="/redoc",
     )
+
+    app.add_exception_handler(StarletteHTTPException, http_error)
+    app.add_exception_handler(RequestValidationError, validation_error)
+    app.add_exception_handler(Exception, unexpected_error)
+    app.add_middleware(SafeErrorsMiddleware)
 
     app.add_middleware(
         CORSMiddleware,
@@ -50,6 +59,7 @@ def create_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=["*"] ,
         allow_headers=["*"],
+        expose_headers=["X-Request-ID"],
     )
 
     app.include_router(health_router, prefix=settings.api_v1_prefix, tags=["Health"])

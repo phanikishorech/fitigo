@@ -16,7 +16,8 @@ from app.models.class_booking import ClassSession, GymClass
 from app.models.gym import Gym
 from app.models.membership import UserMembership
 from app.models.platform_membership import PlatformMembershipOrder
-from app.models.payment_checkout import PaymentCheckout, PaymentWebhookReceipt
+from app.models.payment_checkout import PaymentCheckout, PaymentWebhookReceipt, PaymentAttempt
+from app.services.wallet_gateway_service import account_for_checkout, credit_wallet, refund_wallet
 from app.models.slot import GymSlot
 from app.services.booking_access_service import BookingAccessService, validate_visitors
 from app.services.booking_time import require_future_start
@@ -94,12 +95,30 @@ class PaymentCheckoutService:
             source = f"cart-request:{key}"
         previous = self.db.scalar(select(PaymentCheckout).where(PaymentCheckout.user_id == user_id, PaymentCheckout.source_key == source))
         if previous:
+            if kind == 'WALLET_TOPUP' and previous.amount != payload.amount:
+                raise HTTPException(409, detail='Idempotency key belongs to another recharge amount')
             if kind == "SINGLE_GYM" and (previous.snapshot.get("gym_id") != payload.gym_id or previous.snapshot.get("id") != payload.plan_id):
                 raise HTTPException(409, detail="Idempotency key belongs to another purchase")
             self.db.commit()
             return self.start(previous.id, user_id)
         platform_order = None
         booking = None
+        if kind == 'WALLET_TOPUP':
+            pending = self.db.scalar(select(PaymentCheckout).where(PaymentCheckout.user_id == user_id,
+                PaymentCheckout.kind == kind, PaymentCheckout.status.in_(['CREATED', 'CREATING', 'PENDING', 'FAILED']))
+                .order_by(PaymentCheckout.created_at.desc()))
+            if pending:
+                # Recover provider success/failure before an old pending intent
+                # can block a different recharge amount indefinitely.
+                result = self.reconcile(pending.id, user_id)
+                if pending.status in {'PAID', 'REVIEW_REQUIRED', 'REFUNDED'}:
+                    # Return the recovered payment first; never automatically
+                    # create/charge another order after discovering paid funds.
+                    return result
+                if pending.amount != payload.amount:
+                    raise HTTPException(409, 'An unpaid recharge already exists. Resume or cancel it from payment history first.')
+                self.db.commit()
+                return self.start(pending.id, user_id)
         if kind == "SINGLE_GYM":
             terms = single_terms(self.db, payload.gym_id, payload.plan_id, lock=True)
         elif kind == "MULTI_GYM":
@@ -138,7 +157,11 @@ class PaymentCheckoutService:
         self.db.flush()
         if kind == "CART":
             self.prepare_cart(checkout, items)
-        elif booking:
+        elif kind == 'WALLET_TOPUP':
+            checkout.amount = payload.amount
+            checkout.snapshot = {'requested_amount': str(payload.amount)}
+            account_for_checkout(self.db, checkout)
+        elif kind == "BOOKING":
             checkout.amount, checkout.currency = booking.total_price, booking.currency
             booking.checkout_id = checkout.id
             payment = self.db.scalar(select(Payment).where(Payment.booking_id == booking.id).with_for_update())
@@ -247,15 +270,42 @@ class PaymentCheckoutService:
             self.check_order(checkout, order)
             payments = self.gateway.payments(checkout.gateway_order_id, payment_id)
             verified = []
+            mismatched = []
             for payment in payments:
-                if payment.order_id != checkout.gateway_order_id or payment.amount != minor(checkout.amount) or payment.currency != checkout.currency:
+                if payment.order_id != checkout.gateway_order_id or payment.currency != checkout.currency:
                     raise HTTPException(409, detail="Payment amount, currency or ownership mismatch")
-                verified.append(payment)
+                # A declined/dropped Cashfree attempt can carry a discounted
+                # attempted amount. It is history, never evidence of paid funds.
+                # Paid/refunded mismatches are retained for review, not fulfilled.
+                if payment.amount != minor(checkout.amount) and (payment.status == 'SUCCESS' or payment.refunded):
+                    mismatched.append(payment)
+                else:
+                    verified.append(payment)
+                attempt = self.db.scalar(select(PaymentAttempt).where(PaymentAttempt.checkout_id == checkout.id,
+                    PaymentAttempt.external_id == payment.id))
+                state = 'REFUNDED' if payment.refunded == payment.amount and payment.refunded else 'PARTIALLY_REFUNDED' if payment.refunded else payment.status
+                if attempt is None:
+                    attempt = PaymentAttempt(id=str(uuid4()), checkout_id=checkout.id, external_id=payment.id,
+                        amount=Decimal(payment.amount) / 100, currency=payment.currency, status=state,
+                        refunded_amount=Decimal(payment.refunded) / 100)
+                    self.db.add(attempt); self.db.flush()
+                elif state in {'SUCCESS', 'REFUNDED', 'PARTIALLY_REFUNDED'} or attempt.status not in {'SUCCESS', 'REFUNDED', 'PARTIALLY_REFUNDED'}:
+                    # Do not erase verified success/refund with an older failure.
+                    if Decimal(payment.refunded) / 100 >= attempt.refunded_amount:
+                        attempt.status, attempt.refunded_amount = state, Decimal(payment.refunded) / 100
             captured = next((p for p in verified if p.status == "SUCCESS" and not p.refunded), None)
             refunded = next((p for p in verified if (not checkout.gateway_payment_id or p.id == checkout.gateway_payment_id)
                 and p.refunded > 0), None)
-            if refunded:
+            if mismatched:
+                checkout.status, checkout.failure_code = 'REVIEW_REQUIRED', 'PAYMENT_AMOUNT_MISMATCH'
+                # Keep the real observed transaction ID without declaring the
+                # booking paid or granting a wallet credit at the requested amount.
+                if not checkout.gateway_payment_id:
+                    checkout.gateway_payment_id = mismatched[0].id
+            elif refunded:
                 checkout.gateway_payment_id = refunded.id
+                if checkout.kind == 'WALLET_TOPUP':
+                    refund_wallet(self.db, checkout, refunded.refunded)
                 self.revoke(checkout, full=refunded.refunded == minor(checkout.amount))
             elif captured and checkout.status not in {"PAID", "REVIEW_REQUIRED", "REFUNDED"}:
                 if not order.paid:
@@ -269,6 +319,10 @@ class PaymentCheckoutService:
                 except HTTPException:
                     checkout.status, checkout.failure_code = "REVIEW_REQUIRED", "FULFILLMENT_UNAVAILABLE"
                     self.record_paid(checkout, captured.id)
+            elif order.paid and not captured:
+                # Order is paid but payments may be temporarily incomplete. Do
+                # not let the browser cancel/recharge an already paid order.
+                checkout.status, checkout.failure_code = 'REVIEW_REQUIRED', 'PAID_ORDER_PAYMENT_UNAVAILABLE'
             elif checkout.status not in {"PAID", "REVIEW_REQUIRED", "REFUNDED", "CANCELLED"}:
                 checkout.status = "PENDING" if any(p.status == "PENDING" for p in verified) else "FAILED" if verified or not order.payable else "PENDING"
                 for payment in self.db.scalars(select(Payment).join(Booking, Booking.id == Payment.booking_id)
@@ -288,6 +342,12 @@ class PaymentCheckoutService:
             return
         if checkout.status == "CANCELLED":
             raise HTTPException(409, detail="Checkout was cancelled")
+        if checkout.kind == 'WALLET_TOPUP':
+            if not payment_id:
+                raise HTTPException(409, 'Wallet recharge requires verified payment')
+            credit_wallet(self.db, checkout)
+            checkout.status, checkout.failure_code = 'PAID', None
+            return
         if checkout.kind in {"SINGLE_GYM", "MULTI_GYM"}:
             self.membership_eligible(checkout.user_id, checkout.snapshot)
             terms, now = checkout.snapshot, datetime.utcnow().replace(microsecond=0)

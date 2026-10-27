@@ -12,7 +12,7 @@ from app.models.booking import Payment
 from app.models.gym import Gym
 from app.routers import admin
 from app.services import admin_dashboard_service
-from test_owner_dashboard_metrics import api as owner_api, booking, checkin, DAY, NOW
+from test_owner_dashboard_metrics import api as owner_api, booking, checkin, paid_booking, DAY, NOW
 
 
 @pytest.fixture
@@ -47,25 +47,27 @@ def test_owner_range_includes_both_dates_and_scopes_visits_revenue_bookings_and_
         checkin(db, 3)
         for day, amount in [(first - timedelta(days=1), 900), (first, 100), (last, 200), (last + timedelta(days=1), 800)]:
             row = booking(db, 1, day=day)
-            # Revenue follows scheduled date, consistent with the daily activity report.
-            db.add(Payment(booking_id=row.id, amount=amount, status="PAID", created_at=NOW - timedelta(days=60)))
+            # Owner revenue uses immutable purchase date, not scheduled date.
+            paid_booking(db, row, amount, at=ist_day_bounds(day)[0])
+            checkin(db, 1, booked=row, at=ist_day_bounds(day)[0])
         cancelled = booking(db, 1, day=first, status="CANCELLED")
         db.add(Payment(booking_id=cancelled.id, amount=400, status="REFUNDED"))
         other = booking(db, 2, day=last)
-        db.add(Payment(booking_id=other.id, amount=50, status="PAID"))
+        paid_booking(db, other, 50)
+        checkin(db, 2, booked=other)
         booking(db, 3, day=last)
         db.commit()
     selected = get(api, 'gym-owner/dashboard/summary', {**params, "gym_id": 1})
     overall = get(api, 'gym-owner/dashboard/summary', params)
     assert selected['date_from'] == str(first) and selected['date_to'] == str(last)
-    assert selected['visits']['total'] == 2 and overall['visits']['total'] == 3
+    assert selected['visits']['total'] == 4 and overall['visits']['total'] == 6
     assert selected['bookings']['in_period'] == 3 and selected['bookings']['confirmed_in_period'] == 2
     assert float(selected['revenue']['in_period']) == 300
     assert float(overall['revenue']['in_period']) == 350
     rows = get(api, 'gym-owner/gyms/1/bookings', params)
     assert len(rows) == 3 and all(first <= date.fromisoformat(row['slot_date']) <= last for row in rows)
     attendance = get(api, 'gym-owner/gyms/1/attendance', params)
-    assert len(attendance) == 2 and all(row['gym_id'] == 1 for row in attendance)
+    assert len(attendance) == 4 and all(row['gym_id'] == 1 for row in attendance)
     assert get(api, 'gym-owner/gyms/1/bookings', {**params, 'limit': 1, 'offset': 1}) == rows[1:2]
 
 

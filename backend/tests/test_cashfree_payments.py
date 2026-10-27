@@ -163,7 +163,13 @@ def test_unverified_states_never_grant_access_and_retry_reuses_order(api, kind, 
 def test_wrong_amount_currency_or_order_fails_closed(api, updates):
     record = checkout(api)
     api[3].pay(record, **updates)
-    assert verify(api, record).status_code == 409
+    response = verify(api, record)
+    if 'payment_amount' in updates:
+        assert response.status_code == 200
+        assert response.json()['status'] == 'REVIEW_REQUIRED'
+        assert response.json()['failure_code'] == 'PAYMENT_AMOUNT_MISMATCH'
+    else:
+        assert response.status_code == 409
     with Session(api[2]) as db:
         assert db.scalar(select(func.count(AccessQrToken.id))) == 0
 

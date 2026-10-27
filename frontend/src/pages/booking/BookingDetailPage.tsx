@@ -11,7 +11,7 @@ import BookingAccess from './BookingAccess'
 export default function BookingDetailPage({ id, success = false }: { id: number; success?: boolean }) {
   const result = useResource(async () => {
     const booking = await bookingService.detail(id)
-    const [gym, visits] = await Promise.all([gymService.details(booking.gym_id), bookingService.visits()])
+    const [gym, visits] = await Promise.all([gymService.details(booking.gym_id), bookingService.visit(id)])
     return { booking, gym, visit: visits.find(item => item.booking_id === id) }
   }, String(id))
   const mutation = useMutation()

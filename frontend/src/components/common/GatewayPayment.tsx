@@ -13,8 +13,8 @@ export default function GatewayPayment({ source, initial, onPaid }: { source?: P
   const accept = (next: PaymentCheckout) => {
     setCheckout(next)
     if (next.status === 'PAID') { setMessage('Payment confirmed by FitiGo.'); onPaid?.(next) }
-    else if (next.status === 'REVIEW_REQUIRED') setMessage('Payment received, but this purchase could not be fulfilled. Do not pay again. Contact support with this checkout ID for reconciliation/refund.')
-    else if (next.status === 'PENDING' || next.status === 'CREATING') setMessage('Payment is not confirmed yet. Refresh status before retrying. Your booking/membership is not active.')
+    else if (next.status === 'REVIEW_REQUIRED') setMessage(next.failure_code === 'PAYMENT_AMOUNT_MISMATCH' ? 'The gateway reports a different paid amount, possibly due to a gateway offer. No access or wallet credit was granted. Do not pay this order again. Contact support for reconciliation/refund.' : 'Payment received, but this purchase could not be fulfilled. Do not pay again. Contact support with this checkout ID for reconciliation/refund.')
+    else if (next.status === 'PENDING' || next.status === 'CREATING') setMessage('Payment is not confirmed yet. Refresh status before retrying. Access or wallet credit has not been granted.')
     else if (next.status === 'FAILED') setMessage('Payment failed. You can retry this same checkout without creating another purchase.')
     else setMessage(`Payment status: ${next.status.toLowerCase()}.`)
   }
@@ -47,8 +47,9 @@ export default function GatewayPayment({ source, initial, onPaid }: { source?: P
     }
   })
   return <div className="fg-stack">
-    <p>Secure {checkout?.provider === 'CASHFREE' ? 'Cashfree' : checkout?.provider === 'RAZORPAY' ? 'Razorpay' : 'payment'} checkout. Access is granted only after FitiGo confirms payment.</p>
+    <p>Secure {checkout?.provider === 'CASHFREE' ? 'Cashfree' : checkout?.provider === 'RAZORPAY' ? 'Razorpay' : 'payment'} checkout. Your purchase or wallet credit is completed only after FitiGo confirms payment.</p>
     {checkout && <><p><strong>{checkout.mode === 'test' ? 'TEST MODE · No real money' : 'LIVE MODE · Real payment'}</strong></p><p>{money(checkout.amount, checkout.currency)} · {checkout.status.replaceAll('_', ' ').toLowerCase()}</p><small>Checkout: {checkout.id}</small></>}
+    {checkout?.status === 'REVIEW_REQUIRED' && !message && <p role="status">Payment requires review. No new access or wallet credit is granted. Contact support with the checkout ID; do not pay this order again.</p>}
     {message && <p role="status">{message}</p>}
     {mutation.error && <Alert>{mutation.error}</Alert>}
     {(!checkout || checkout.can_pay) && <Button loading={mutation.pending} onClick={() => void pay()}>{checkout ? 'Retry / open payment' : 'Continue to secure payment'}</Button>}
@@ -56,6 +57,6 @@ export default function GatewayPayment({ source, initial, onPaid }: { source?: P
     {checkout && ['CREATED', 'CREATING', 'PENDING', 'FAILED'].includes(checkout.status) && <Button variant="text" loading={mutation.pending} onClick={() => void mutation.run(async () => accept(await paymentService.cancel(checkout.id)))}>Cancel unpaid checkout</Button>}
     {checkout?.booking_ids.map(id => <Link key={id} to={`/bookings/${id}`} className="fg-inline-link">View booking #{id}</Link>)}
     {checkout?.membership_id && <Link to={`/membership/${checkout.membership_id}`} className="fg-inline-link">View membership</Link>}
-    <Link to="/checkout" className="fg-inline-link">Review checkout / recent payments</Link>
+    <Link to="/profile/payments" className="fg-inline-link">View payment history</Link>
   </div>
 }

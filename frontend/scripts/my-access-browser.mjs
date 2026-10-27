@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { isolatedBrowserTarget } from './isolated-browser.mjs'
 const target = await isolatedBrowserTarget()
+const origin = process.env.FITIGO_TEST_ORIGIN || 'http://localhost:5173'
 const ws = new WebSocket(target.webSocketDebuggerUrl)
 await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject })
 let sequence = 0, scope = 'MULTI_GYM', status = 'ACTIVE', failure = null, delayQr = false, issuedStatus = null, shortExpiry = false
@@ -17,7 +18,7 @@ function command(method, params = {}) { return new Promise((resolve, reject) => 
 async function evaluate(expression) { const r = await command('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }); if (r.exceptionDetails) throw Error(r.exceptionDetails.exception?.description || r.exceptionDetails.text); return r.result.value }
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms))
 async function until(expression) { for (let i = 0; i < 300; i++) { if (await evaluate(expression)) return; await wait(80) } throw Error(`Not ready: ${expression}; ${await evaluate('document.body.innerText')}`) }
-async function visit(path, text) { await command('Page.navigate', { url: 'http://localhost:5173' + path }); await until(`document.body.innerText.includes(${JSON.stringify(text)})`); await until(`!document.querySelector('[aria-label="Loading"]')`) }
+async function visit(path, text) { await command('Page.navigate', { url: origin + path }); await until(`document.body.innerText.includes(${JSON.stringify(text)})`); await until(`!document.querySelector('[aria-label="Loading"]')`) }
 async function click(text, selector = 'button') { await evaluate(`Array.from(document.querySelectorAll(${JSON.stringify(selector)})).find(e=>e.textContent.trim()===${JSON.stringify(text)}).click()`); await wait(100) }
 async function width(w) { await command('Emulation.setDeviceMetricsOverride', { width: w, height: 1000, deviceScaleFactor: 1, mobile: w < 768 }); await wait(80); assert.equal(await evaluate('document.documentElement.scrollWidth<=innerWidth+1'), true, `Overflow at ${w}`) }
 async function shot(name) { const image = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true }); await writeFile(join(tmpdir(), name), Buffer.from(image.data, 'base64')) }

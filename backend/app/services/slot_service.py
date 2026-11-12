@@ -18,7 +18,8 @@ class SlotService:
         self.db = db
 
     def create_slot(self, *, owner_user_id: int, gym_id: int, data: dict) -> GymSlot:
-        gym = self.db.execute(select(Gym).where(Gym.id == gym_id, Gym.owner_user_id == owner_user_id)).scalars().first()
+        gym = self.db.execute(select(Gym).where(Gym.id == gym_id, Gym.owner_user_id == owner_user_id)
+                              .with_for_update().execution_options(populate_existing=True)).scalars().first()
         if not gym:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gym not found")
 
@@ -54,6 +55,7 @@ class SlotService:
             capacity=int(data["capacity"]),
             price=Decimal(str(data["price"])),
             is_active=1,
+            sync_kind='CLASS' if is_class_schedule else 'DIRECT',
         )
         self.db.add(slot)
 
@@ -127,10 +129,13 @@ class SlotService:
                 .first()
             )
             if exists:
-                continue
+                self.db.rollback()
+                raise HTTPException(409, detail='A class session already exists at this time. No duplicate schedule was created.')
+            self.db.flush()
             self.db.add(
                 ClassSession(
                     gym_class_id=int(gclass.id),
+                    source_slot_id=slot.id,
                     session_date=sess_date,
                     start_time=start_time,
                     end_time=end_time,
@@ -146,43 +151,52 @@ class SlotService:
         return slot
 
     def update_slot(self, *, owner_user_id: int, slot_id: int, data: dict) -> GymSlot:
+        # Resolve scope before locking; serialize class creation/cart selection
+        # and mutations using the same gym-first lock order.
+        gym_id = self.db.scalar(select(GymSlot.gym_id).join(Gym, Gym.id == GymSlot.gym_id)
+            .where(GymSlot.id == slot_id, Gym.owner_user_id == owner_user_id))
+        if gym_id is None:
+            raise HTTPException(status_code=404, detail='Slot not found')
+        self.db.scalar(select(Gym).where(Gym.id == gym_id, Gym.owner_user_id == owner_user_id).with_for_update())
         slot = self.db.execute(
             select(GymSlot).join(Gym, Gym.id == GymSlot.gym_id).where(GymSlot.id == slot_id, Gym.owner_user_id == owner_user_id)
+            .with_for_update().execution_options(populate_existing=True)
         ).scalars().first()
         if not slot:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Slot not found")
 
+        changes = {}
         for k, v in data.items():
             if v is None:
                 continue
             if k == "price":
-                setattr(slot, k, Decimal(str(v)))
+                changes[k] = Decimal(str(v))
             elif k in {"start_time", "end_time"} and isinstance(v, str):
-                setattr(slot, k, dtime.fromisoformat(v))
+                changes[k] = dtime.fromisoformat(v)
             elif k == "is_active":
-                setattr(slot, k, 1 if v else 0)
+                changes[k] = 1 if v else 0
             elif k in {"specific_date", "repeat_days"}:
-                # Scheduling fields are handled at ClassSession layer; keep ignore here for now.
-                # We accept them so the API stays forward compatible with owner UI.
-                continue
+                raise HTTPException(409, detail='Changing recurrence or dates requires a new schedule; no existing bookings were moved.')
             else:
-                setattr(slot, k, v)
+                changes[k] = v
 
-        if slot.end_time <= slot.start_time:
+        if changes.get('end_time', slot.end_time) <= changes.get('start_time', slot.start_time):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="end_time must be after start_time")
 
-        self.db.commit()
+        changes = {k: v for k, v in changes.items() if getattr(slot, k) != v}
+        try:
+            from app.services.class_sync_service import synchronize
+            synchronize(self.db, slot, changes)
+            for k, v in changes.items(): setattr(slot, k, v)
+            self.db.commit()
+        except Exception:
+            self.db.rollback()
+            raise
         self.db.refresh(slot)
         return slot
 
     def deactivate_slot(self, *, owner_user_id: int, slot_id: int) -> None:
-        slot = self.db.execute(
-            select(GymSlot).join(Gym, Gym.id == GymSlot.gym_id).where(GymSlot.id == slot_id, Gym.owner_user_id == owner_user_id)
-        ).scalars().first()
-        if not slot:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Slot not found")
-        slot.is_active = 0
-        self.db.commit()
+        self.update_slot(owner_user_id=owner_user_id, slot_id=slot_id, data={'is_active': False})
 
     def list_owner_slots(self, *, owner_user_id: int, gym_id: int) -> list[GymSlot]:
         gym = self.db.execute(select(Gym).where(Gym.id == gym_id, Gym.owner_user_id == owner_user_id)).scalars().first()

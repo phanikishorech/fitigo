@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from app.core.time import ist_today
+from datetime import timedelta
+
 import uuid
 from datetime import date, datetime, timedelta, timezone
 
@@ -65,7 +68,7 @@ def test_booking_idempotency_key_returns_same_booking_and_does_not_double_reserv
 
         r1 = client.post(
             "/api/v1/bookings",
-            json={"gym_slot_id": slot.id, "slot_date": str(date.today()), "quantity": 2},
+            json={"gym_slot_id": slot.id, "slot_date": str((ist_today() + timedelta(days=1))), "quantity": 2},
             headers={"Authorization": f"Bearer {token}", "Idempotency-Key": idem},
         )
         assert r1.status_code == 200
@@ -73,7 +76,7 @@ def test_booking_idempotency_key_returns_same_booking_and_does_not_double_reserv
 
         r2 = client.post(
             "/api/v1/bookings",
-            json={"gym_slot_id": slot.id, "slot_date": str(date.today()), "quantity": 2},
+            json={"gym_slot_id": slot.id, "slot_date": str((ist_today() + timedelta(days=1))), "quantity": 2},
             headers={"Authorization": f"Bearer {token}", "Idempotency-Key": idem},
         )
         assert r2.status_code == 200
@@ -128,7 +131,7 @@ def test_expired_pending_booking_releases_capacity_on_next_booking_attempt():
         token = create_access_token(str(customer.id))
         r1 = client.post(
             "/api/v1/bookings",
-            json={"gym_slot_id": slot.id, "slot_date": str(date.today()), "quantity": 1},
+            json={"gym_slot_id": slot.id, "slot_date": str((ist_today() + timedelta(days=1))), "quantity": 1},
             headers={"Authorization": f"Bearer {token}"},
         )
         assert r1.status_code == 200
@@ -149,7 +152,7 @@ def test_expired_pending_booking_releases_capacity_on_next_booking_attempt():
         # Next booking should succeed because create_booking expires old one while holding the slot lock
         r2 = client.post(
             "/api/v1/bookings",
-            json={"gym_slot_id": slot.id, "slot_date": str(date.today()), "quantity": 1},
+            json={"gym_slot_id": slot.id, "slot_date": str((ist_today() + timedelta(days=1))), "quantity": 1},
             headers={"Authorization": f"Bearer {token}"},
         )
         assert r2.status_code == 200

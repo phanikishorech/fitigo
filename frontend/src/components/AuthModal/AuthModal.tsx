@@ -54,6 +54,7 @@ export default function AuthModal({ open, onClose, onAuthed }: Props) {
   const [passwordBusy, setPasswordBusy] = useState(false)
   const [view, setView] = useState<'signin' | 'register' | 'forgot'>('signin')
   const [registered, setRegistered] = useState(false)
+  const [resendSeconds, setResendSeconds] = useState(60)
   const [step, setStep] = useState<Step>('enter')
   const [email, setEmail] = useState('')
   const [mobile, setMobile] = useState({ countryCode: '+1', number: '' })
@@ -251,7 +252,7 @@ export default function AuthModal({ open, onClose, onAuthed }: Props) {
           </div>
           {signInMode === 'password' && open && <PasswordPanel email={email} onEmailChange={setEmail} onAuthed={onAuthed} onBusyChange={setPasswordBusy} />}
           {signInMode === 'otp' && <>
-          {import.meta.env.DEV && <p className={panel.helperText}>OTP delivery is not configured for local development. Use Password to sign in with an existing account.</p>}
+          <p className={panel.helperText}>Codes require configured email or SMS delivery. If delivery is unavailable, use Password or contact your administrator.</p>
 
           {step === 'enter' && method === 'email' && (
             <EmailOtpPanel
@@ -261,7 +262,8 @@ export default function AuthModal({ open, onClose, onAuthed }: Props) {
                 const clean = email.trim().toLowerCase()
                 if (!isValidEmail(clean)) return
 
-                await authService.sendEmail(clean)
+                const delivery = await authService.sendEmail(clean)
+                setResendSeconds(delivery.resend_seconds || 60)
 
                 setOtpTarget({ kind: 'email', email: clean })
                 setStep('otp')
@@ -286,7 +288,8 @@ export default function AuthModal({ open, onClose, onAuthed }: Props) {
                 const num = mobile.number.replace(/\s+/g, '')
                 if (!cc || !num) return
 
-                await authService.sendMobile(cc, num)
+                const delivery = await authService.sendMobile(cc, num)
+                setResendSeconds(delivery.resend_seconds || 60)
 
                 setOtpTarget({ kind: 'mobile', countryCode: cc, number: num })
                 setStep('otp')
@@ -297,14 +300,16 @@ export default function AuthModal({ open, onClose, onAuthed }: Props) {
           {step === 'otp' && otpTarget?.kind === 'email' && (
             <OtpVerifyPanel
               title="Verify your email"
-              subtitle="We've sent a verification code to your email address."
+              resendSeconds={resendSeconds}
+              subtitle="The email provider accepted a code for"
               maskedTarget={maskedEmail}
               onChangeTarget={() => {
                 setStep('enter')
                 setOtpTarget(null)
               }}
               onResend={async () => {
-                await authService.sendEmail(otpTarget.email)
+                const delivery = await authService.sendEmail(otpTarget.email)
+                setResendSeconds(delivery.resend_seconds || 60)
               }}
               onVerify={async (otp) => {
                 const result = await authService.verifyEmail(otpTarget.email, otp)
@@ -316,14 +321,16 @@ export default function AuthModal({ open, onClose, onAuthed }: Props) {
           {step === 'otp' && otpTarget?.kind === 'mobile' && (
             <OtpVerifyPanel
               title="Verify your mobile"
-              subtitle="We've sent a verification code to your phone number."
+              resendSeconds={resendSeconds}
+              subtitle="The SMS provider accepted a code for"
               maskedTarget={`${otpTarget.countryCode} •••• ${otpTarget.number.slice(-2)}`}
               onChangeTarget={() => {
                 setStep('enter')
                 setOtpTarget(null)
               }}
               onResend={async () => {
-                await authService.sendMobile(otpTarget.countryCode, otpTarget.number)
+                const delivery = await authService.sendMobile(otpTarget.countryCode, otpTarget.number)
+                setResendSeconds(delivery.resend_seconds || 60)
               }}
               onVerify={async (otp) => {
                 const result = await authService.verifyMobile(otpTarget.countryCode, otpTarget.number, otp)

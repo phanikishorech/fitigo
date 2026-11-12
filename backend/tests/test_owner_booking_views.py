@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from app.core.time import ist_today
+from datetime import timedelta
+
 import uuid
 from datetime import date
 
@@ -73,14 +76,14 @@ def test_owner_can_list_only_own_gym_bookings_and_read_details():
         b1 = book_svc.create_booking(
             user_id=customer.id,
             gym_slot_id=s1.id,
-            slot_date=date.today(),
+            slot_date=(ist_today() + timedelta(days=1)),
             quantity=1,
             notes=None,
         )
         _ = book_svc.create_booking(
             user_id=customer.id,
             gym_slot_id=s2.id,
-            slot_date=date.today(),
+            slot_date=(ist_today() + timedelta(days=1)),
             quantity=1,
             notes=None,
         )

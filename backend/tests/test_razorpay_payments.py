@@ -35,7 +35,7 @@ class FakeGateway:
     def create_order(self, checkout):
         self.creations += 1
         order = dict(id=f"order_{self.creations}", amount=int(checkout.amount * 100), currency=checkout.currency,
-                     receipt=checkout.id, status="created", amount_paid=0, amount_due=int(checkout.amount * 100))
+                     receipt=checkout.id, status="created", amount_paid=0, amount_due=int(checkout.amount * 100), attempts=0)
         self.orders[order['id']] = order
         if self.timeout_after_create:
             raise HTTPException(503, detail="Simulated ambiguous order creation")
@@ -59,6 +59,7 @@ class FakeGateway:
                       currency=order['currency'], status=status, captured=status == 'captured', amount_refunded=0)
         entity.update(updates)
         self.entities[entity['id']] = entity
+        order['attempts'] += 1
         if status == 'captured':
             order.update(status='paid', amount_paid=order['amount'], amount_due=0)
         return entity
@@ -115,6 +116,21 @@ def verify(api, record, entity, **updates):
     body = dict(razorpay_order_id=record['razorpay_order_id'], razorpay_payment_id=entity['id'], razorpay_signature=signature)
     body.update(updates)
     return api[0].post(f"/api/v1/payments/checkouts/{record['id']}/verify", headers=api[1][1], json=body)
+
+
+def test_gateway_reschedule_stays_blocked_without_duplicate_charge(api):
+    record=checkout(api)
+    with Session(api[2]) as db:
+        booking=db.scalar(select(Booking).where(Booking.checkout_id==record['id']))
+        bid,sid,day=booking.id,booking.gym_slot_id,booking.slot_date
+    for paid in [False,True]:
+        if paid:
+            entity=api[3].pay(record);assert verify(api,record,entity).status_code==200
+        count=api[3].creations
+        response=api[0].post(f'/api/v1/bookings/{bid}/reschedule',headers=api[1][1],json={'gym_slot_id':sid,'slot_date':str(day+timedelta(days=1))})
+        assert response.status_code==409
+        assert api[3].creations==count
+        with Session(api[2]) as db:assert db.get(Booking,bid).slot_date==day
 
 
 def refresh(api, record):
@@ -210,11 +226,11 @@ def test_cancelled_booking_cannot_be_reactivated_by_late_capture(api):
         assert db.scalar(select(Payment.status)) == 'PAID'  # Captured funds are not falsely labelled refunded.
 
 
-def test_explicit_checkout_cancel_and_late_capture(api):
+def test_active_gateway_order_cannot_be_locally_cancelled(api):
     record = checkout(api)
     response = api[0].post(f"/api/v1/payments/checkouts/{record['id']}/cancel", headers=api[1][1])
-    assert response.json()['status'] == 'CANCELLED'
-    assert verify(api, record, api[3].pay(record)).json()['status'] == 'REVIEW_REQUIRED'
+    assert response.status_code == 409
+    assert verify(api, record, api[3].pay(record)).json()['status'] == 'PAID'
 
 
 @pytest.mark.parametrize('kind', ['SINGLE_GYM', 'MULTI_GYM'])
@@ -310,6 +326,8 @@ def test_paid_booking_cancel_does_not_claim_gateway_refund(api):
     response = api[0].post(f'/api/v1/bookings/{booking_id}/cancel', headers=api[1][1], json={'reason': 'cancel'})
     assert response.status_code == 200, response.text
     assert response.json()['payment']['status'] == 'PAID'
+    assert response.json()['refund_initiated'] is False
+    assert 'does not initiate' in response.json()['cancellation_message']
     assert webhook(api, entity).status_code == 200
     assert api[0].post(f'/api/v1/bookings/{booking_id}/qr', headers=api[1][1]).status_code == 400
 

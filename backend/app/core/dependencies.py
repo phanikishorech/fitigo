@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
 from sqlalchemy.orm import Session
@@ -42,15 +42,19 @@ def get_current_user(
 
 
 def get_optional_user(
+    request: Request,
     token: str | None = Depends(oauth2_scheme_optional),
     db: Session = Depends(get_db),
 ) -> User | None:
     """Anonymous only when no credentials are supplied.
 
-    Invalid/revoked credentials must not become an anonymous/dev-fallback session.
+    Invalid/revoked credentials must not become an anonymous session.
     """
 
     if not token:
+        if "authorization" in request.headers:
+            raise HTTPException(status_code=401, detail="Invalid authentication credentials",
+                                headers={"WWW-Authenticate": "Bearer"})
         return None
     return get_current_user(token=token, db=db)
 

@@ -10,13 +10,15 @@ from app.models.booking import Booking, BookingStatus, Payment, PaymentStatus
 from app.models.slot import GymSlot, SlotAvailability, SlotAvailabilityStatus
 from app.services.booking_access_service import BookingAccessService
 from app.services.booking_time import require_future_start
+from app.services.operation_audit import record
+from app.services.notification_workflow import publish
 
 
 class AdminBookingOpsService:
     def __init__(self, db: Session):
         self.db = db
 
-    def cancel_booking(self, *, booking_id: int, reason: str | None = None) -> Booking:
+    def cancel_booking(self, *, booking_id: int, reason: str | None = None, actor_id: int | None = None) -> Booking:
         booking = self.db.execute(select(Booking).where(Booking.id == booking_id).with_for_update().execution_options(populate_existing=True)).scalars().first()
         if not booking:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
@@ -56,10 +58,11 @@ class AdminBookingOpsService:
                 .scalars()
                 .first()
             )
-            if payment and payment.status == PaymentStatus.PAID.value and payment.provider not in {"RAZORPAY", "CASHFREE"} and not booking.checkout_id:
-                payment.status = PaymentStatus.REFUNDED.value
+            # Preserve payment history: cancellation does not issue a refund.
 
             BookingAccessService(self.db).revoke(booking)
+            record(self.db, 'BOOKING_CANCELLED', booking.id, actor_id, reason_code='ADMIN_REQUEST', gym_id=booking.gym_id)
+            publish(self.db, booking.user_id, 'BOOKING_CANCELLED', booking.id)
             self.db.commit()
         except Exception:
             self.db.rollback()
@@ -75,6 +78,7 @@ class AdminBookingOpsService:
         new_status: str,
         external_ref: str | None = None,
         note: str | None = None,
+        actor_id: int | None = None,
     ) -> Booking:
         booking = self.db.execute(select(Booking).where(Booking.id == booking_id).with_for_update().execution_options(populate_existing=True)).scalars().first()
         if not booking:
@@ -90,6 +94,8 @@ class AdminBookingOpsService:
                 raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Payment not found")
             if payment.provider in {"RAZORPAY", "CASHFREE"} or booking.checkout_id:
                 raise HTTPException(409, detail="Gateway payment status must be reconciled with the payment provider")
+            if payment.provider == 'WALLET' or new_status == PaymentStatus.REFUNDED.value:
+                raise HTTPException(409, detail="A status edit cannot perform a wallet transaction or confirm a refund")
 
             confirming = new_status == PaymentStatus.PAID.value and booking.status == BookingStatus.PENDING_PAYMENT.value
             if confirming:
@@ -116,6 +122,7 @@ class AdminBookingOpsService:
                 BookingAccessService(self.db).revoke(booking)
             if confirming:
                 require_future_start(booking.slot_date, slot.start_time)
+            record(self.db, 'PAYMENT_STATUS_CHANGED', booking.id, actor_id, reason_code='ADMIN_REQUEST', to_status=new_status)
             self.db.commit()
         except Exception:
             self.db.rollback()

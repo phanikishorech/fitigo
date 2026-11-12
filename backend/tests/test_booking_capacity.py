@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from app.core.time import ist_today
+from datetime import timedelta
+
 from datetime import date
 import uuid
 
@@ -46,6 +49,7 @@ def test_booking_capacity_and_cancel_releases_capacity():
         gym_svc.submit_for_approval(owner_user_id=owner.id, gym_id=gym.id)
         # force approved for this isolated test (no admin flow here)
         gym.status = "APPROVED"
+        gym.is_active = True  # Submission deliberately disables public booking until approval.
         db.commit()
 
         slot_svc = SlotService(db)
@@ -65,7 +69,7 @@ def test_booking_capacity_and_cancel_releases_capacity():
         # Book 2 -> ok
         r = client.post(
             "/api/v1/bookings",
-            json={"gym_slot_id": slot.id, "slot_date": str(date.today()), "quantity": 2},
+            json={"gym_slot_id": slot.id, "slot_date": str((ist_today() + timedelta(days=1))), "quantity": 2},
             headers={"Authorization": f"Bearer {token}"},
         )
         assert r.status_code == 200
@@ -74,7 +78,7 @@ def test_booking_capacity_and_cancel_releases_capacity():
         # Book 1 more -> should fail
         r2 = client.post(
             "/api/v1/bookings",
-            json={"gym_slot_id": slot.id, "slot_date": str(date.today()), "quantity": 1},
+            json={"gym_slot_id": slot.id, "slot_date": str((ist_today() + timedelta(days=1))), "quantity": 1},
             headers={"Authorization": f"Bearer {token}"},
         )
         assert r2.status_code == 400
@@ -91,7 +95,7 @@ def test_booking_capacity_and_cancel_releases_capacity():
         # Book again -> ok
         r3 = client.post(
             "/api/v1/bookings",
-            json={"gym_slot_id": slot.id, "slot_date": str(date.today()), "quantity": 1},
+            json={"gym_slot_id": slot.id, "slot_date": str((ist_today() + timedelta(days=1))), "quantity": 1},
             headers={"Authorization": f"Bearer {token}"},
         )
         assert r3.status_code == 200

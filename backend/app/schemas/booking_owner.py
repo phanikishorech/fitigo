@@ -3,12 +3,15 @@ from __future__ import annotations
 from datetime import date, datetime, time
 from app.schemas.time import ISTResponse
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
+from typing import Literal
+from app.schemas.booking import CANCELLATION_MESSAGE
 
 
 class OwnerBookingActionRequest(BaseModel):
-    reason: str | None = None
-    note: str | None = None
+    model_config = ConfigDict(extra='forbid')
+    reason: str | None = Field(default=None, max_length=500)
+    note: str | None = Field(default=None, max_length=500)
 
 
 class OwnerBookingCustomer(BaseModel):
@@ -36,6 +39,11 @@ class OwnerBookingPayment(BaseModel):
 
 
 class OwnerBookingResponse(ISTResponse):
+    allowed_actions: list[Literal['CANCEL', 'MARK_ATTENDED', 'MARK_NO_SHOW']] = Field(default_factory=list)
+    action_unavailable_reasons: dict[str, str] = Field(default_factory=dict)
+    cancellation_policy: str = CANCELLATION_MESSAGE
+    refund_initiated: Literal[False] = False
+    cancellation_message: str = CANCELLATION_MESSAGE
     id: int
     gym_id: int
     gym_slot_id: int

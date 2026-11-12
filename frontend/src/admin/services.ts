@@ -8,7 +8,7 @@ export const adminAuthService = {
   login: authService.loginWithPassword,
   logout: logoutSession
 }
-export type DailyReport = { day: string; total_bookings: number; confirmed_bookings: number; cancelled_bookings: number; expired_bookings: number; paid_amount_total: string }
+export type DailyReport = { day: string; total_bookings: number; confirmed_bookings: number; cancelled_bookings: number; expired_bookings: number; paid_amount_total: string; mode?: 'test' | 'live'; currency?: string; date_basis?: string; basis?: string }
 export type ReportFilters = { date_from?: string; date_to?: string; gym_id?: number; limit?: number }
 export const dashboardService = { daily: (params: ReportFilters) => request<DailyReport[]>(`/admin/reports/bookings/daily${query(params)}`) }
 export type AdminGymDetails = Omit<OwnerGymDetails, 'can_submit_for_approval'> & {

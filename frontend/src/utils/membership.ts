@@ -10,6 +10,17 @@ export function membershipOverviewState(records: { status: string }[], summarySt
   if ((summaryStatus === null || nonActive.includes(summaryStatus)) && records.every(record => nonActive.includes(record.status))) return 'none'
   return 'unknown'
 }
+
+// Group only explicit past/inactive statuses. Pending and unknown records stay
+// visible; never infer expiry or access eligibility from dates on the device.
+export function groupMembershipRecords<T extends { status: string }>(records: T[]): { current: T[]; history: T[] } {
+  const current: T[] = []; const history: T[] = []
+  for (const record of records) {
+    if (['EXPIRED', 'CANCELLED', 'INACTIVE', 'NONE'].includes(record.status)) history.push(record)
+    else current.push(record)
+  }
+  return { current, history }
+}
 // Presentation only. No dates, membership counts or expiry arithmetic determine entitlement.
 export function dayPresentation(day: AccessDay): AccessPresentation {
   if (day.status === 'VISITED' || (day.qr_status === 'USED' && !!day.checkin_time)) return 'VISITED'

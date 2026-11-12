@@ -84,6 +84,8 @@ class BookingAccessService:
             return "PAYMENT_NOT_COMPLETED", "Payment is not completed or has been refunded."
         if booking.attendance_status == "ATTENDED":
             return "BOOKING_ALREADY_USED", "This booking has already been used."
+        if booking.attendance_status == "NO_SHOW":
+            return "BOOKING_CLOSED", "This visit was closed as no-show."
         try:
             _, expires = self.window(booking)
         except HTTPException as error:

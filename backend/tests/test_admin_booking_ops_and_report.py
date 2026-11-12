@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from app.core.time import ist_today
+from datetime import timedelta
+
 import uuid
 from datetime import date
 
@@ -63,7 +66,7 @@ def test_admin_can_cancel_booking_and_daily_report_includes_day():
         )
 
         bsvc = BookingService(db)
-        b = bsvc.create_booking(user_id=customer.id, gym_slot_id=slot.id, slot_date=date.today(), quantity=1, notes=None)
+        b = bsvc.create_booking(user_id=customer.id, gym_slot_id=slot.id, slot_date=(ist_today() + timedelta(days=1)), quantity=1, notes=None)
 
         token = create_access_token(str(admin.id))
         rc = client.post(
@@ -79,6 +82,6 @@ def test_admin_can_cancel_booking_and_daily_report_includes_day():
             headers={"Authorization": f"Bearer {token}"},
         )
         assert rr.status_code == 200
-        assert any(row["day"] == str(date.today()) for row in rr.json())
+        assert any(row["day"] == str((ist_today() + timedelta(days=1))) for row in rr.json())
     finally:
         db.close()

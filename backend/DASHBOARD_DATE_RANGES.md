@@ -1,5 +1,11 @@
 # Dashboard date-range contract
 
+## Phase 3 admin financial correction (supersedes older admin revenue descriptions below)
+
+Admin dashboard and daily report paid totals now require a matching, PAID Razorpay/Cashfree checkout in the effective configured payment mode, with a recorded provider payment ID, INR currency, and the same purchasing user/provider as the booking payment. Unlinked legacy, wallet, refunded, partially refunded and review-required records contribute zero. No environment is inferred from order-ID prefixes. Responses disclose mode, currency and scheduled-booking-date basis.
+
+The admin measure remains paid-booking amounts, not earned revenue: cancelled/no-show bookings remain included while paid. Booking counts still cover all modes. Owner purchase-date/check-in recognition is unchanged and must not be equated with this admin measure. Admin `last_30d` now means today and the preceding 29 dates inclusive, excluding future bookings. See `C:/Users/ckishor/.cline/data/workspaces/chat/fitigo/backend/PAYMENT_PHASE3_IMPLEMENTATION.md`.
+
 Both owner and admin dashboard summaries accept inclusive `date_from` and `date_to` ISO dates. Defaults remain today in IST. A complete pair is required when either field is supplied; at most 366 days are allowed. Owner APIs continue to accept legacy `date`, but it cannot be combined with a range.
 
 ## Metrics

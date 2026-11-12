@@ -155,7 +155,7 @@ def mark_attended(
     svc = BookingService(db)
     # reuse owner-mark logic with gym owner id
     owner_id = db.execute(select(Gym.owner_user_id).where(Gym.id == b.gym_id)).scalar_one()
-    svc.owner_mark_attendance(owner_user_id=owner_id, booking_id=booking_id, attendance_status="ATTENDED", note=payload.note)
+    svc.owner_mark_attendance(owner_user_id=owner_id, booking_id=booking_id, attendance_status="ATTENDED", note=payload.note, actor_user_id=current_user.id)
     return {"status": "ok"}
 
 
@@ -175,5 +175,5 @@ def mark_no_show(
 
     svc = BookingService(db)
     owner_id = db.execute(select(Gym.owner_user_id).where(Gym.id == b.gym_id)).scalar_one()
-    svc.owner_mark_attendance(owner_user_id=owner_id, booking_id=booking_id, attendance_status="NO_SHOW", note=payload.note)
+    svc.owner_mark_attendance(owner_user_id=owner_id, booking_id=booking_id, attendance_status="NO_SHOW", note=payload.note, actor_user_id=current_user.id)
     return {"status": "ok"}

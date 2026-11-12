@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from logging.config import fileConfig
+import logging
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
@@ -23,12 +24,17 @@ from app.models import cart  # noqa: F401
 from app.models import wallet  # noqa: F401
 from app.models import access  # noqa: F401
 from app.models import payment_checkout  # noqa: F401
+from app.models import operations  # noqa: F401
+from app.models import notification_delivery  # noqa: F401
+from app.models import support  # noqa: F401
 
 
 config = context.config
 
-if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+if config.config_file_name is not None and not logging.getLogger().handlers:
+    # Embedded migrations must not replace the host's handlers (including test
+    # capture) or disable its loggers. Standalone CLI still gets console logging.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 
 def get_url() -> str:

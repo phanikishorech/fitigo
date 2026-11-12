@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
+import re
+from datetime import date, timedelta
 
 from fastapi.testclient import TestClient
 
@@ -18,9 +19,16 @@ from app.services.slot_service import SlotService
 client = TestClient(app)
 
 
-def test_owner_can_invite_staff_and_staff_can_list_bookings_for_assigned_gym():
+def test_owner_can_invite_staff_and_staff_can_list_bookings_for_assigned_gym(monkeypatch):
     if SessionLocal is None:
         return
+    from app.core.config import settings
+    from app.services import account_delivery
+    monkeypatch.setattr(settings, 'smtp_host', 'smtp.fixture.test')
+    monkeypatch.setattr(settings, 'smtp_from', 'sender@example.com')
+    monkeypatch.setattr(settings, 'public_frontend_url', 'https://app.example.test')
+    mail = []
+    monkeypatch.setattr(account_delivery, 'send_email', lambda *args: mail.append(args))
 
     db = SessionLocal()
     try:
@@ -54,7 +62,8 @@ def test_owner_can_invite_staff_and_staff_can_list_bookings_for_assigned_gym():
             data={"name": "AM", "start_time": "06:00:00", "end_time": "07:00:00", "capacity": 10, "price": "100.00"},
         )
         bsvc = BookingService(db)
-        _ = bsvc.create_booking(user_id=customer.id, gym_slot_id=slot.id, slot_date=date.today(), quantity=1, notes=None)
+        visit_date = date.today()+timedelta(days=1)
+        _ = bsvc.create_booking(user_id=customer.id, gym_slot_id=slot.id, slot_date=visit_date, quantity=1, notes=None)
 
         owner_token = create_access_token(str(owner.id))
         staff_email = f"staff_{uuid.uuid4().hex[:8]}@example.com"
@@ -64,12 +73,14 @@ def test_owner_can_invite_staff_and_staff_can_list_bookings_for_assigned_gym():
             headers={"Authorization": f"Bearer {owner_token}"},
         )
         assert r.status_code == 200
-        staff_user_id = r.json()["staff_user_id"]
-
-        staff_token = create_access_token(str(staff_user_id))
+        token = re.search(r'#token=([A-Za-z0-9_-]+)', mail[-1][2]).group(1)
+        assert client.post('/api/v1/auth/staff-invitations/accept', json={'token': token, 'new_password': 'Staff chosen password 123!'}).status_code == 200
+        login = client.post('/api/v1/auth/login', json={'email': staff_email, 'password': 'Staff chosen password 123!'})
+        assert login.status_code == 200
+        staff_token = login.json()['access_token']
         r2 = client.get(
             f"/api/v1/gym-staff/gyms/{gym.id}/bookings",
-            params={"date": str(date.today())},
+            params={"date": str(visit_date)},
             headers={"Authorization": f"Bearer {staff_token}"},
         )
         assert r2.status_code == 200

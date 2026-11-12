@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import require_role
@@ -30,8 +30,8 @@ def validate_checkin(
     svc_staff = StaffService(db)
     gym = db.get(Gym, payload.gym_id)
     if not (gym and gym.owner_user_id == current_user.id) and int(payload.gym_id) not in set(svc_staff.staff_gym_ids(staff_user_id=current_user.id)):
-        # keep consistent with other staff endpoints
-        return ValidateCheckinFailureResponse(success=False, status="GYM_NOT_ALLOWED", message="Gym not found")
+        raise HTTPException(status_code=403, detail={"code": "GYM_NOT_ALLOWED",
+                            "message": "You are not authorized to check in visitors at this gym."})
 
     svc = AccessService(db)
     try:
@@ -39,8 +39,6 @@ def validate_checkin(
         return ValidateCheckinSuccessResponse(**res)
     except Exception as e:
         # Convert FastAPI HTTPException to structured errors
-        from fastapi import HTTPException
-
         if isinstance(e, HTTPException):
             code = getattr(e, "status_code", 400)
             if code >= 500:

@@ -24,3 +24,18 @@ class GymStaffAssignment(Base):
     role: Mapped[str] = mapped_column(String(30), nullable=False, default="STAFF")
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+
+
+class StaffInvitation(Base):
+    __tablename__ = 'staff_invitations'
+    __table_args__ = (UniqueConstraint('gym_id', 'user_id', name='uq_staff_invitation_gym_user'),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    gym_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('gyms.id'), nullable=False)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('users.id'), nullable=False)
+    owner_user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('users.id'), nullable=False)
+    email: Mapped[str] = mapped_column(String(255), nullable=False)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)

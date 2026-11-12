@@ -98,6 +98,16 @@ def public_detail(detail):
 
 
 async def http_error(request, exc: HTTPException):
+    if exc.status_code == 503 and isinstance(exc.detail, dict) and exc.detail.get('code') in {
+        'ACCOUNT_DELIVERY_UNAVAILABLE', 'ACCOUNT_DELIVERY_FAILED'
+    }:
+        messages = {
+            'ACCOUNT_DELIVERY_UNAVAILABLE': 'Account message delivery is not configured. Contact your FitiGo administrator.',
+            'ACCOUNT_DELIVERY_FAILED': 'The provider did not confirm message acceptance. Try again later or contact your administrator.',
+        }
+        code = exc.detail['code']
+        return JSONResponse(status_code=503, content={'detail': messages[code], 'code': code,
+            'request_id': request_id(request.scope)}, headers={'Cache-Control': 'no-store', 'X-Request-ID': request_id(request.scope)})
     if exc.status_code >= 500:
         log_failure(request.scope, exc)
         return server_error(request.scope, exc.status_code)

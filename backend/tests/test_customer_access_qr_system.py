@@ -21,6 +21,8 @@ from app.services.gym_service import GymService
 from app.services.membership_service import MembershipService
 from app.services.staff_service import StaffService
 from app.services.access_service import AccessService
+from app.core.time import ist_today, ist_day_bounds
+from legacy_access_fixtures import active_membership, assigned_staff
 
 
 client = TestClient(app)
@@ -50,14 +52,11 @@ def _create_gym(db, owner_id: int, name: str) -> Gym:
 def _create_membership(db, *, owner_id: int, customer_id: int, gym: Gym):
     msvc = MembershipService(db)
     plan = msvc.create_plan(owner_user_id=owner_id, gym_id=int(gym.id), data={"name": "Monthly", "duration_days": 30, "price": "999.00"})
-    return msvc.purchase_membership(user_id=customer_id, gym_id=int(gym.id), plan_id=int(plan.id))
+    return active_membership(db, customer_id, gym.id, plan.id)
 
 
 def _invite_staff(db, *, owner_id: int, gym_id: int) -> int:
-    ssvc = StaffService(db)
-    staff_email = f"staff_{uuid.uuid4().hex[:8]}@example.com"
-    invite = ssvc.invite_staff(owner_user_id=owner_id, gym_id=gym_id, email=staff_email, first_name="S", last_name="T")
-    return int(invite["staff_user_id"])
+    return assigned_staff(db, gym_id)
 
 
 def test_concurrent_rotated_tokens_allow_exactly_one_checkin():
@@ -171,9 +170,10 @@ def test_multi_gym_access_daily_one_time_use():
         gym_a = _create_gym(db, owner.id, "Gym A")
         gym_b = _create_gym(db, owner.id, "Gym B")
 
-        # make user multi-gym by owning two active memberships
-        _create_membership(db, owner_id=int(owner.id), customer_id=int(customer.id), gym=gym_a)
-        _create_membership(db, owner_id=int(owner.id), customer_id=int(customer.id), gym=gym_b)
+        # Multi-Gym is now an explicit entitlement, not inferred broad access.
+        gym_a.multi_gym_enabled = gym_b.multi_gym_enabled = True
+        db.commit()
+        active_membership(db, customer.id, multi=True)
 
         staff_a = _invite_staff(db, owner_id=int(owner.id), gym_id=int(gym_a.id))
         staff_b = _invite_staff(db, owner_id=int(owner.id), gym_id=int(gym_b.id))
@@ -222,7 +222,7 @@ def test_paused_day_blocks_qr_generation():
         gym_a = _create_gym(db, owner.id, "Gym A")
         _create_membership(db, owner_id=int(owner.id), customer_id=int(customer.id), gym=gym_a)
 
-        today = datetime.utcnow().date()
+        today = ist_today()
         db.add(AccessPauseDay(user_id=int(customer.id), access_date=today, reason="test", created_at=datetime.utcnow()))
         db.commit()
 
@@ -245,19 +245,18 @@ def test_calendar_marks_visited_and_no_visit():
         customer = _create_user(auth, role=ROLE_CUSTOMER, prefix="cust_c")
 
         gym_a = _create_gym(db, owner.id, "Gym A")
-        _create_membership(db, owner_id=int(owner.id), customer_id=int(customer.id), gym=gym_a)
+        member = _create_membership(db, owner_id=int(owner.id), customer_id=int(customer.id), gym=gym_a)
         _invite_staff(db, owner_id=int(owner.id), gym_id=int(gym_a.id))
 
-        # Insert a USED daily access + checkin for yesterday to force VISITED
-        yesterday = datetime.utcnow().date() - timedelta(days=1)
+        yesterday = ist_today() - timedelta(days=1)
         # Create daily access row directly
         da = CustomerDailyAccess(
             user_id=int(customer.id),
-            membership_id=db.execute(select(CustomerDailyAccess.membership_id)).scalars().first() or 1,
+            membership_id=member.id,
             access_type="SINGLE_GYM",
             gym_id=int(gym_a.id),
             access_date=yesterday,
-            access_key=f"u:{customer.id}|m:1|d:{yesterday.isoformat()}|g:{gym_a.id}",
+            access_key=f"u:{customer.id}|m:{member.id}|d:{yesterday.isoformat()}|g:{gym_a.id}",
             status="USED",
             used_at=datetime.utcnow(),
             used_gym_id=int(gym_a.id),
@@ -266,10 +265,17 @@ def test_calendar_marks_visited_and_no_visit():
             updated_at=datetime.utcnow(),
         )
         db.add(da)
+        db.flush()
+        from app.models.access import AccessQrToken
+        token = AccessQrToken(daily_access_id=da.id, token_hash=uuid.uuid4().hex*2,
+                             expires_at=datetime.utcnow(), status='USED')
+        db.add(token); db.flush()
+        db.add(Checkin(user_id=customer.id, gym_id=gym_a.id, daily_access_id=da.id, qr_token_id=token.id,
+                       membership_id=member.id, status='SUCCESS', checkin_time=ist_day_bounds(yesterday)[0]+timedelta(hours=12)))
         db.commit()
 
         cust_token = create_access_token(str(customer.id))
-        now = datetime.utcnow()
+        now = yesterday
         r_cal = client.get(
             "/api/v1/customer/access-calendar",
             params={"month": now.month, "year": now.year},
@@ -280,5 +286,6 @@ def test_calendar_marks_visited_and_no_visit():
         # Should have a record for yesterday
         y = [d for d in days if d["date"] == yesterday.isoformat()]
         assert y
+        assert y[0]['status'] == 'VISITED' and y[0]['gym_id'] == gym_a.id
     finally:
         db.close()

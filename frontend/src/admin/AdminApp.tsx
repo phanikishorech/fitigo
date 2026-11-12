@@ -8,6 +8,7 @@ import './admin.css'
 
 const Login = lazy(() => import('./Login'))
 const Dashboard = lazy(() => import('./Dashboard'))
+const Analytics = lazy(() => import('./Analytics'))
 const Users = lazy(() => import('./Users'))
 const Gyms = lazy(() => import('./Gyms'))
 const Bookings = lazy(() => import('./Bookings'))
@@ -24,6 +25,7 @@ function Authenticated({ path, route }: { path: string; route: AdminRoute }) {
   const { user, roles } = useIdentity()
   let content
   if (route.page === 'dashboard') content = <Dashboard />
+  else if (route.page === 'analytics') content = <Analytics />
   else if (route.page === 'users' || route.page === 'user') content = <Users id={route.id} />
   else if (['gyms', 'gym', 'review'].includes(route.page)) content = <Gyms id={route.id} review={route.page === 'review'} />
   else if (route.page === 'bookings' || route.page === 'booking') content = <Bookings id={route.id} />

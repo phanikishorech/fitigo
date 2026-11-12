@@ -175,17 +175,6 @@ def list_class_sessions_for_gym_and_date(
     return out
 
 
-def _get_dev_customer_id(db: Session) -> int | None:
-    """Dev-only fallback for demo flows when the frontend isn't sending Authorization yet."""
-
-    import os
-
-    if os.getenv("ENVIRONMENT", "development") != "development":
-        return None
-    u = db.execute(select(User).where(User.email == "customer@example.com")).scalars().first()
-    return int(u.id) if u else None
-
-
 def _has_active_membership(db: Session, *, user_id: int, gym_id: int) -> bool:
     from datetime import datetime
 
@@ -1094,7 +1083,7 @@ def get_gym_booking_options(
     if not gym:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gym not found")
 
-    user_id: int | None = int(current_user.id) if current_user else _get_dev_customer_id(db)
+    user_id: int | None = int(current_user.id) if current_user else None
     included = _has_active_membership(db, user_id=user_id, gym_id=int(gym.id)) if user_id is not None else False
     membership_status = "INCLUDED" if included else "NO_ACTIVE_MEMBERSHIP"
 
@@ -1288,7 +1277,7 @@ def validate_gym_booking(
         )
 
     # Membership eligibility
-    user_id: int | None = int(current_user.id) if current_user else _get_dev_customer_id(db)
+    user_id: int | None = int(current_user.id) if current_user else None
     included = _has_active_membership(db, user_id=user_id, gym_id=int(gym.id)) if user_id is not None else False
 
     # Pricing
@@ -1324,7 +1313,7 @@ def create_access_bookings(
     gym_id: int,
     payload: CreateAccessBookingRequest,
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_optional_user),
+    current_user: User = Depends(require_role({ROLE_CUSTOMER})),
 ):
     """Create one or more visit bookings and (for free bookings) auto-confirm.
 
@@ -1338,9 +1327,7 @@ def create_access_bookings(
     if not gym:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gym not found")
 
-    user_id: int | None = int(current_user.id) if current_user else _get_dev_customer_id(db)
-    if user_id is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
+    user_id = int(current_user.id)
 
     results = []
     svc = BookingService(db)

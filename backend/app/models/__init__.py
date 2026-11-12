@@ -10,3 +10,6 @@ from app.models import class_booking  # noqa: F401
 from app.models import cart  # noqa: F401
 from app.models import wallet  # noqa: F401
 from app.models import access  # noqa: F401
+from app.models import operations  # noqa: F401
+from app.models import notification_delivery  # noqa: F401
+from app.models import support  # noqa: F401

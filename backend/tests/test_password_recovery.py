@@ -11,7 +11,7 @@ from app.core.dependencies import get_current_user, get_optional_user
 from app.core.security import create_access_token, hash_password, verify_password
 from app.database.base import Base
 from app.database.session import get_db
-from app.models.auth import User, Role, UserRole, PasswordResetToken, RefreshToken, AuthRateLimit
+from app.models.auth import User, Role, UserRole, PasswordResetToken, RefreshToken, AuthRateLimit, AccountOtp
 from app.routers.auth import router
 from app.services import password_service
 
@@ -23,7 +23,7 @@ NEW = 'A different Password 456!'
 def api(monkeypatch):
     engine = create_engine('sqlite://', connect_args={'check_same_thread': False}, poolclass=StaticPool)
     metadata = MetaData()
-    for name in ('users','roles','user_roles','refresh_tokens','password_reset_tokens','auth_rate_limits'):
+    for name in ('users','roles','user_roles','refresh_tokens','password_reset_tokens','auth_rate_limits','account_otps','operation_audits','notification_events','notification_preferences','notification_deliveries'):
         table = Base.metadata.tables[name].to_metadata(metadata)
         if 'id' in table.c:
             table.c.id.type = Integer()
@@ -95,7 +95,7 @@ def test_reset_generic_response_hashed_expiring_one_time_and_session_revocation(
     unknown=client.post('/api/v1/auth/forgot-password',json={'email':'unknown@example.com'})
     assert known.status_code==unknown.status_code==200
     assert known.json()==unknown.json()
-    assert len(mail)==1
+    assert len(mail)==2
     token=mail[0][1]
     assert token not in known.text
     with Session(engine) as db:
@@ -119,14 +119,15 @@ def test_expired_reset_and_inactive_account_cannot_change_password(api):
         db.get(User,2).status='INACTIVE';db.commit()
     assert client.post('/api/v1/auth/reset-password',json={'token':mail[0][1],'new_password':NEW}).status_code==400
     assert client.post('/api/v1/auth/forgot-password',json={'email':'user-2@example.com'}).status_code==200
-    assert len(mail)==1
+    assert len(mail)==2
+    assert client.post('/api/v1/auth/reset-password',json={'token':mail[1][1],'new_password':NEW}).status_code==400
     login(client)
 
 
 def test_missing_mail_configuration_reports_unavailable_without_fake_send(api,monkeypatch):
     client,_,mail=api
     monkeypatch.setattr(settings,'smtp_host',None)
-    assert client.get('/api/v1/auth/password-reset/options').json()=={'email_available':False}
+    assert client.get('/api/v1/auth/password-reset/options').json()=={'email_available':False,'expiry_minutes':30}
     assert client.post('/api/v1/auth/forgot-password',json={'email':'user-1@example.com'}).status_code==503
     assert mail==[]
 
@@ -137,6 +138,7 @@ def test_delivery_failure_does_not_expose_account_or_create_valid_token(api,monk
     monkeypatch.setattr(password_service,'send_reset_email',fail)
     a=client.post('/api/v1/auth/forgot-password',json={'email':'user-1@example.com'})
     b=client.post('/api/v1/auth/forgot-password',json={'email':'unknown@example.com'})
+    assert a.status_code==b.status_code==503
     assert a.json()==b.json()
     assert 'private' not in a.text
     with Session(engine) as db:
@@ -190,13 +192,15 @@ def test_smtp_uses_tls_and_fragment_link_without_password(monkeypatch):
         def starttls(self,context): events.append('tls')
         def login(self,*args): events.append('login')
         def send_message(self,message): events.append(message)
-    monkeypatch.setattr(password_service.smtplib,'SMTP',Mail)
+    from app.services import account_delivery
+    from pydantic import SecretStr
+    monkeypatch.setattr(account_delivery.smtplib,'SMTP',Mail)
     monkeypatch.setattr(settings,'smtp_host','smtp.example.com')
     monkeypatch.setattr(settings,'smtp_from','no-reply@example.com')
     monkeypatch.setattr(settings,'password_reset_frontend_url','https://app.example.com/auth/reset-password')
     monkeypatch.setattr(settings,'smtp_security','starttls')
     monkeypatch.setattr(settings,'smtp_username','test')
-    monkeypatch.setattr(settings,'smtp_password','test-only')
+    monkeypatch.setattr(settings,'smtp_password',SecretStr('test-only'))
     password_service.send_reset_email('user-1@example.com','opaque-fixture')
     assert events[:5]==['connect','ehlo','tls','ehlo','login']
     assert '#token=opaque-fixture' in events[-1].get_content()

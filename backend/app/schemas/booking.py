@@ -2,10 +2,15 @@ from __future__ import annotations
 from app.schemas.time import ISTResponse
 
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 from app.schemas.visitors import VisitorName
 from app.models.access import AccessSource
+
+CANCELLATION_MESSAGE = ('Cancellation does not initiate a gateway refund or wallet credit. '
+    'Recorded payment/refund history is preserved. Contact support for a separate refund review; '
+    'a refund is confirmed only when recorded through the payment reconciliation workflow.')
 
 
 class BookingAccessPassStatus(ISTResponse):
@@ -59,6 +64,8 @@ class PaymentResponse(ISTResponse):
 
 
 class BookingResponse(ISTResponse):
+    refund_initiated: Literal[False] = False
+    cancellation_message: str = CANCELLATION_MESSAGE
     visitor_names: list[str] | None = None
     access: BookingAccessResponse
     id: int

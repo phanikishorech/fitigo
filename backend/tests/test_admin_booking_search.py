@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from app.core.time import ist_today
+from datetime import timedelta
+
 import uuid
 from datetime import date
 
@@ -66,7 +69,7 @@ def test_admin_can_search_bookings_by_gym_and_status():
         b = booking_svc.create_booking(
             user_id=customer.id,
             gym_slot_id=slot.id,
-            slot_date=date.today(),
+            slot_date=(ist_today() + timedelta(days=1)),
             quantity=1,
             notes=None,
         )

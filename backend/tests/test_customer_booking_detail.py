@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from app.core.time import ist_today
+from datetime import timedelta
+
 import uuid
 from datetime import date
 
@@ -63,7 +66,7 @@ def test_customer_can_get_own_booking_detail_and_not_others():
         )
 
         bsvc = BookingService(db)
-        b = bsvc.create_booking(user_id=c1.id, gym_slot_id=slot.id, slot_date=date.today(), quantity=1, notes=None)
+        b = bsvc.create_booking(user_id=c1.id, gym_slot_id=slot.id, slot_date=(ist_today() + timedelta(days=1)), quantity=1, notes=None)
 
         t1 = create_access_token(str(c1.id))
         r = client.get(f"/api/v1/bookings/{b.id}", headers={"Authorization": f"Bearer {t1}"})

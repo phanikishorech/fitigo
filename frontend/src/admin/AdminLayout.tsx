@@ -12,11 +12,16 @@ const navigation: { label: string; path: string; icon: IconName }[] = [
   { label: 'Gyms', path: '/admin/gyms', icon: 'gym' },
   { label: 'Bookings', path: '/admin/bookings', icon: 'ticket' },
   { label: 'Membership Plans', path: '/admin/membership-plans', icon: 'bag' },
-  { label: 'Reports', path: '/admin/reports', icon: 'chart' }
+  { label: 'Reports', path: '/admin/reports', icon: 'chart' },
+  { label: 'Analytics', path: '/admin/analytics', icon: 'chart' },
+  { label: 'Support requests', path: '/admin/support', icon: 'help' },
+  { label: 'Readiness checks', path: '/admin/readiness', icon: 'shield' },
+  { label: 'Recorded audit events', path: '/admin/audit-logs', icon: 'shield' },
+  { label: 'Runtime settings', path: '/admin/settings', icon: 'user' }
 ]
 export function Logo() { return <Link to="/admin/dashboard" className="ad-logo"><span className="fg-logo-mark"><Icon name="gym" size={23} /></span><span>Fiti<span>Go</span></span><small>ADMIN</small></Link> }
 export function AdminSidebar({ path, logout }: { path: string; logout: () => void }) {
-  return <><Logo /><div className="ad-nav-caption">WORKSPACE</div><nav aria-label="Admin navigation">{navigation.map(item => <a key={item.path} href={item.path} aria-current={path === item.path || path.startsWith(item.path + '/') || (path === '/admin' && item.label === 'Dashboard') ? 'page' : undefined} onClick={e => { if (!e.ctrlKey && !e.metaKey && !e.shiftKey) { e.preventDefault(); navigate(item.path) } }}><Icon name={item.icon} />{item.label}</a>)}<span className="ad-nav-unavailable" title="Audit logs are not available in the current API"><Icon name="shield" />Audit Logs<small>Planned</small></span></nav><div className="ad-sidebar-bottom"><nav aria-label="Account navigation"><Link to="/admin/profile"><Icon name="user" />Admin Profile</Link><button onClick={logout}><Icon name="logout" />Logout</button></nav><div className="ad-workspace-note"><Icon name="shield" /><span>FitiGo Administration<small>Platform management workspace</small></span></div></div></>
+  return <><Logo /><div className="ad-nav-caption">WORKSPACE</div><nav aria-label="Admin navigation">{navigation.map(item => <a key={item.path} href={item.path} aria-current={path === item.path || path.startsWith(item.path + '/') || (path === '/admin' && item.label === 'Dashboard') ? 'page' : undefined} onClick={e => { if (!e.ctrlKey && !e.metaKey && !e.shiftKey) { e.preventDefault(); navigate(item.path) } }}><Icon name={item.icon} />{item.label}</a>)}</nav><div className="ad-sidebar-bottom"><nav aria-label="Account navigation"><Link to="/admin/profile"><Icon name="user" />Admin Profile</Link><button onClick={logout}><Icon name="logout" />Logout</button></nav><div className="ad-workspace-note"><Icon name="shield" /><span>FitiGo Administration<small>Platform management workspace</small></span></div></div></>
 }
 export function AdminHeader({ user, roles, onMenu }: { user: User; roles: string[]; onMenu: () => void }) {
   const [search, setSearch] = useState(''); const [scope, setScope] = useState('users')

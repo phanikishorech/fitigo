@@ -1,6 +1,6 @@
 // TEST ONLY: backend session fixtures, no real credentials/accounts are changed.
 import assert from 'node:assert/strict'
-const origin='http://localhost:5173',debug='http://localhost:9231'
+const origin=process.env.FITIGO_TEST_ORIGIN||'http://localhost:5173',debug='http://localhost:9231'
 // Separate storage from other open fixture tabs: cross-tab logout is now real behavior.
 const browserInfo=await(await fetch(`${debug}/json/version`)).json()
 const browser=new WebSocket(browserInfo.webSocketDebuggerUrl)
@@ -49,7 +49,7 @@ ws.onmessage=async event=>{
    else if(path==='/api/v1/users/me/roles')body=roles
    else if(path==='/api/v1/gyms/discover')body={gyms:[],page:1,page_size:8,total_count:0,has_more:false}
    else if(['/api/v1/meta/gym-types','/api/v1/facilities','/api/v1/gym-owner/gyms','/api/v1/gym-staff/gyms','/api/v1/admin/gyms','/api/v1/admin/bookings','/api/v1/admin/reports/bookings/daily'].includes(path))body=[]
-   else if(path==='/api/v1/gym-owner/dashboard/summary')body={gym_id:null,date:'2026-10-19',date_from:'2026-10-19',date_to:'2026-10-19',visits:{fitigo_member:0,single_gym_membership:0,individual_booking:0,total:0},gyms:{total:0,approved:0,pending_approval:0,draft:0},bookings:{today:0,on_date:0,upcoming:0,in_period:0,confirmed_in_period:0},revenue:{last_30d:'0.00',in_period:'0.00',currency:'INR'}}
+   else if(path==='/api/v1/gym-owner/dashboard/summary')body={gym_id:null,date:'2026-10-19',date_from:'2026-10-19',date_to:'2026-10-19',generated_at:'2026-10-19T12:00:00+05:30',upcoming_visits:0,visits:{fitigo_member:0,single_gym_membership:0,individual_booking:0,total:0},gyms:{total:0,approved:0,pending_approval:0,draft:0},bookings:{today:0,on_date:0,upcoming:0,in_period:0,confirmed_in_period:0},attendance:{upcoming:0,attended:0,cancelled:0,no_show:0,pending_payment:0,expired:0,unresolved:0},revenue:{mode:'test',last_30d:'0.00',in_period:'0.00',currency:'INR',total:'0.00',single_gym_membership:'0.00',individual_booking:'0.00',fully_refunded_sales:'0.00',partial_refund_count:0,excluded_paid_records:0}}
    else if(path==='/api/v1/admin/dashboard/summary')body={date_from:'2026-10-19',date_to:'2026-10-19',users:{total:0,customers:0,gym_owners:0,in_period:0},gyms:{total:0,pending_approval:0,in_period:0},bookings:{today:0,upcoming:0,in_period:0,confirmed_in_period:0},revenue:{last_30d:'0.00',in_period:'0.00',currency:'INR'}}
    else if(path==='/api/v1/profile')body={user_id:1,full_name:'Same Account',profile_image:null,member_since:user.created_at,membership_status:null}
    else if(path==='/api/v1/auth/password-reset/options')body={email_available:false}

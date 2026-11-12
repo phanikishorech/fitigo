@@ -1,3 +1,4 @@
+from test_database_guard import disposable_name
 """Opt-in concurrent scans in a disposable local MySQL schema; no application writes."""
 import os
 from pathlib import Path
@@ -29,7 +30,7 @@ def mysql_access(monkeypatch):
     from test_booking_access_qr import NOW
     assert settings.environment == "development"
     assert application_engine.url.host in ("localhost", "127.0.0.1", "::1")
-    name = "fitigo_booking_qr_test_" + uuid4().hex[:12]
+    name = disposable_name()
     control = create_engine(application_engine.url.set(database=None), isolation_level="AUTOCOMMIT")
     created, engine = False, None
     try:

@@ -33,6 +33,7 @@ ws.onmessage=async event=>{
     const mode=responseMode;await wait(responseDelay)
     if(mode==='NETWORK'){await command('Fetch.failRequest',{requestId,errorReason:'ConnectionFailed'});return}
     if(mode==='SERVER'){await command('Fetch.fulfillRequest',{requestId,responseCode:500,body:Buffer.from('{"detail":"SQL private failure"}').toString('base64')});return}
+    if(mode==='GYM_NOT_ALLOWED'){await command('Fetch.fulfillRequest',{requestId,responseCode:403,responseHeaders:[{name:'Content-Type',value:'application/json'}],body:Buffer.from(JSON.stringify({detail:{code:'GYM_NOT_ALLOWED',message:'Forbidden'}})).toString('base64')});return}
      body=mode==='CHECKED_IN'?{success:true,status:'CHECKED_IN',customer_name:bookingMode?'David Visitor':'Fixture Member',gym_name:'Scanner Fixture Gym',access_type:bookingMode?'BOOKING_ACCESS':'MULTI_GYM',access_label:bookingMode?'Booking':'FitiGo Multi-Gym',checkin_time:new Date().toISOString()}:mode==='MALFORMED'?{success:true,status:'OK'}:{success:false,status:mode,message:'SQL private failure'}
    }else throw Error(`Unexpected API ${path}`)
    await command('Fetch.fulfillRequest',{requestId,responseCode:200,responseHeaders:[{name:'Content-Type',value:'application/json'}],body:Buffer.from(JSON.stringify(body)).toString('base64')})
@@ -78,7 +79,7 @@ try{
  bookingMode=true;responseMode='CHECKED_IN';await show('GYMACCESS:booking-fixture');await isState('APPROVED')
  assert.equal(await evaluate(`document.querySelector('.ow-scan-overlay').innerText.includes('David Visitor') && document.querySelector('.ow-scan-overlay').innerText.includes('Booking')`),true)
  await isState('SCANNING');bookingMode=false
- for(const code of ['DAILY_ACCESS_ALREADY_CONSUMED','MEMBERSHIP_EXPIRED','MEMBERSHIP_PAUSED','WRONG_GYM','INVALID_QR','BOOKING_CANCELLED','BOOKING_NOT_CONFIRMED','PAYMENT_NOT_COMPLETED','BOOKING_ALREADY_USED','BOOKING_EXPIRED','WRONG_DATE']){
+ for(const code of ['GYM_NOT_ALLOWED','DAILY_ACCESS_ALREADY_CONSUMED','MEMBERSHIP_EXPIRED','MEMBERSHIP_PAUSED','WRONG_GYM','INVALID_QR','BOOKING_CANCELLED','BOOKING_NOT_CONFIRMED','PAYMENT_NOT_COMPLETED','BOOKING_ALREADY_USED','BOOKING_EXPIRED','WRONG_DATE']){
   responseMode=code;await show('GYMACCESS:fixture-'+code);await isState('REJECTED')
   assert.equal(await evaluate(`document.body.innerText.includes('SQL')`),false)
   await isState('SCANNING')

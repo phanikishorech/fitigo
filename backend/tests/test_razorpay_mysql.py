@@ -1,3 +1,4 @@
+from test_database_guard import disposable_name
 """Real row-locking tests in an automatically dropped, isolated MySQL database."""
 import os
 from concurrent.futures import ThreadPoolExecutor
@@ -31,7 +32,7 @@ pytestmark = pytest.mark.skipif(os.getenv('FITIGO_MYSQL_PAYMENT_TESTS') != '1', 
 def database(monkeypatch, request):
     assert application_engine is not None and application_engine.url.host in ('localhost', '127.0.0.1', '::1')
     assert settings.environment == 'development'
-    name = 'fitigo_payment_test_' + uuid4().hex[:12]
+    name = disposable_name()
     control = create_engine(application_engine.url.set(database=None), isolation_level='AUTOCOMMIT')
     engine = None
     created = False
@@ -143,3 +144,46 @@ def test_concurrent_wallet_recharge_is_credited_exactly_once(database):
         result = history(db, uid, 20, 0)
         assert result['total'] == 1
         assert len(result['items'][0]['attempts']) == 1
+
+
+def test_concurrent_current_cart_replacement_creates_only_one_new_order(database):
+    from datetime import date, time, timedelta
+    from app.models.cart import CartItem
+    from app.models.booking import Booking
+    from app.models.gym import GymOperatingHours
+    engine, gateway, uid, membership_source = database
+    def add_item(db, start):
+        row = CartItem(user_id=uid, gym_id=membership_source.gym_id, booking_type='GYM',
+            booking_date=date.today() + timedelta(days=3), preferred_start_time=time(start),
+            preferred_end_time=time(start + 1), member_count=1, visitor_names=['Test Visitor'],
+            price_per_person=100, total_price=100, currency='INR', status='ACTIVE')
+        db.add(row); db.flush()
+        return row.id
+    with Session(engine) as db:
+        db.get(Gym, membership_source.gym_id).gym_price_per_person = 100
+        for day in range(7):
+            db.add(GymOperatingHours(gym_id=membership_source.gym_id, day_of_week=day,
+                open_time=time(0), close_time=time(23, 59), is_closed=False))
+        old_id = add_item(db, 10)
+        db.commit()
+        old = payment_checkout_service.PaymentCheckoutService(db).create(uid,
+            CheckoutCreate(kind='CART', cart_item_ids=[old_id]), 'old-cart')
+    with Session(engine) as db:
+        db.get(Booking, old['booking_ids'][0]).expires_at = datetime.utcnow() - timedelta(minutes=1)
+        item_id = add_item(db, 12)
+        db.commit()
+    source = CheckoutCreate(kind='CART', cart_item_ids=[item_id], confirm_razorpay_replacement=True)
+    barrier = Barrier(2)
+    def create(key):
+        with Session(engine, autoflush=False) as db:
+            barrier.wait(timeout=10)
+            return payment_checkout_service.PaymentCheckoutService(db).create(uid, source, key)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first, second = list(pool.map(create, ['fresh-tab-one', 'fresh-tab-two']))
+    assert first['id'] == second['id'] != old['id']
+    assert gateway.creations == 2
+    if settings.gateway_name == 'CASHFREE':
+        assert sum(request.method == 'PATCH' for request in gateway.calls) == 1
+    with Session(engine) as db:
+        assert db.scalar(select(func.count(PaymentCheckout.id))) == 2
+        assert db.get(PaymentCheckout, old['id']).status == ('CANCELLED' if settings.gateway_name == 'CASHFREE' else 'SUPERSEDED')

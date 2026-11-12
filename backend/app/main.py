@@ -31,8 +31,26 @@ from app.routers.payments import router as payments_router
 
 
 def create_app() -> FastAPI:
+    # Validate even when an ASGI host disables lifespan events.
+    settings.validate_security()
     @asynccontextmanager
     async def lifespan(app):
+        settings.validate_security()
+        if settings.support_workflows_enabled:
+            from sqlalchemy import inspect
+            from app.database.session import engine
+            if not settings.operational_workflows_enabled or engine is None or not {'support_tickets', 'support_messages'} <= set(inspect(engine).get_table_names()):
+                raise RuntimeError('Support requires operational audit and its schema migration before activation.')
+        if settings.notification_workflows_enabled:
+            from sqlalchemy import inspect
+            from app.database.session import engine
+            if engine is None or not {'notification_preferences','notification_deliveries'} <= set(inspect(engine).get_table_names()):
+                raise RuntimeError('Apply notification migration before enabling notification workflows.')
+        if settings.operational_workflows_enabled:
+            from sqlalchemy import inspect
+            from app.database.session import engine
+            if engine is None or not {'operation_audits', 'photo_deletions'} <= set(inspect(engine).get_table_names()):
+                raise RuntimeError('Operational workflow migration must be applied before enabling it.')
         from starlette.concurrency import run_in_threadpool
         from app.services.payment_providers import validate_startup
         await run_in_threadpool(validate_startup)
@@ -81,6 +99,13 @@ def create_app() -> FastAPI:
     app.include_router(customer_access_router, prefix=settings.api_v1_prefix, tags=["Customer Access"])
     app.include_router(checkins_router, prefix=settings.api_v1_prefix, tags=["Check-ins"])
     app.include_router(payments_router, prefix=settings.api_v1_prefix, tags=["Payments"])
+    from app.routers.workflow_capabilities import router as workflow_router
+    app.include_router(workflow_router, prefix=settings.api_v1_prefix, tags=['Workflows'])
+    from app.routers.support_requests import router as support_router, admin_router as admin_support_router
+    app.include_router(support_router, prefix=settings.api_v1_prefix, tags=['Support'])
+    app.include_router(admin_support_router, prefix=settings.api_v1_prefix, tags=['Admin support'])
+    from app.routers.readiness import router as readiness_router
+    app.include_router(readiness_router, prefix=settings.api_v1_prefix, tags=['Admin readiness'])
 
     # Serve local uploads in development.
     backend_dir = Path(__file__).resolve().parents[1]

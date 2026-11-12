@@ -30,6 +30,31 @@ test('Multi-Gym plan destination is recognized and session protected', () => {
   assert.equal(routes.isProtectedRoute(route), true)
 })
 
+test('past memberships are grouped into history without changing their records or order', () => {
+  const records = [{id:1,status:'EXPIRED'}, {id:2,status:'ACTIVE'}, {id:3,status:'CANCELLED'}, {id:4,status:'PAUSED'}, {id:5,status:'INACTIVE'}, {id:6,status:'NONE'}]
+  const before = JSON.stringify(records)
+  const grouped = state.groupMembershipRecords(records)
+  assert.deepEqual(grouped.current.map(r=>r.id),[2,4])
+  assert.deepEqual(grouped.history.map(r=>r.id),[1,3,5,6])
+  assert.equal(JSON.stringify(records),before)
+  assert.equal(grouped.history[0],records[0])
+})
+test('pending and unknown memberships stay visible; device dates do not decide expiry', () => {
+  const records = [{status:'PENDING'}, {status:'NEW_STATUS'}, {status:'ACTIVE',end_at:'2000-01-01'}, {status:'EXPIRED',end_at:'2999-01-01'}]
+  const grouped = state.groupMembershipRecords(records)
+  assert.deepEqual(grouped.current,records.slice(0,3))
+  assert.deepEqual(grouped.history,[records[3]])
+  assert.deepEqual(state.groupMembershipRecords([]),{current:[],history:[]})
+})
+test('membership history is collapsed and historical cards mount only after expansion', () => {
+  const source = readFileSync(new URL('../src/pages/membership/MembershipOverview.tsx',import.meta.url),'utf8')
+  assert.match(source,/const \[expanded, setExpanded\] = useState\(false\)/)
+  assert.match(source,/<details className="fm-membership-history fm-panel"/)
+  assert.match(source,/expanded && <div className="fm-stack fm-history-records"/)
+  assert.match(source,/multi \? current : current.filter/)
+  assert.match(source,/const selected = id \? memberships.find/)
+})
+
 for (const [path, page] of Object.entries({ '/membership/42': 'membershipRecord', '/membership/42/details': 'membershipDetails', '/membership/pause': 'membershipPause', '/membership/gyms': 'membershipGyms', '/gyms': 'membershipGyms', '/gyms/12/visit': 'confirmVisit' })) test(`protected membership route ${path}`, () => { assert.equal(routes.customerRoute(path).page, page); assert.equal(routes.isProtectedRoute(routes.customerRoute(path)), true) })
 test('membership IDs and return paths are validated', () => {
   for (const path of ['/membership/0', '/membership/-1', '/membership/9007199254740992', '/gyms/0/visit', '/membership/1/details/pause']) assert.equal(routes.customerRoute(path).page,'notFound')

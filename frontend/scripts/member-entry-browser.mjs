@@ -22,6 +22,7 @@ function fixture(path) {
   const status = state === 'USED' ? 'ACTIVE' : state
   if (path.endsWith('/profile/membership')) return { membership_id: state === 'NONE' ? null : 1, status, membership_scope: scope, plan_name: 'Fixture Plan', start_date: start, end_date: end, active_gyms: scope === 'SINGLE_GYM' ? [{ gym_id: 42, gym_name: gym.gym_name }] : [], membership_features: [] }
   if (path.endsWith('/memberships/me')) return state === 'NONE' ? [] : [{ id: 1, user_id: 1, gym_id: scope === 'SINGLE_GYM' ? 42 : null, plan_id: 1, membership_type: scope, status, start_at: start, end_at: end, payment_status: 'PAID', payment_provider: 'CASHFREE', terms_snapshot: { name: 'Fixture Plan', duration_value: 1, duration_unit: 'YEAR' } }]
+  if (path.endsWith('/memberships/plans')) return { items: [], checkout_available: false, payment_mode: 'DISABLED', server_time: new Date().toISOString() }
   if (path.endsWith('/customer/access-calendar')) return { access_type: scope, gym: scope === 'SINGLE_GYM' ? { id: 42, name: gym.gym_name } : null, days: [{ date: day, status: 'TODAY', qr_status: state, qr_available: state === 'ACTIVE', gym_name: state === 'USED' ? gym.gym_name : null, checkin_time: state === 'USED' ? '10:00:00' : null }] }
   if (path.endsWith('/memberships/me/1/pause')) return { membership_id: 1, membership_status: status, pause_allowed: false, can_pause: false, max_pause_days: 0, pause_days_used: 0, pause_days_remaining: 0, currently_paused: state === 'PAUSED', current_pause: state === 'PAUSED' ? { end_date: day, resumes_on: '2027-01-01' } : null, history: [], original_end_at: end, current_end_at: end, reason_code: 'PAUSE_NOT_ALLOWED', timezone: 'Asia/Kolkata' }
   if (path.endsWith('/gyms/42/details')) return gym
@@ -57,6 +58,7 @@ try {
     assert.equal(await evaluate('location.pathname+location.search'), '/access/qr?generate=1')
     assert.equal(qrRequests, before + 1)
     await visit('/home', type === 'MULTI_GYM' ? 'You’re a FitiGo member' : 'You’re a member of Assigned Movement Studio'); await widths()
+    assert.equal(await evaluate(`!!document.querySelector('[aria-label="Explore FitiGo membership"]')`), false)
     assert.equal(qrRequests, before + 1)
     assert.equal(await evaluate(`document.querySelector('[aria-label="Your membership access"] a').getAttribute('href')`), '/my-access')
     await evaluate(`document.querySelector('[aria-label="Your membership access"] a').click()`)
@@ -69,12 +71,22 @@ try {
     await visit('/membership', value === 'PAUSED' ? 'Membership Paused' : 'You’ve used your access today.')
     assert.equal(await evaluate(`document.querySelector('main').innerText.includes('Generate Visit QR')`), false)
     await visit('/home', value === 'PAUSED' ? 'Your membership is paused.' : 'You’ve already used today’s access.')
+    assert.equal(await evaluate(`!!document.querySelector('[aria-label="Explore FitiGo membership"]')`), false)
     assert.equal(await evaluate(`document.querySelector('[aria-label="Your membership access"]').innerText.includes('Book a visit today')`), false)
   }
-  state = 'NONE'; await visit('/home', 'Your next workout.')
+  state = 'NONE'; const calendarReads = calls.filter(path => path.endsWith('/customer/access-calendar')).length
+  await visit('/home', 'View FitiGo plans'); await widths()
   await until(`!document.querySelector('[aria-label="Loading membership status"]')`)
   assert.equal(await evaluate(`!!document.querySelector('[aria-label="Your membership access"]')`), false)
+  assert.equal(calls.filter(path => path.endsWith('/customer/access-calendar')).length, calendarReads)
+  assert.equal(await evaluate(`document.querySelector('[aria-label="Explore FitiGo membership"] a').getAttribute('href')`), '/membership/multi-gym/plans')
+  await evaluate(`document.querySelector('[aria-label="Explore FitiGo membership"] a').click()`)
+  await until(`location.pathname==='/membership/multi-gym/plans' && document.body.innerText.includes('Multi-Gym Plans')`)
+  state = 'EXPIRED'; await visit('/home', 'View FitiGo plans')
+  state = 'UNKNOWN'; await visit('/home', 'Unable to check your membership right now')
+  assert.equal(await evaluate(`!!document.querySelector('[aria-label="Explore FitiGo membership"]')`), false)
   state = 'ACTIVE'; fail = true; await visit('/home', 'Unable to check your membership right now')
+  assert.equal(await evaluate(`!!document.querySelector('[aria-label="Explore FitiGo membership"]')`), false)
   fail = false; await evaluate(`Array.from(document.querySelectorAll('main button')).find(b=>b.textContent==='Retry membership status').click()`)
   await until(`!!document.querySelector('[aria-label="Your membership access"]')`)
   assert.equal(qrRequests, before)
@@ -84,6 +96,7 @@ try {
   await visit('/home', 'Your next workout.')
   assert.equal(calls.filter(path => path.endsWith('/profile/membership')).length, reads)
   assert.equal(await evaluate(`!!document.querySelector('[aria-label="Your membership access"]')`), false)
+  assert.equal(await evaluate(`!!document.querySelector('[aria-label="Explore FitiGo membership"]')`), false)
   assert.deepEqual(errors, [])
   console.log('PASS membership/home Single-Gym and Multi-Gym entry, explicit QR generation once, My Access links, paused/used/nonmember/anonymous/error states, 360–1440px')
 } finally { ws.close(); await target.dispose() }

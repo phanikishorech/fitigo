@@ -168,7 +168,9 @@ def test_wrong_gym_date_window_token_and_scanner_authorization(api, monkeypatch)
     booking = create(api, ["David"])
     token = qr(api, booking)[0]["qr_token"]
     assert scan(api, token, gym=2, actor=5)["status"] == "WRONG_GYM"
-    assert scan(api, token, actor=5)["status"] == "GYM_NOT_ALLOWED"
+    denied = api[0].post('/api/v1/checkins/validate', headers=api[1][5], json={'gym_id': 1, 'qr_token': token})
+    assert denied.status_code == 403
+    assert denied.json()['detail']['code'] == 'GYM_NOT_ALLOWED'
     assert scan(api, "GYMACCESS:made-up-token")["status"] == "INVALID_QR"
     assert scan(api, "1")["status"] == "INVALID_QR"
     monkeypatch.setattr(booking_access_service, "utcnow", lambda: NOW - timedelta(days=1))

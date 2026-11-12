@@ -165,7 +165,9 @@ def test_production_and_external_payment_cannot_be_enabled(funded, monkeypatch):
     monkeypatch.setattr(settings,'environment','production')
     assert pay(funded,record).json()['detail']['code']=='WALLET_MVP_DISABLED'
     assert client.get('/api/v1/memberships/plans').json()['checkout_available'] is False
-    assert client.post('/api/v1/wallet/topup',headers=headers[1],json={'amount':'100.00','currency':'INR'}).status_code==403
+    response = client.post('/api/v1/wallet/topup',headers=headers[1],json={'amount':'100.00','currency':'INR'})
+    assert response.status_code == 409
+    assert response.json()['detail'] == 'Use verified gateway checkout to recharge your wallet.'
     assert balances(funded)==(Decimal('5000.00'),0,0)
 
 

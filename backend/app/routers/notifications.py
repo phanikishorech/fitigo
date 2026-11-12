@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -15,22 +15,32 @@ from app.schemas.notification import NotificationEventResponse
 from app.services.notification_service import NotificationService
 
 
-router = APIRouter(prefix="/notifications")
+def no_store(response: Response):
+    response.headers['Cache-Control'] = 'no-store'
+
+
+router = APIRouter(prefix="/notifications", dependencies=[Depends(no_store)])
+from app.routers.notification_inbox import router as inbox_router
+router.include_router(inbox_router)
 
 
 def _to_response(ev: NotificationEvent) -> NotificationEventResponse:
+    from app.services.notification_workflow import TEMPLATES
+    # Legacy payloads were unrestricted. Never echo raw templates/credentials.
+    payload = {}
     try:
-        payload = json.loads(ev.payload_json or "{}")
-    except Exception:
-        payload = {"_raw": ev.payload_json}
+        raw = json.loads(ev.payload_json or '{}')
+        if isinstance(raw, dict):
+            payload = {k:v for k,v in raw.items() if k in {'resource_id','gym_id','booking_id'} and type(v) is int and v>0}
+    except (ValueError, TypeError): pass
 
     return NotificationEventResponse(
         id=ev.id,
         user_id=ev.user_id,
-        event_type=ev.event_type,
+        event_type=ev.event_type if ev.event_type in TEMPLATES else 'LEGACY_EVENT',
         status=ev.status,
         payload=payload,
-        error_message=ev.error_message,
+        error_message='DELIVERY_NOT_CONFIRMED' if ev.error_message else None,
         created_at=ev.created_at,
         sent_at=ev.sent_at,
     )
@@ -40,8 +50,8 @@ def _to_response(ev: NotificationEvent) -> NotificationEventResponse:
 def list_my_events(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-    limit: int = 50,
-    offset: int = 0,
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
 ):
     items = (
         db.execute(
@@ -61,7 +71,7 @@ def list_my_events(
 def list_pending(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role({ROLE_ADMIN, ROLE_SUPER_ADMIN})),
-    limit: int = 50,
+    limit: int = Query(50, ge=1, le=100),
 ):
     svc = NotificationService(db)
     items = svc.list_pending(limit=limit)

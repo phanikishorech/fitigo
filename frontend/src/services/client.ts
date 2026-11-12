@@ -6,6 +6,14 @@ export class ApiError extends Error {
 
 // Only recognized public business codes are exposed; never retain raw error payloads.
 export const accessErrorMessages: Record<string, string> = {
+  RAZORPAY_REPLACEMENT_CONFIRMATION_REQUIRED: 'Your previous Razorpay checkout is unpaid. Confirm below before starting a fresh checkout.',
+  CLASS_HAS_RESERVATIONS: 'No changes saved. Future sessions have bookings or pending payments. Resolve those reservations explicitly first.',
+  CLASS_LINK_RECONCILIATION_REQUIRED: 'This legacy schedule needs a reviewed session link before editing. Contact your administrator; no changes were saved.',
+  SLOT_BOOKING_HISTORY_PROTECTED: 'This slot has booking history. Create a new schedule rather than changing its name or time.',
+  CLASS_INVALID_TIME: 'The changed session must remain in the future and end after it starts.',
+  ACCOUNT_DELIVERY_UNAVAILABLE: 'Account message delivery is not configured. Contact your FitiGo administrator. No message was sent.',
+  ACCOUNT_DELIVERY_FAILED: 'The provider did not confirm message acceptance. Try again later or contact your administrator.',
+  GYM_NOT_ALLOWED: 'You are not authorized to check in visitors at this gym.',
   BOOKING_TIME_PASSED: 'This visit’s start time has passed. Choose a future date and time. No payment was taken.',
   INVALID_BOOKING_TIME: 'Choose a quarter-hour start (00, 15, 30 or 45) for a one-hour visit within opening hours (IST).',
   INVALID_BOOKING_DURATION: 'Gym visits last one hour. Remove this cart item and select a new visit.',
@@ -106,7 +114,9 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const data: unknown = response.status === 204 ? null : await response.json().catch(() => null)
   if (!response.ok) {
     if (response.status === 401 && requestToken === getAccessToken() && !/^\/auth\/(login|logout|email\/verify-otp|mobile\/verify-otp)/.test(path)) clearTokens('expired')
-    const code = response.status !== 401 && response.status < 500 ? publicBusinessCode(data) : undefined
+    const candidate = publicBusinessCode(data)
+    const deliveryCode = response.status === 503 && ['ACCOUNT_DELIVERY_UNAVAILABLE', 'ACCOUNT_DELIVERY_FAILED'].includes(candidate || '')
+    const code = response.status !== 401 && (response.status < 500 || deliveryCode) ? candidate : undefined
     throw new ApiError(code ? accessErrorMessages[code] : safeError(response.status, data && typeof data === 'object' && 'detail' in data ? data.detail : undefined), response.status, code)
   }
   if (data === null && response.status !== 204) throw new ApiError('The server returned an unexpected response. Please try again.', response.status)

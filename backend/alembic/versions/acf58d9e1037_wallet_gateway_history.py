@@ -43,9 +43,11 @@ def upgrade():
 def downgrade():
     if op.get_bind().scalar(sa.text('SELECT COUNT(*) FROM payment_attempts')) or op.get_bind().scalar(sa.text('SELECT COUNT(*) FROM wallet_transactions WHERE checkout_id IS NOT NULL')):
         raise RuntimeError('Reconcile and archive payment attempts and gateway wallet history before downgrade.')
+    if op.get_bind().scalar(sa.text('SELECT COUNT(*) FROM wallet_accounts WHERE payment_mode IS NOT NULL')):
+        raise RuntimeError('Archive and reconcile wallet payment-mode metadata before downgrade.')
     op.drop_table('payment_attempts')
     with op.batch_alter_table('wallet_transactions') as batch:
-        batch.drop_constraint('uq_wallet_transaction_checkout', type_='unique')
         batch.drop_constraint('fk_wallet_transaction_checkout', type_='foreignkey')
+        batch.drop_constraint('uq_wallet_transaction_checkout', type_='unique')
         batch.drop_column('checkout_id')
     op.drop_column('wallet_accounts', 'payment_mode')

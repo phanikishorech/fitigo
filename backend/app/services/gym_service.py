@@ -8,6 +8,7 @@ from sqlalchemy import select, update
 
 from app.models.gym import Gym, GymImage, GymOperatingHours, GymStatusHistory
 from app.repositories.gym_repository import GymRepository
+from app.services.operation_audit import record
 
 
 class GymService:
@@ -92,12 +93,14 @@ class GymService:
             display_order=0,
         )
         self.repo.add_image(img)
+        self.db.flush()
+        record(self.db, 'PHOTO_ADDED', img.id, owner_user_id, gym_id=gym_id)
         self.db.commit()
         self.db.refresh(img)
         return img
 
     def set_cover_image(self, *, owner_user_id: int, gym_id: int, image_id: int) -> GymImage:
-        gym = self.repo.get_owner_gym_by_id(owner_user_id=owner_user_id, gym_id=gym_id)
+        gym = self.db.scalar(select(Gym).where(Gym.id == gym_id, Gym.owner_user_id == owner_user_id).with_for_update())
         if not gym:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gym not found")
 
@@ -109,6 +112,7 @@ class GymService:
 
         self.db.execute(update(GymImage).where(GymImage.gym_id == gym.id).values(is_cover=False))
         img.is_cover = True
+        record(self.db, 'PHOTO_COVER_CHANGED', img.id, owner_user_id, gym_id=gym_id)
         self.db.commit()
         self.db.refresh(img)
         return img
@@ -119,6 +123,18 @@ class GymService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gym not found")
         self.repo.set_gym_facilities(gym_id=gym.id, facility_ids=facility_ids)
         self.db.commit()
+
+    def reorder_images(self, *, owner_user_id: int, gym_id: int, image_ids: list[int]):
+        gym = self.db.scalar(select(Gym).where(Gym.id == gym_id, Gym.owner_user_id == owner_user_id).with_for_update())
+        if not gym: raise HTTPException(404, 'Gym not found')
+        images = list(self.db.scalars(select(GymImage).where(GymImage.gym_id == gym_id).with_for_update()))
+        if len(set(image_ids)) != len(image_ids) or set(image_ids) != {i.id for i in images}:
+            raise HTTPException(409, 'Photo list changed or contains invalid images. Refresh before reordering.')
+        positions = {image_id: index for index, image_id in enumerate(image_ids)}
+        for image in images: image.display_order = positions[image.id]
+        record(self.db, 'PHOTOS_REORDERED', gym_id, owner_user_id)
+        self.db.commit()
+        return {'status': 'ok', 'image_ids': image_ids}
 
     def set_operating_hours(self, *, owner_user_id: int, gym_id: int, items: list[dict]) -> None:
         gym = self.repo.get_owner_gym_by_id(owner_user_id=owner_user_id, gym_id=gym_id)

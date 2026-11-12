@@ -118,6 +118,7 @@ export type OwnerMembershipPlan = {
 
 export type OwnerBooking = {
   allowed_actions?: ('MARK_ATTENDED' | 'MARK_NO_SHOW' | 'CANCEL')[]
+  action_unavailable_reasons?: Record<string, string>
   cancellation_policy?: string
   id: number
   gym_id: number
@@ -310,13 +311,17 @@ export async function listStaff(gymId: number): Promise<StaffAssignment[]> {
   return request(`/gym-owner/gyms/${gymId}/staff`, { cache: 'no-store' })
 }
 
-export async function inviteStaff(gymId: number, payload: { email: string; first_name?: string | null; last_name?: string | null }): Promise<{ status: string; assignment_id: number; staff_user_id: number; temp_password: string | null }> {
+export async function inviteStaff(gymId: number, payload: { email: string; first_name?: string | null; last_name?: string | null }): Promise<{ status: string; invitation_id: string; expires_at: string; delivery_status: string }> {
   return request(`/gym-owner/gyms/${gymId}/staff/invite`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   })
 }
+
+export type StaffInvitation = { id: string; email: string; status: 'PENDING' | 'EXPIRED'; expires_at: string }
+export const listStaffInvitations = (gymId: number) => request<StaffInvitation[]>(`/gym-owner/gyms/${gymId}/staff/invitations`)
+export const revokeStaffInvitation = (gymId: number, id: string) => request(`/gym-owner/gyms/${gymId}/staff/invitations/${encodeURIComponent(id)}`, { method: 'DELETE' })
 
 export async function removeStaff(gymId: number, userId: number): Promise<void> {
   const r = await request<unknown>(`/gym-owner/gyms/${gymId}/staff/${userId}`, { method: 'DELETE' })

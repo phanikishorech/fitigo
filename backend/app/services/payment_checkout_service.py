@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.time import IST, as_ist
 from app.models.auth import User
 from app.models.booking import Booking, Payment
 from app.models.cart import CartItem
@@ -79,16 +80,32 @@ class PaymentCheckoutService:
         elif kind == "MULTI_GYM":
             source = f"multi:{payload.order_id}"
         elif kind == "CART":
+            if payload.cart_item_ids is not None:
+                return self.create_current_cart(user_id, payload.cart_item_ids, key, payload.confirm_razorpay_replacement)
+            from app.services.class_sync_service import lock_cart_class_gyms
+            lock_cart_class_gyms(self.db, user_id)
             same_request = self.db.scalar(select(PaymentCheckout).where(PaymentCheckout.user_id == user_id,
                 PaymentCheckout.source_key == f"cart-request:{key}"))
             if same_request:
                 self.db.commit()
                 return self.start(same_request.id, user_id)
             pending = self.db.scalar(select(PaymentCheckout).where(PaymentCheckout.user_id == user_id,
-                PaymentCheckout.kind == "CART", PaymentCheckout.status.not_in(["PAID", "REFUNDED", "CANCELLED", "REVIEW_REQUIRED"])).order_by(PaymentCheckout.created_at.desc()))
+                PaymentCheckout.kind == "CART", PaymentCheckout.status.not_in(["PAID", "REFUNDED", "CANCELLED", "REVIEW_REQUIRED", "SUPERSEDED"])).order_by(PaymentCheckout.created_at.desc()))
             if pending:
                 self.db.commit()
                 return self.start(pending.id, user_id)
+            # Historical local cancellations did not close gateway orders. Never
+            # use those records as permission to silently charge a replacement.
+            for previous in self.db.scalars(select(PaymentCheckout).where(
+                    PaymentCheckout.user_id == user_id, PaymentCheckout.kind == "CART",
+                    PaymentCheckout.status == "CANCELLED").order_by(PaymentCheckout.created_at.desc())):
+                if not (previous.checkout_data or {}).get("replacement_safe", False):
+                    result = self.reconcile(previous.id, user_id, commit=False)
+                    if previous.status != "CANCELLED" or not (previous.checkout_data or {}).get("replacement_safe", False):
+                        self.db.commit()
+                        return result
+            # Reconciliation can bind the service to an older provider.
+            self.gateway = get_provider()
             items = self.db.scalars(select(CartItem).where(CartItem.user_id == user_id, CartItem.status == "ACTIVE").order_by(CartItem.id).with_for_update()).all()
             if not items:
                 raise HTTPException(409, detail="Cart is empty. Check My Bookings for a completed purchase.")
@@ -152,7 +169,7 @@ class PaymentCheckoutService:
             self.membership_eligible(user_id, terms)
         checkout = PaymentCheckout(id=str(uuid4()), user_id=user_id, source_key=source, kind=kind,
             provider=self.gateway.name, mode=settings.gateway_mode, key_id=self.gateway.key_id,
-            amount=0, currency="INR", snapshot=terms, status="CREATED")
+            amount=0, currency="INR", snapshot=terms, status="CREATED", created_at=datetime.utcnow())
         self.db.add(checkout)
         self.db.flush()
         if kind == "CART":
@@ -176,6 +193,112 @@ class PaymentCheckoutService:
         if checkout.currency != "INR" or minor(checkout.amount) < 0:
             raise HTTPException(409, detail="This checkout supports INR only")
         self.gateway.validate_purchase(checkout, customer)
+        self.db.commit()
+        return self.start(checkout.id, user_id)
+
+    def create_current_cart(self, user_id, item_ids, key, confirm_razorpay_replacement=False):
+        """Explicit current-cart checkout. Hold the user lock across recovery.
+
+        Never return an unrelated old order as the payment for this cart. No GET
+        endpoint invokes this path; provider closure requires the buyer's POST.
+        """
+        from app.services.class_sync_service import lock_cart_class_gyms
+        from app.routers.cart import _validate_checkout_times
+        customer = self.lock_user(user_id)
+        lock_cart_class_gyms(self.db, user_id)
+        requested = set(item_ids)
+        same = self.db.scalar(select(PaymentCheckout).where(PaymentCheckout.user_id == user_id,
+            PaymentCheckout.source_key == f"cart-request:{key}"))
+        if same:
+            if set(same.snapshot.get('cart_item_ids', [])) != requested:
+                raise HTTPException(409, 'Idempotency key belongs to another cart. Reload the cart.')
+            self.db.commit()
+            return self.start(same.id, user_id)
+        rows = list(self.db.scalars(select(CartItem).where(CartItem.user_id == user_id,
+            CartItem.id.in_(item_ids)).order_by(CartItem.id).with_for_update()))
+        if len(rows) != len(requested):
+            raise HTTPException(409, 'Your cart changed. Reload it before paying.')
+        # A double-click/different tab may already have consumed these exact
+        # items. Resume only that purchase, never make another one for them.
+        linked = {item.checkout_id for item in rows}
+        if len(linked) == 1 and None not in linked:
+            same = self.db.get(PaymentCheckout, next(iter(linked)))
+            if same and same.user_id == user_id and set(same.snapshot.get('cart_item_ids', [])) == requested:
+                self.db.commit()
+                return self.start(same.id, user_id)
+        active = list(self.db.scalars(select(CartItem).where(CartItem.user_id == user_id,
+            CartItem.status == 'ACTIVE').order_by(CartItem.id).with_for_update()))
+        if {item.id for item in active} != requested:
+            raise HTTPException(409, 'Your cart changed. Reload it to review the current items and total.')
+        _validate_checkout_times(self.db, active)
+        superseded = []
+        predecessor_ids = []
+        old_orders = list(self.db.scalars(select(PaymentCheckout).where(PaymentCheckout.user_id == user_id,
+            PaymentCheckout.kind == 'CART', PaymentCheckout.status.not_in(['PAID', 'REFUNDED', 'REVIEW_REQUIRED']))
+            .order_by(PaymentCheckout.created_at).with_for_update()))
+        for old in old_orders:
+            if old.status == 'CANCELLED' and (old.checkout_data or {}).get('replacement_safe'):
+                continue
+            result = self.reconcile(old.id, user_id, commit=False)
+            if old.status in {'PAID', 'REFUNDED', 'REVIEW_REQUIRED'}:
+                self.db.commit()
+                raise HTTPException(409, 'A previous payment was recovered. Review payment history before purchasing again.')
+            if (old.checkout_data or {}).get('payment_processing') or old.status == 'CREATING':
+                self.db.commit()
+                raise HTTPException(409, 'A previous payment is processing or unverified. No new checkout was created. Check payment history and try again once it resolves.')
+            if old.status == 'SUPERSEDED':
+                if not (old.checkout_data or {}).get('supersession_eligible'):
+                    self.db.commit()
+                    raise HTTPException(409, 'An earlier replaced order has unresolved payment activity. Check payment history before paying again.')
+                predecessor_ids.append(old.id)
+                continue
+            eligible = old.status in {'FAILED', 'CANCELLED'} or result['payment_blocked_reason'] in {
+                'BOOKING_EXPIRED', 'BOOKING_UNAVAILABLE', 'GATEWAY_UNAVAILABLE'}
+            if not eligible:
+                self.db.commit()
+                raise HTTPException(409, 'Another checkout is still available for payment. Review it in payment history before starting a different purchase.')
+            if old.provider == 'RAZORPAY':
+                if not (old.checkout_data or {}).get('supersession_eligible'):
+                    self.db.commit()
+                    raise HTTPException(409, 'The previous payment history is incomplete or unresolved. No new checkout was created. Refresh payment history before paying again.')
+                if not confirm_razorpay_replacement:
+                    self.db.commit()
+                    raise HTTPException(409, detail={'code': 'RAZORPAY_REPLACEMENT_CONFIRMATION_REQUIRED',
+                        'message': 'Confirm replacement of the previous unpaid Razorpay checkout.'})
+                superseded.append(old)
+                continue
+            if not (old.checkout_data or {}).get('replacement_safe'):
+                if not old.gateway_order_id:
+                    self.db.commit()
+                    raise HTTPException(409, 'Previous order creation is unresolved. No new payment was started.')
+                order = self.gateway.terminate_order(old.gateway_order_id)
+                self.check_order(old, order)
+                self.db.flush()
+                self.reconcile(old.id, user_id, commit=False)
+            if old.status in {'PAID', 'REFUNDED', 'REVIEW_REQUIRED'} or not (old.checkout_data or {}).get('replacement_safe'):
+                self.db.commit()
+                raise HTTPException(409, 'The previous gateway order is still closing or a payment was detected. No new checkout was created. Try again after checking payment history.')
+            if old.status != 'CANCELLED':
+                self.close_unpaid(old)
+                self.db.flush()
+        # Reconciliation binds to the old provider, not the new configured one.
+        self.gateway = get_provider()
+        checkout = PaymentCheckout(id=str(uuid4()), user_id=user_id, source_key=f'cart-request:{key}',
+            kind='CART', provider=self.gateway.name, mode=settings.gateway_mode, key_id=self.gateway.key_id,
+            amount=0, currency='INR', snapshot={}, status='CREATED', created_at=datetime.utcnow())
+        self.db.add(checkout); self.db.flush()
+        self.prepare_cart(checkout, active)
+        self.gateway.validate_purchase(checkout, customer)
+        if superseded or predecessor_ids:
+            checkout.snapshot = {**checkout.snapshot, 'replaces_checkout_ids': predecessor_ids + [old.id for old in superseded]}
+            for old in superseded:
+                # Local retirement is NOT gateway cancellation. Keep the order,
+                # attempts and amounts available for late-event reconciliation.
+                self.close_unpaid(old)
+                old.status = 'SUPERSEDED'
+                old.checkout_data = {**old.checkout_data, 'replacement_safe': False}
+                old.snapshot = {**old.snapshot, 'superseded_by': checkout.id,
+                    'replacement_acknowledged_at': datetime.utcnow().isoformat() + 'Z'}
         self.db.commit()
         return self.start(checkout.id, user_id)
 
@@ -224,13 +347,24 @@ class PaymentCheckoutService:
         checkout.amount = total
         checkout.snapshot = {"cart_item_ids": [item.id for item in items]}
 
-    def valid_booking(self, booking):
-        if booking.status != "PENDING_PAYMENT" or booking.expires_at < datetime.utcnow():
+    def valid_booking(self, booking, *, checkout_started_at=None):
+        if booking.status != "PENDING_PAYMENT" or booking.expires_at <= datetime.utcnow():
             raise HTTPException(409, detail="Booking cancelled, expired or no longer pending")
         slot, gym = self.db.get(GymSlot, booking.gym_slot_id), self.db.get(Gym, booking.gym_id)
         if not slot or not gym or gym.status != "APPROVED" or not gym.is_active:
             raise HTTPException(409, detail="Booking is unavailable")
-        require_future_start(booking.slot_date, slot.start_time)
+        if checkout_started_at is None:
+            require_future_start(booking.slot_date, slot.start_time)
+        else:
+            # Purchase eligibility is checked before launching the gateway. A
+            # captured in-flight payment may arrive just after the visit starts;
+            # keep the original payment deadline and never extend the visit.
+            start = datetime.combine(booking.slot_date, slot.start_time, tzinfo=IST)
+            end = datetime.combine(booking.slot_date, slot.end_time, tzinfo=IST)
+            if end <= start:
+                end += timedelta(days=1)
+            if as_ist(checkout_started_at) >= start or as_ist(datetime.utcnow()) >= end:
+                raise HTTPException(409, detail="Visit was unavailable when checkout started or has ended")
 
     def check_order(self, checkout, order):
         check_order(checkout, order)
@@ -238,6 +372,15 @@ class PaymentCheckoutService:
 
     def start(self, checkout_id, user_id):
         checkout = self.owned(checkout_id, user_id)
+        if checkout.status in {'CREATED', 'CREATING', 'PENDING', 'FAILED'}:
+            for old_id in checkout.snapshot.get('replaces_checkout_ids', []):
+                previous = self.reconcile(old_id, user_id, commit=False)
+                old = self.db.get(PaymentCheckout, old_id)
+                if previous['status'] != 'SUPERSEDED' or not (old.checkout_data or {}).get('supersession_eligible'):
+                    self.db.commit()
+                    raise HTTPException(409, 'An earlier order has new or unresolved payment activity. Do not pay again. Review payment history.')
+            self.db.flush()
+            checkout = self.owned(checkout_id, user_id)
         if checkout.status == "CREATED":
             if minor(checkout.amount) == 0:
                 self.fulfill(checkout, None)
@@ -269,6 +412,10 @@ class PaymentCheckoutService:
             order = self.gateway.order(checkout.gateway_order_id)
             self.check_order(checkout, order)
             payments = self.gateway.payments(checkout.gateway_order_id, payment_id)
+            checkout.checkout_data = {**(checkout.checkout_data or {}),
+                "payment_processing": any(p.status == "PENDING" for p in payments),
+                "replacement_safe": bool(order.checkout_data.get("closed_unpaid")) and not order.paid
+                    and all(p.status == "FAILED" and not p.refunded for p in payments)}
             verified = []
             mismatched = []
             for payment in payments:
@@ -293,6 +440,21 @@ class PaymentCheckoutService:
                     # Do not erase verified success/refund with an older failure.
                     if Decimal(payment.refunded) / 100 >= attempt.refunded_amount:
                         attempt.status, attempt.refunded_amount = state, Decimal(payment.refunded) / 100
+            # A temporarily incomplete provider response must not erase earlier
+            # evidence of processing/paid funds and authorize another purchase.
+            self.db.flush()
+            observed = list(self.db.scalars(select(PaymentAttempt).where(PaymentAttempt.checkout_id == checkout.id)))
+            checkout.checkout_data = {**checkout.checkout_data,
+                "payment_processing": any(p.status == "PENDING" for p in observed),
+                "replacement_safe": checkout.checkout_data["replacement_safe"]
+                    and all(p.status == "FAILED" and not p.refunded_amount for p in observed)}
+            expected = order.checkout_data.get('expected_attempts')
+            checkout.checkout_data = {**checkout.checkout_data,
+                'supersession_eligible': checkout.provider == 'RAZORPAY'
+                    and bool(order.checkout_data.get('unpaid_verified'))
+                    and type(expected) is int and expected >= 0
+                    and expected == len({p.id for p in payments})
+                    and all(p.status == 'FAILED' and not p.refunded_amount for p in observed)}
             captured = next((p for p in verified if p.status == "SUCCESS" and not p.refunded), None)
             refunded = next((p for p in verified if (not checkout.gateway_payment_id or p.id == checkout.gateway_payment_id)
                 and p.refunded > 0), None)
@@ -323,7 +485,7 @@ class PaymentCheckoutService:
                 # Order is paid but payments may be temporarily incomplete. Do
                 # not let the browser cancel/recharge an already paid order.
                 checkout.status, checkout.failure_code = 'REVIEW_REQUIRED', 'PAID_ORDER_PAYMENT_UNAVAILABLE'
-            elif checkout.status not in {"PAID", "REVIEW_REQUIRED", "REFUNDED", "CANCELLED"}:
+            elif checkout.status not in {"PAID", "REVIEW_REQUIRED", "REFUNDED", "CANCELLED", "SUPERSEDED"}:
                 checkout.status = "PENDING" if any(p.status == "PENDING" for p in verified) else "FAILED" if verified or not order.payable else "PENDING"
                 for payment in self.db.scalars(select(Payment).join(Booking, Booking.id == Payment.booking_id)
                     .where(Booking.checkout_id == checkout.id, Booking.status == "PENDING_PAYMENT")):
@@ -340,7 +502,7 @@ class PaymentCheckoutService:
     def fulfill(self, checkout, payment_id):
         if checkout.status == "PAID":
             return
-        if checkout.status == "CANCELLED":
+        if checkout.status in {"CANCELLED", "SUPERSEDED"}:
             raise HTTPException(409, detail="Checkout was cancelled")
         if checkout.kind == 'WALLET_TOPUP':
             if not payment_id:
@@ -368,7 +530,7 @@ class PaymentCheckoutService:
             if not bookings or sum(Decimal(str(b.total_price)) for b in bookings) != checkout.amount:
                 raise HTTPException(409, detail="Booking totals changed")
             for booking in bookings:
-                self.valid_booking(booking)
+                self.valid_booking(booking, checkout_started_at=checkout.created_at)
                 # Cart sources are server-linked records. Customer-supplied
                 # booking notes must never decide which class capacity to debit.
                 item = None
@@ -403,23 +565,66 @@ class PaymentCheckoutService:
             membership.status, membership.payment_status = "CANCELLED", "REFUNDED" if full else "PARTIALLY_REFUNDED"
 
     def present(self, checkout):
-        bookings = list(self.db.scalars(select(Booking.id).where(Booking.checkout_id == checkout.id)))
+        bookings = list(self.db.scalars(select(Booking).where(Booking.checkout_id == checkout.id).order_by(Booking.id)))
         membership = self.db.scalar(select(UserMembership.id).where(UserMembership.gateway_checkout_id == checkout.id))
-        can_pay = checkout.status in {"PENDING", "FAILED"} and bool(checkout.gateway_order_id) and (checkout.checkout_data or {}).get("payable", True)
-        if can_pay and bookings:
-            can_pay = all(b.status == "PENDING_PAYMENT" and b.expires_at > datetime.utcnow() for b in self.db.scalars(select(Booking).where(Booking.checkout_id == checkout.id)))
+        data = checkout.checkout_data or {}
+        reason = None
+        if checkout.status not in {"PENDING", "FAILED"}:
+            reason = "ORDER_UNRESOLVED" if checkout.status == "CANCELLED" and not data.get("replacement_safe") else checkout.status
+        elif data.get("payment_processing"):
+            reason = "PAYMENT_PROCESSING"
+        elif bookings and any(b.expires_at <= datetime.utcnow() for b in bookings):
+            reason = "BOOKING_EXPIRED"
+        elif bookings and any(b.status != "PENDING_PAYMENT" for b in bookings):
+            reason = "BOOKING_UNAVAILABLE"
+        elif not checkout.gateway_order_id:
+            reason = "ORDER_UNRESOLVED"
+        elif not data.get("payable", True):
+            reason = "GATEWAY_UNAVAILABLE"
+        elif checkout.provider == "CASHFREE" and not data.get("payment_session_id"):
+            reason = "SESSION_UNAVAILABLE"
+        if reason is None:
+            for booking in bookings:
+                try:
+                    self.valid_booking(booking)
+                except HTTPException:
+                    reason = "BOOKING_UNAVAILABLE"
+                    break
+        can_cancel = checkout.status in {"CREATED", "CREATING", "PENDING", "FAILED"} and (
+            (checkout.status == "CREATED" and not checkout.gateway_order_id) or bool(data.get("replacement_safe")))
+        items = []
+        for booking in bookings:
+            slot, gym = self.db.get(GymSlot, booking.gym_slot_id), self.db.get(Gym, booking.gym_id)
+            items.append({"booking_id": booking.id, "gym_name": gym.name if gym else "Gym visit",
+                "booking_date": str(booking.slot_date), "start_time": str(slot.start_time) if slot else None,
+                "quantity": booking.quantity, "amount": str(booking.total_price), "currency": booking.currency})
+        deadline = min((b.expires_at for b in bookings), default=None)
         return {"id": checkout.id, "kind": checkout.kind, "status": checkout.status, "mode": checkout.mode, "amount": str(checkout.amount),
             "amount_minor": minor(checkout.amount), "currency": checkout.currency, "provider": checkout.provider,
             "environment": "sandbox" if checkout.mode == "test" else "production",
-            "gateway_order_id": checkout.gateway_order_id, "booking_ids": bookings, "membership_id": membership,
+            "gateway_order_id": checkout.gateway_order_id, "booking_ids": [b.id for b in bookings], "membership_id": membership,
             **get_provider(checkout.provider).checkout_info(checkout),
-            "can_pay": can_pay, "failure_code": checkout.failure_code}
+            "can_pay": reason is None, "failure_code": checkout.failure_code, "payment_blocked_reason": reason,
+            "payment_expires_at": deadline.isoformat() + "Z" if deadline else None,
+            "can_cancel": can_cancel, "replacement_safe": bool(data.get("replacement_safe")),
+            "cart_item_ids": checkout.snapshot.get("cart_item_ids", []), "items": items}
 
     def cancel(self, checkout_id, user_id):
         self.reconcile(checkout_id, user_id)
         checkout = self.owned(checkout_id, user_id)
         if checkout.status in {"PAID", "REVIEW_REQUIRED", "REFUNDED"}:
             return self.present(checkout)
+        if checkout.status == "CANCELLED":
+            return self.present(checkout)
+        if not self.present(checkout)["can_cancel"]:
+            raise HTTPException(409, detail="The original gateway order is still active, processing or unverified. Refresh payment status or contact support. Do not start another payment.")
+        self.close_unpaid(checkout)
+        self.db.commit()
+        return self.present(checkout)
+
+    def close_unpaid(self, checkout):
+        """Local close only after the caller verifies closure; no commit/unlock."""
+        checkout.checkout_data = {**(checkout.checkout_data or {}), "replacement_safe": True}
         checkout.status = "CANCELLED"
         for booking in self.db.scalars(select(Booking).where(Booking.checkout_id == checkout.id).with_for_update()):
             if booking.status == "PENDING_PAYMENT":
@@ -436,8 +641,6 @@ class PaymentCheckoutService:
                 BookingAccessService(self.db).revoke(booking)
         for item in self.db.scalars(select(CartItem).where(CartItem.checkout_id == checkout.id)):
             item.status = "REMOVED"
-        self.db.commit()
-        return self.present(checkout)
 
     def webhook(self, raw: bytes, signature: str, event_id: str = "", provider="RAZORPAY", timestamp=""):
         require_gateway(provider)
@@ -462,7 +665,7 @@ class PaymentCheckoutService:
         if previous:
             if previous.body_hash != digest:
                 raise HTTPException(409, detail="Webhook event ID conflict")
-            if checkout.status in {"CREATING", "PENDING", "FAILED"}:
+            if checkout.status in {"CREATING", "PENDING", "FAILED", "SUPERSEDED"}:
                 self.reconcile(checkout.id, checkout.user_id)
             return {"status": "duplicate"}
         if not checkout.gateway_order_id:

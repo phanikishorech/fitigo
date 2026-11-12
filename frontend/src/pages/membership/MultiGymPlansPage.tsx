@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { paymentInstructions } from '../../utils/paymentInstructions'
 import { Alert, Button, Heading } from '../../components/common/UI'
 import { MembershipBack, MembershipNotice } from '../../components/membership/MembershipUI'
 import { MembershipPlanCard, PlanEmptyState, PlanErrorState, PlanSkeleton } from '../../components/membership/MembershipPlanCard'
@@ -21,7 +22,7 @@ export default function MultiGymPlansPage() {
   })
   return <div className="fm-page"><MembershipBack /><Heading title="Multi-Gym Plans" subtitle="One membership. Multiple gyms." />
     {result.loading ? <PlanSkeleton /> : result.error ? <PlanErrorState message={result.error} retry={result.retry} /> : !result.data?.items.length ? <PlanEmptyState /> : <>
-      <MembershipNotice>{result.data.checkout_available ? 'Controlled MVP: pay using wallet test credits only. No real-money or external payment is taken. Choosing a plan opens checkout for review.' : 'Membership checkout is unavailable in this environment. External payments remain disabled.'}</MembershipNotice>
+      <MembershipNotice>{paymentInstructions(result.data)}</MembershipNotice>
       {mutation.error && <Alert>{mutation.error} <Button variant="text" onClick={result.retry}>Refresh plans</Button></Alert>}
       <div className="fm-plan-grid">{result.data.items.map(plan => <MembershipPlanCard key={plan.id} plan={plan}><Button className="fm-full" disabled={mutation.pending} onClick={() => choose(plan.id)} aria-label={`Choose Plan: ${plan.name}`}>{mutation.pending ? 'Preparing review…' : 'Choose Plan'}</Button></MembershipPlanCard>)}</div>
     </>}

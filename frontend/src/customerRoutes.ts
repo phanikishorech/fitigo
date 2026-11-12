@@ -1,7 +1,7 @@
 export type CustomerRoute =
   | { page: 'home' | 'explore' | 'location' | 'cart' | 'checkout' | 'wallet' | 'recharge' | 'bookings' | 'membership' | 'membershipCheckout' | 'membershipSuccess' | 'profile' | 'access' | 'calendar' | 'history' | 'visits' | 'reviews' | 'settings' | 'auth' | 'staff' | 'notFound' }
   | { page: 'gym' | 'bookingAccess' | 'bookingSchedule' | 'plans' | 'bookingDetail' | 'bookingSuccess' | 'review' | 'membershipRecord' | 'membershipDetails' | 'confirmVisit'; id: number }
-  | { page: 'membershipPause' | 'membershipGyms' | 'multiGymPlans' | 'forgotPassword' | 'resetPassword' | 'payments' }
+  | { page: 'membershipPause' | 'membershipGyms' | 'multiGymPlans' | 'forgotPassword' | 'resetPassword' | 'staffInvitation' | 'payments' }
 
 export function customerRoute(path: string): CustomerRoute {
   const normalized = path.replace(/\/+$/, '') || '/'
@@ -13,6 +13,7 @@ export function customerRoute(path: string): CustomerRoute {
     '/membership/multi-gym/plans': 'multiGymPlans',
     '/profile/payments': 'payments',
     '/auth/forgot-password': 'forgotPassword', '/auth/reset-password': 'resetPassword',
+    '/auth/accept-invitation': 'staffInvitation',
     '/membership/checkout': 'membershipCheckout', '/membership/success': 'membershipSuccess', '/profile': 'profile',
     '/access/qr': 'access', '/my-access': 'access', '/profile/access/today': 'access', '/profile/access': 'calendar',
     '/profile/history': 'history', '/profile/visits': 'visits', '/profile/reviews': 'reviews', '/settings': 'settings',
@@ -29,10 +30,10 @@ export function customerRoute(path: string): CustomerRoute {
   return { page: 'notFound' }
 }
 export function isProtectedRoute(route: CustomerRoute) {
-  return !['home', 'explore', 'location', 'gym', 'bookingAccess', 'bookingSchedule', 'plans', 'auth', 'forgotPassword', 'resetPassword', 'notFound'].includes(route.page)
+  return !['home', 'explore', 'location', 'gym', 'bookingAccess', 'bookingSchedule', 'plans', 'auth', 'forgotPassword', 'resetPassword', 'staffInvitation', 'notFound'].includes(route.page)
 }
 export function safeReturnTo(value: string | null | undefined) {
   if (!value || !value.startsWith('/') || value.startsWith('//') || /[\\\r\n]/.test(value)) return '/home'
   const route = customerRoute(value.split(/[?#]/)[0])
-  return ['auth', 'forgotPassword', 'resetPassword', 'notFound', 'staff'].includes(route.page) ? '/home' : value
+  return ['auth', 'forgotPassword', 'resetPassword', 'staffInvitation', 'notFound', 'staff'].includes(route.page) ? '/home' : value
 }

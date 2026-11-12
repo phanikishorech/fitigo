@@ -20,9 +20,9 @@ from app.schemas.gym import GymResponse
 def api():
     engine = create_engine('sqlite://', connect_args={'check_same_thread': False}, poolclass=StaticPool)
     metadata = MetaData()
-    for name in ('users', 'roles', 'user_roles', 'gyms', 'gym_status_history', 'gym_images', 'gym_facilities', 'gym_facility_mapping', 'gym_operating_hours'):
+    for name in ('users', 'roles', 'user_roles', 'gyms', 'gym_status_history', 'gym_images', 'gym_facilities', 'gym_facility_mapping', 'gym_operating_hours', 'notification_events', 'notification_preferences', 'notification_deliveries'):
         table = Base.metadata.tables[name].to_metadata(metadata)
-        table.c.id.type = Integer()
+        if 'id' in table.c: table.c.id.type = Integer()
     metadata.create_all(engine)
     with Session(engine) as db:
         db.add(Role(id=1, name='GYM_OWNER'))

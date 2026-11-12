@@ -28,11 +28,11 @@ export default defineConfig(() => ({
     allowedHosts: ['increase-eminem-alexandria-proceedings.trycloudflare.com'],    
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://127.0.0.1:8001',
         changeOrigin: true
       },
       '/uploads': {
-        target: 'http://localhost:8000',
+        target: 'http://127.0.0.1:8001',
         changeOrigin: true
       }
     }

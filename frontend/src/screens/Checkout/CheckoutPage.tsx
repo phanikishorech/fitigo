@@ -331,7 +331,7 @@ export default function CheckoutPage() {
 
               <div style={{ marginTop: 16, fontWeight: 950 }}>Payment</div>
               <div className={styles.muted} style={{ marginTop: 6 }}>
-                Wallet is the only payment option in this MVP.
+                This is the legacy development wallet flow. Use the current secure checkout for backend-configured gateway payments; no payment is complete until the server verifies it.
               </div>
 
               <div className={styles.notice} style={{ marginTop: 12 }}>

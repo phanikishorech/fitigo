@@ -88,7 +88,8 @@ def test_admin_new_users_gyms_bookings_revenue_and_chart_share_range(api):
         db.get(Gym, 3).status = 'PENDING_APPROVAL'
         for gym, day, amount in [(1, first, 100), (2, last, 200), (3, first - timedelta(days=1), 999), (3, last + timedelta(days=1), 888)]:
             row = booking(db, gym, day=day)
-            db.add(Payment(booking_id=row.id, amount=amount, status='PAID'))
+            # Revenue requires verified checkout mode, not an unclassified fixture.
+            paid_booking(db, row, amount)
         db.commit()
     summary = get(api, 'admin/dashboard/summary', params, actor=6)
     assert summary['users']['in_period'] == 2 and summary['users']['total'] == 6

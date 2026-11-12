@@ -8,15 +8,16 @@ type Props = {
   onChangeTarget: () => void
   onResend: () => Promise<void>
   onVerify: (otp: string) => Promise<void>
+  resendSeconds?: number
 }
 
 const OTP_LEN = 6
 
-export function OtpVerifyPanel({ title, subtitle, maskedTarget, onChangeTarget, onResend, onVerify }: Props) {
+export function OtpVerifyPanel({ title, subtitle, maskedTarget, onChangeTarget, onResend, onVerify, resendSeconds = 60 }: Props) {
   const [digits, setDigits] = useState<string[]>(Array.from({ length: OTP_LEN }, () => ''))
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [resendIn, setResendIn] = useState(30)
+  const [resendIn, setResendIn] = useState(resendSeconds)
   const [resending, setResending] = useState(false)
   const resendLock = useRef(false)
   const inputsRef = useRef<Array<HTMLInputElement | null>>([])
@@ -141,7 +142,7 @@ export function OtpVerifyPanel({ title, subtitle, maskedTarget, onChangeTarget, 
             setError(null)
             try {
               await onResend()
-              setResendIn(30)
+              setResendIn(resendSeconds)
             } catch (e) {
               setError(e instanceof Error ? e.message : 'Failed to resend OTP')
             } finally {
@@ -150,7 +151,7 @@ export function OtpVerifyPanel({ title, subtitle, maskedTarget, onChangeTarget, 
             }
           }}
         >
-          {resending ? 'Sending…' : 'Resend code'}{resendIn > 0 ? ` in 00:${String(resendIn).padStart(2, '0')}` : ''}
+          {resending ? 'Sending…' : 'Resend code'}{resendIn > 0 ? ` in ${Math.floor(resendIn / 60)}:${String(resendIn % 60).padStart(2, '0')}` : ''}
         </button>
       </div>
 

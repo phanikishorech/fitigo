@@ -86,7 +86,8 @@ try {
   }
   await command('Page.navigate', { url: `${origin}/checkout` })
   await until(`document.body.innerText.includes('Recent payments')`)
-  assert.ok(await evaluate(`document.body.innerText.includes('TEST MODE')`))
+  assert.equal(await evaluate(`document.querySelector('details').open`), false)
+  assert.ok(await evaluate(`document.body.innerText.includes('Test Mode')`))
   assert.deepEqual(errors, [])
   console.log(`PASS ${provider} existing membership/checkout UI: Test Mode, dismissal, failure, retry reuse, interrupted callback, refresh recovery, recent payments, responsive layout`)
 } finally { ws.close(); await target.dispose() }

@@ -26,6 +26,7 @@ from app.services.gym_service import GymService
 from app.services.gym_details_service import get_gym_submission
 from app.services.slot_service import SlotService
 from app.services.booking_service import BookingService
+from app.services.owner_booking_policy import owner_actions
 from app.services.staff_service import StaffService
 from app.services.owner_dashboard_service import OwnerDashboardService
 from app.storage.local import LocalStorageService
@@ -41,6 +42,8 @@ from app.services.membership_service import MembershipService
 router = APIRouter(prefix="/gym-owner")
 from app.routers.owner_analytics import router as analytics_router
 router.include_router(analytics_router)
+from app.routers.owner_members import router as members_router
+router.include_router(members_router)
 
 
 def _to_membership_plan_response(p) -> MembershipPlanResponse:
@@ -60,15 +63,8 @@ def _to_membership_plan_response(p) -> MembershipPlanResponse:
 
 
 def _validate_image(upload: UploadFile, max_bytes: int = 5 * 1024 * 1024) -> None:
-    if upload.content_type not in {"image/jpeg", "image/png", "image/webp"}:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid image type")
-
-    # best-effort size check (spools to temp file for large uploads)
-    upload.file.seek(0, 2)
-    size = upload.file.tell()
-    upload.file.seek(0)
-    if size > max_bytes:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File too large")
+    from app.storage.image_validation import validate_image
+    validate_image(upload)
 
 
 @router.post("/gyms", response_model=OwnerGymResponse)
@@ -233,6 +229,8 @@ def upload_gym_image(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role({ROLE_GYM_OWNER})),
 ):
+    if not db.scalar(select(Gym.id).where(Gym.id == gym_id, Gym.owner_user_id == current_user.id).with_for_update()):
+        raise HTTPException(404, "Gym not found")
     _validate_image(file)
     storage = LocalStorageService()
     rel_path = storage.save_gym_image(
@@ -374,9 +372,11 @@ def delete_slot(
 def invite_staff(
     gym_id: int,
     payload: InviteStaffRequest,
+    response: Response,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role({ROLE_GYM_OWNER})),
 ):
+    response.headers['Cache-Control'] = 'no-store'
     svc = StaffService(db)
     res = svc.invite_staff(
         owner_user_id=current_user.id,
@@ -385,8 +385,7 @@ def invite_staff(
         first_name=payload.first_name,
         last_name=payload.last_name,
     )
-    # temp_password returned only when a new user is created
-    return {"status": "ok", **res}
+    return res
 
 
 @router.get("/gyms/{gym_id}/staff", response_model=list[StaffAssignmentResponse])
@@ -400,6 +399,22 @@ def list_staff(
     items = svc.list_gym_staff(owner_user_id=current_user.id, gym_id=gym_id)
     response.headers['Cache-Control'] = 'no-store'
     return [StaffAssignmentResponse(**item) for item in items]
+
+
+@router.get('/gyms/{gym_id}/staff/invitations')
+def list_staff_invitations(gym_id: int, response: Response, db: Session = Depends(get_db),
+                          current_user: User = Depends(require_role({ROLE_GYM_OWNER}))):
+    from app.services.staff_invitation_service import StaffInvitationService
+    response.headers['Cache-Control'] = 'no-store'
+    return StaffInvitationService(db).list(current_user.id, gym_id)
+
+
+@router.delete('/gyms/{gym_id}/staff/invitations/{invitation_id}')
+def revoke_staff_invitation(gym_id: int, invitation_id: str, db: Session = Depends(get_db),
+                           current_user: User = Depends(require_role({ROLE_GYM_OWNER}))):
+    from app.services.staff_invitation_service import StaffInvitationService
+    StaffInvitationService(db).revoke(current_user.id, gym_id, invitation_id)
+    return {'status': 'REVOKED'}
 
 
 @router.delete("/gyms/{gym_id}/staff/{user_id}", response_model=dict)
@@ -444,6 +459,7 @@ def list_gym_bookings(
     for b, u, s, p in rows:
         out.append(
             OwnerBookingResponse(
+                **owner_actions(db, b, current_user.id),
                 id=b.id,
                 gym_id=b.gym_id,
                 gym_slot_id=b.gym_slot_id,
@@ -501,6 +517,7 @@ def get_booking_detail(
     svc = BookingService(db)
     b, u, s, p = svc.get_owner_booking(owner_user_id=current_user.id, booking_id=booking_id)
     return OwnerBookingResponse(
+        **owner_actions(db, b, current_user.id),
         id=b.id,
         gym_id=b.gym_id,
         gym_slot_id=b.gym_slot_id,
@@ -558,6 +575,7 @@ def owner_cancel_booking(
     b = svc.owner_cancel_booking(owner_user_id=current_user.id, booking_id=booking_id, reason=payload.reason)
     b2, u, s, p = svc.get_owner_booking(owner_user_id=current_user.id, booking_id=b.id)
     return OwnerBookingResponse(
+        **owner_actions(db, b2, current_user.id),
         id=b2.id,
         gym_id=b2.gym_id,
         gym_slot_id=b2.gym_slot_id,
@@ -615,6 +633,7 @@ def owner_mark_attended(
     _ = svc.owner_mark_attendance(owner_user_id=current_user.id, booking_id=booking_id, attendance_status="ATTENDED", note=payload.note)
     b, u, s, p = svc.get_owner_booking(owner_user_id=current_user.id, booking_id=booking_id)
     return OwnerBookingResponse(
+        **owner_actions(db, b, current_user.id),
         id=b.id,
         gym_id=b.gym_id,
         gym_slot_id=b.gym_slot_id,
@@ -672,6 +691,7 @@ def owner_mark_no_show(
     _ = svc.owner_mark_attendance(owner_user_id=current_user.id, booking_id=booking_id, attendance_status="NO_SHOW", note=payload.note)
     b, u, s, p = svc.get_owner_booking(owner_user_id=current_user.id, booking_id=booking_id)
     return OwnerBookingResponse(
+        **owner_actions(db, b, current_user.id),
         id=b.id,
         gym_id=b.gym_id,
         gym_slot_id=b.gym_slot_id,

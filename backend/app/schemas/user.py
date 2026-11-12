@@ -9,7 +9,9 @@ class UserMeResponse(BaseModel):
     id: int
     first_name: str | None
     last_name: str | None
-    email: EmailStr
+    # Persisted mobile-only accounts use a non-deliverable placeholder. Validate
+    # real email addresses on input, not by crashing an authenticated response.
+    email: str
     phone: str | None
     status: str
     created_at: datetime

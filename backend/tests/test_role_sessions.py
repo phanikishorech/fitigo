@@ -53,7 +53,8 @@ def test_missing_roles_and_inactive_sessions_are_not_fabricated(api):
 
 def test_otp_login_includes_same_role_contract(api,monkeypatch):
     client,_,_=api
-    monkeypatch.setattr(OtpService,'_email_store',{})
+    from app.services import account_delivery
+    monkeypatch.setattr(account_delivery,'send_email',lambda *args: None)
     monkeypatch.setattr(OtpService,'_generate_otp',lambda self:'654321')
     assert client.post('/api/v1/auth/email/send-otp',json={'email':'user-2@example.com'}).status_code==200
     response=client.post('/api/v1/auth/email/verify-otp',json={'email':'user-2@example.com','otp':'654321'})

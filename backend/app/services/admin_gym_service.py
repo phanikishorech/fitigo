@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.gym import Gym, GymStatusHistory
+from app.services.notification_workflow import publish
 
 
 class AdminGymService:
@@ -27,12 +28,13 @@ class AdminGymService:
                 reason=reason,
             )
         )
+        publish(self.db, gym.owner_user_id, 'GYM_STATUS_CHANGED', gym.id)
         self.db.commit()
         self.db.refresh(gym)
         return gym
 
     def approve(self, *, gym_id: int, changed_by_user_id: int) -> Gym:
-        gym = self.db.execute(select(Gym).where(Gym.id == gym_id)).scalars().first()
+        gym = self.db.execute(select(Gym).where(Gym.id == gym_id).with_for_update().execution_options(populate_existing=True)).scalars().first()
         if not gym:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gym not found")
         if gym.status != "PENDING_APPROVAL":
@@ -41,7 +43,7 @@ class AdminGymService:
         return self._change_status(gym=gym, new_status="APPROVED", changed_by_user_id=changed_by_user_id)
 
     def reject(self, *, gym_id: int, changed_by_user_id: int, reason: str) -> Gym:
-        gym = self.db.execute(select(Gym).where(Gym.id == gym_id)).scalars().first()
+        gym = self.db.execute(select(Gym).where(Gym.id == gym_id).with_for_update().execution_options(populate_existing=True)).scalars().first()
         if not gym:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gym not found")
         if gym.status != "PENDING_APPROVAL":
@@ -50,7 +52,7 @@ class AdminGymService:
         return self._change_status(gym=gym, new_status="REJECTED", changed_by_user_id=changed_by_user_id, reason=reason)
 
     def suspend(self, *, gym_id: int, changed_by_user_id: int, reason: str) -> Gym:
-        gym = self.db.execute(select(Gym).where(Gym.id == gym_id)).scalars().first()
+        gym = self.db.execute(select(Gym).where(Gym.id == gym_id).with_for_update().execution_options(populate_existing=True)).scalars().first()
         if not gym:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gym not found")
         if gym.status not in {"APPROVED", "PENDING_APPROVAL"}:
@@ -59,7 +61,7 @@ class AdminGymService:
         return self._change_status(gym=gym, new_status="SUSPENDED", changed_by_user_id=changed_by_user_id, reason=reason)
 
     def reactivate(self, *, gym_id: int, changed_by_user_id: int) -> Gym:
-        gym = self.db.execute(select(Gym).where(Gym.id == gym_id)).scalars().first()
+        gym = self.db.execute(select(Gym).where(Gym.id == gym_id).with_for_update().execution_options(populate_existing=True)).scalars().first()
         if not gym:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gym not found")
         if gym.status != "SUSPENDED":

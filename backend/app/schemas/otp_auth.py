@@ -9,18 +9,18 @@ class EmailSendOtpRequest(BaseModel):
 
 class EmailVerifyOtpRequest(BaseModel):
     email: EmailStr
-    otp: str = Field(min_length=4, max_length=8)
+    otp: str = Field(pattern=r'^[0-9]{6}$')
 
 
 class MobileSendOtpRequest(BaseModel):
-    country_code: str = Field(min_length=2, max_length=5, examples=["+1"])
-    mobile_number: str = Field(min_length=6, max_length=15)
+    country_code: str = Field(pattern=r'^\+[1-9][0-9]{0,2}$', examples=["+1"])
+    mobile_number: str = Field(pattern=r'^[0-9]{6,14}$')
 
 
 class MobileVerifyOtpRequest(BaseModel):
-    country_code: str = Field(min_length=2, max_length=5)
-    mobile_number: str = Field(min_length=6, max_length=15)
-    otp: str = Field(min_length=4, max_length=8)
+    country_code: str = Field(pattern=r'^\+[1-9][0-9]{0,2}$')
+    mobile_number: str = Field(pattern=r'^[0-9]{6,14}$')
+    otp: str = Field(pattern=r'^[0-9]{6}$')
 
 
 class OtpVerifyResponse(BaseModel):

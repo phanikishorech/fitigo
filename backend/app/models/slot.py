@@ -45,6 +45,8 @@ class GymSlot(Base):
     price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
     # stored as 0/1 in DB (TINYINT/INT); API converts to bool
     is_active: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    # Legacy rows are never linked to customer sessions by guessed name/time.
+    sync_kind: Mapped[str] = mapped_column(String(12), nullable=False, default='DIRECT', server_default='LEGACY')
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)

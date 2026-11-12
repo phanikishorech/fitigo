@@ -64,6 +64,7 @@ class ClassSession(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     gym_class_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("gym_classes.id"), nullable=False)
+    source_slot_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey('gym_slots.id'), nullable=True, index=True)
 
     session_date: Mapped[date] = mapped_column(Date, nullable=False)
     # Stored as SQL TIME.

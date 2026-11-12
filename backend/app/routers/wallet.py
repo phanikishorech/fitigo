@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.dependencies import get_optional_user, get_current_user
+from app.core.dependencies import get_current_user
 from app.database.session import get_db
 from app.models.auth import User
 from app.models.wallet import WalletAccount, WalletTransaction, WalletTxnDirection, WalletTxnType
@@ -46,12 +46,6 @@ def _maybe_raise_migration_hint(err: Exception) -> None:
         ) from err
 
 
-def _get_dev_customer_id(db: Session) -> int | None:
-    # Keep behavior consistent with cart/profile dev flows.
-    u = db.execute(select(User).where(User.email == "customer@example.com")).scalars().first()
-    return int(u.id) if u else None
-
-
 def _require_user_id(db: Session, current_user: User | None) -> int:
     uid = int(current_user.id) if current_user else None
     if uid is None:
@@ -85,7 +79,7 @@ def _txn_to_response(tx: WalletTransaction) -> WalletTransactionResponse:
 
 
 @router.get("/balance", response_model=WalletBalanceResponse)
-def get_balance(db: Session = Depends(get_db), current_user: User | None = Depends(get_optional_user)):
+def get_balance(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     try:
         uid = _require_user_id(db, current_user)
         acct = _get_or_create_account(db, user_id=uid)
@@ -100,7 +94,7 @@ def get_balance(db: Session = Depends(get_db), current_user: User | None = Depen
 def list_transactions(
     limit: int = Query(default=50, ge=1, le=200),
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_optional_user),
+    current_user: User = Depends(get_current_user),
 ):
     try:
         uid = _require_user_id(db, current_user)

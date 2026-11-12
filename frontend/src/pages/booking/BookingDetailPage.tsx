@@ -7,8 +7,13 @@ import { canReview } from '../../utils/booking'
 import { Alert, Badge, Button, ErrorState, Heading, Link, Modal, Skeleton } from '../../components/common/UI'
 import Icon from '../../components/common/Icon'
 import BookingAccess from './BookingAccess'
+import CancellationNotice from '../../components/common/CancellationNotice'
 
 export default function BookingDetailPage({ id, success = false }: { id: number; success?: boolean }) {
+  return <><CancellationNotice /><BookingDetails id={id} success={success} /></>
+}
+
+function BookingDetails({ id, success }: { id: number; success: boolean }) {
   const result = useResource(async () => {
     const booking = await bookingService.detail(id)
     const [gym, visits] = await Promise.all([gymService.details(booking.gym_id), bookingService.visit(id)])

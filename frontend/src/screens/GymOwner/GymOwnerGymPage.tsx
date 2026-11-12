@@ -934,11 +934,7 @@ export default function GymOwnerGymPage({ gymId }: { gymId: number }) {
                         first_name: invite.first_name || null,
                         last_name: invite.last_name || null
                       })
-                      if (res.temp_password) {
-                        alert(`Staff created. Temporary password: ${res.temp_password}`)
-                      } else {
-                        alert('Staff invited/assigned')
-                      }
+                      alert(res.delivery_status === 'PROVIDER_ACCEPTED' ? 'Invitation accepted by the email provider. Gym access begins after acceptance.' : 'Refresh invitation status.')
                       setInvite({ email: '', first_name: '', last_name: '' })
                       reloadAll()
                     } catch (e: any) {

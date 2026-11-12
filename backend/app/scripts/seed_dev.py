@@ -40,6 +40,20 @@ from app.models.membership import MembershipStatus, UserMembership
 from app.models.review import GymReview
 
 
+def require_development_seed() -> str:
+    # Use the same parsed environment as the API, including .env configuration.
+    # Explicit invocation alone must not seed a production or remote database.
+    from sqlalchemy.engine import make_url
+    if settings.environment != 'development' or os.getenv('FITIGO_ALLOW_DEV_SEED') != '1':
+        raise RuntimeError('Seeding requires development and FITIGO_ALLOW_DEV_SEED=1.')
+    if not settings.database_url or make_url(settings.database_url).host not in {'localhost', '127.0.0.1', '::1'}:
+        raise RuntimeError('Development seeding requires a local database.')
+    password = os.getenv('DEV_SEED_PASSWORD', '')
+    if len(password) < 12 or password.lower() in {'password1234', 'changeme12345'}:
+        raise RuntimeError('Configure a private DEV_SEED_PASSWORD of at least 12 characters.')
+    return password
+
+
 def seed_dev_users() -> None:
     """Seed development users.
 
@@ -48,17 +62,12 @@ def seed_dev_users() -> None:
     - owner@example.com  (GYM_OWNER)
     - customer@example.com (CUSTOMER)
 
-    Password is controlled via env (or defaults to 'password1234').
+    Requires explicit local-development opt-in and a private configured password.
     """
 
+    password = require_development_seed()
     if SessionLocal is None:
         raise RuntimeError("DATABASE_URL is not configured")
-
-    environment = os.getenv("ENVIRONMENT", "development")
-    if environment != "development":
-        raise RuntimeError("Seeding is allowed only in development environment")
-
-    password = os.getenv("DEV_SEED_PASSWORD", "password1234")
 
     db = SessionLocal()
     try:
@@ -113,6 +122,7 @@ def seed_dev_users() -> None:
 
 
 def seed_sample_gyms_and_slots() -> None:
+    require_development_seed()
     if SessionLocal is None:
         raise RuntimeError("DATABASE_URL is not configured")
 

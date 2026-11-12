@@ -8,7 +8,7 @@ export type AdminDashboardSummary = {
   users: { total: number; customers: number; gym_owners: number; in_period: number }
   gyms: { total: number; pending_approval: number; in_period: number }
   bookings: { today: number; upcoming: number; in_period: number; confirmed_in_period: number }
-  revenue: { last_30d: string; currency: string; in_period: string }
+  revenue: { last_30d: string; currency: string; in_period: string; mode?: 'test' | 'live'; date_basis?: string; basis?: string }
 }
 export type AdminUserListItem = {
   id: number; first_name: string | null; last_name: string | null; email: string
@@ -38,7 +38,7 @@ export const adminPing = () => request<{ status: string; user_id: number }>('/ad
 export const fetchAdminDashboardSummary = (params: Partial<DateRange> = {}) => request<AdminDashboardSummary>(`/admin/dashboard/summary${query(params)}`)
 export const fetchAdminUsers = (params: UserFilters = {}) => request<AdminUserListItem[]>(`/admin/users${query(params)}`)
 export const fetchAdminUser = (id: number) => request<AdminUserListItem>(`/admin/users/${id}`)
-export const adminUpdateUserStatus = (id: number, payload: { status: string; reason?: string | null }) => post<{ status: string; user_id: number; new_status: string }>(`/admin/users/${id}/status`, payload)
+export const adminUpdateUserStatus = (id: number, payload: { status: string; reason?: string | null; reason_code?: string }) => post<{ status: string; user_id: number; new_status: string }>(`/admin/users/${id}/status`, payload)
 export const fetchPendingGyms = () => request<AdminGymListItem[]>('/admin/gyms/pending')
 export const fetchAdminGyms = (params: GymFilters = {}) => request<AdminGymListItem[]>(`/admin/gyms${query(params)}`)
 export const adminApproveGym = (id: number) => post<GymResult>(`/admin/gyms/${id}/approve`)

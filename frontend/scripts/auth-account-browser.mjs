@@ -1,7 +1,7 @@
 // Isolated auth fixtures. No real accounts, passwords, reset emails, or sessions are changed.
 import assert from 'node:assert/strict'
 import { isolatedBrowserTarget } from './isolated-browser.mjs'
-const origin='http://localhost:5173', debug='http://localhost:9231'
+const origin=process.env.FITIGO_TEST_ORIGIN||'http://localhost:5173', debug='http://localhost:9231'
 const target=await isolatedBrowserTarget(debug)
 const ws=new WebSocket(target.webSocketDebuggerUrl)
 await new Promise((resolve,reject)=>{ws.onopen=resolve;ws.onerror=reject})
@@ -85,7 +85,7 @@ try{
    await until(`location.pathname==='/membership/pause' && document.body.innerText.includes('Pause Membership')`)
  console.log('PASS registration mismatch/duplicate/success, duplicate-submit prevention, existing login callback, responsive form')
  await evaluate(`localStorage.clear()`);await visit('/auth/forgot-password','Enter your account email.')
- await fill('input[name="email"]','new@example.com');await click('Send reset link');await until(`document.body.innerText.includes('If an active account exists')`)
+ await fill('input[name="email"]','new@example.com');await click('Send reset link');await until(`document.body.innerText.includes('email provider accepted the request')`)
  emailAvailable=false;await visit('/auth/forgot-password','Password reset email is not available yet');assert.equal(await evaluate(`document.querySelector('main input')===null`),true)
  emailAvailable=true
  await visit('/auth/reset-password','This reset link is missing or invalid.')

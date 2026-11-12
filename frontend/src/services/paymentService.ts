@@ -4,8 +4,11 @@ export type PaymentCheckout = {
   provider: 'RAZORPAY' | 'CASHFREE'; environment: 'sandbox' | 'production'; gateway_order_id: string | null; payment_session_id?: string | null
   id: string; kind: string; status: string; mode: 'test' | 'live'; amount: string; amount_minor: number; currency: string
   key_id: string; razorpay_order_id: string | null; booking_ids: number[]; membership_id: number | null; can_pay: boolean; failure_code: string | null
+  payment_blocked_reason?: string | null; payment_expires_at?: string | null; can_cancel?: boolean; replacement_safe?: boolean
+  cart_item_ids?: number[]
+  items?: { booking_id: number; gym_name: string; booking_date: string; start_time: string | null; quantity: number; amount: string; currency: string }[]
 }
-export type PaymentSource = { kind: 'WALLET_TOPUP'; amount: string } | { kind: 'CART' } | { kind: 'BOOKING'; booking_id: number } |
+export type PaymentSource = { kind: 'WALLET_TOPUP'; amount: string } | { kind: 'CART'; cart_item_ids?: number[]; confirm_razorpay_replacement?: boolean } | { kind: 'BOOKING'; booking_id: number } |
   { kind: 'SINGLE_GYM'; gym_id: number; plan_id: number; accepted_quote: string } |
   { kind: 'MULTI_GYM'; order_id: string; accepted_quote: string }
 export type GatewayCallback = { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }

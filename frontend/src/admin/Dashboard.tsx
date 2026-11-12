@@ -6,6 +6,7 @@ import { useAdminResource } from './hooks'
 import { DataCard, EmptyState, Icon, Identity, Link, MetricCard, PageHeader, Resource, StatusBadge, personName } from './UI'
 import DateRangePicker, { dateRangeLabel } from '../components/common/DateRangePicker'
 import { presetRange, rangeDays, type DateRange } from '../utils/dateRange'
+import RevenueScope from './RevenueScope'
 
 export function BookingActivity({ range }: { range: DateRange }) {
   const days = rangeDays(range)
@@ -23,9 +24,10 @@ export default function Dashboard() {
   const pending = useAdminResource(() => fetchAdminGyms({ status: 'PENDING_APPROVAL', limit: 4 }), 'dashboard-pending')
   const bookings = useAdminResource(() => fetchAdminBookings({ ...range, limit: 5 }), `dashboard-bookings:${key}`)
   return <>
-    <PageHeader title="Dashboard" subtitle="Platform overview and activity" />
+    <PageHeader title="Dashboard" subtitle="Platform overview and activity" action={<Link to="/admin/analytics" className="fg-button fg-button--secondary"><Icon name="chart" size={17} />Open analytics</Link>} />
     <DateRangePicker value={range} onChange={setRange} />
     <Resource resource={summary}>{data => <>
+      <RevenueScope mode={data.revenue.mode} />
       <div className="ad-metrics">
         <MetricCard title="New users" value={data.users.in_period.toLocaleString()} caption="Registered in selected range" icon="user" />
         <MetricCard title="New gyms" value={data.gyms.in_period.toLocaleString()} caption="Created in selected range" icon="gym" />

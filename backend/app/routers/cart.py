@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.dependencies import get_optional_user
+from app.core.dependencies import get_current_user
 from app.database.session import get_db
 from app.models.auth import User
 from app.models.cart import BookingType, CartItem, CartItemStatus
@@ -27,7 +27,7 @@ from app.services.booking_access_service import BookingAccessService, validate_v
 from app.services.booking_time import require_future_start, gym_visit_end
 
 
-router = APIRouter(prefix="/cart")
+router = APIRouter(prefix="/cart", dependencies=[Depends(get_current_user)])
 
 
 def _operating_hours_for_date(db: Session, *, gym_id: int, dt: date_t):
@@ -48,12 +48,6 @@ def _operating_hours_for_date(db: Session, *, gym_id: int, dt: date_t):
     if not row:
         return None, None, True
     return row.open_time, row.close_time, bool(row.is_closed)
-
-
-def _get_dev_customer_id(db: Session) -> int | None:
-    # Keep behavior consistent with gyms_public.py dev flows.
-    u = db.execute(select(User).where(User.email == "customer@example.com")).scalars().first()
-    return int(u.id) if u else None
 
 
 def _require_user_id(db: Session, current_user: User | None) -> int:
@@ -97,7 +91,7 @@ def _to_cart_item_response(
 @router.get("/items", response_model=list[CartItemResponse])
 def list_cart_items(
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_optional_user),
+    current_user: User = Depends(get_current_user),
 ):
     uid = _require_user_id(db, current_user)
     items = (
@@ -152,7 +146,7 @@ def list_cart_items(
 def remove_cart_item(
     item_id: int,
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_optional_user),
+    current_user: User = Depends(get_current_user),
 ):
     uid = _require_user_id(db, current_user)
     it = db.execute(select(CartItem).where(CartItem.id == item_id, CartItem.user_id == uid)).scalars().first()
@@ -170,7 +164,7 @@ def remove_cart_item(
 def add_gym_to_cart(
     payload: CartItemCreateGymRequest,
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_optional_user),
+    current_user: User = Depends(get_current_user),
 ):
     uid = _require_user_id(db, current_user)
     if payload.booking_type != BookingType.GYM.value:
@@ -249,13 +243,14 @@ def add_gym_to_cart(
 def add_class_to_cart(
     payload: CartItemCreateClassRequest,
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_optional_user),
+    current_user: User = Depends(get_current_user),
 ):
     uid = _require_user_id(db, current_user)
     if payload.booking_type != BookingType.CLASS.value:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="booking_type must be CLASS")
 
-    gym = db.execute(select(Gym).where(Gym.id == payload.gym_id, Gym.status == "APPROVED", Gym.is_active.is_(True))).scalars().first()
+    gym = db.execute(select(Gym).where(Gym.id == payload.gym_id, Gym.status == "APPROVED", Gym.is_active.is_(True))
+                     .with_for_update().execution_options(populate_existing=True)).scalars().first()
     if not gym:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gym not found")
     if not bool(getattr(gym, "has_classes", False)):
@@ -267,6 +262,7 @@ def add_class_to_cart(
             select(ClassSession, GymClass)
             .join(GymClass, GymClass.id == ClassSession.gym_class_id)
             .where(ClassSession.id == payload.class_session_id)
+            .with_for_update().execution_options(populate_existing=True)
         )
         .first()
     )
@@ -365,7 +361,7 @@ def add_class_to_cart(
 @router.post("/checkout", response_model=CartCheckoutResponse)
 def checkout_cart(
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_optional_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Confirm all ACTIVE cart items.
 
@@ -382,6 +378,8 @@ def checkout_cart(
         raise HTTPException(409, detail="Use verified gateway checkout")
     uid = _require_user_id(db, current_user)
 
+    from app.services.class_sync_service import lock_cart_class_gyms
+    lock_cart_class_gyms(db, uid)
     items = (
         db.execute(
             select(CartItem)
@@ -493,7 +491,7 @@ def checkout_cart(
 @router.post("/checkout/wallet", response_model=CartWalletCheckoutResponse)
 def checkout_cart_with_wallet(
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_optional_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Confirm all ACTIVE cart items and pay using FitiGo Wallet.
 
@@ -510,7 +508,9 @@ def checkout_cart_with_wallet(
     from app.core.config import settings
     if settings.gateway_required or settings.environment != "development":
         raise HTTPException(409, detail="Use verified gateway checkout")
-    # Lock cart items first (consistent lock ordering for this flow)
+    from app.services.class_sync_service import lock_cart_class_gyms
+    lock_cart_class_gyms(db, uid)
+    # Gym -> cart -> session, matching owner class synchronization.
     items = (
         db.execute(
             select(CartItem)

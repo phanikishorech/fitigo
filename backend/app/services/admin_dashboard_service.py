@@ -12,6 +12,7 @@ from app.repositories.user_repository import UserRepository
 from app.core.roles import ROLE_CUSTOMER, ROLE_GYM_OWNER
 from app.core.time import ist_day_bounds, ist_today
 from app.core.reporting_range import reporting_range
+from app.services.admin_revenue import eligible_admin_payment, admin_revenue_scope
 
 
 class AdminDashboardService:
@@ -67,14 +68,14 @@ class AdminDashboardService:
         ).scalar_one()
 
         # Revenue last 30 days
-        start_day = today - timedelta(days=30)
+        start_day = today - timedelta(days=29)
         revenue_30d = self.db.execute(
             select(func.coalesce(func.sum(Payment.amount), 0))
             .select_from(Payment)
             .join(Booking, Booking.id == Payment.booking_id)
             .where(
-                Payment.status == PaymentStatus.PAID.value,
-                Booking.slot_date >= start_day,
+                eligible_admin_payment(),
+                Booking.slot_date.between(start_day, today),
             )
         ).scalar_one()
 
@@ -88,7 +89,7 @@ class AdminDashboardService:
             .where(period_filter, Booking.status == BookingStatus.CONFIRMED.value))
         revenue_in_period = self.db.scalar(select(func.coalesce(func.sum(Payment.amount), 0))
             .select_from(Payment).join(Booking, Booking.id == Payment.booking_id)
-            .where(period_filter, Payment.status == PaymentStatus.PAID.value))
+            .where(period_filter, eligible_admin_payment()))
         return {
             "date_from": first.isoformat(),
             "date_to": last.isoformat(),
@@ -110,6 +111,7 @@ class AdminDashboardService:
                 "upcoming": int(upcoming_bookings or 0),
             },
             "revenue": {
+                **admin_revenue_scope(),
                 "in_period": str(revenue_in_period),
                 "last_30d": str(revenue_30d),
                 "currency": "INR",

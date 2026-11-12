@@ -1,3 +1,4 @@
+from test_database_guard import disposable_name
 """Real MySQL ONLY_FULL_GROUP_BY regression, in a disposable database only."""
 import os
 from datetime import date, datetime, time, timedelta
@@ -33,7 +34,7 @@ def mysql_api(monkeypatch):
     assert application_engine is not None
     assert application_engine.url.host in ('localhost', '127.0.0.1', '::1')
     assert settings.environment == 'development'
-    name = 'fitigo_dashboard_test_' + uuid4().hex[:12]
+    name = disposable_name()
     control = create_engine(application_engine.url.set(database=None), isolation_level='AUTOCOMMIT')
     engine, created = None, False
     try:

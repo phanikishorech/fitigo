@@ -38,11 +38,5 @@ class NotificationService:
         )
 
     def mark_sent(self, *, event_id: int) -> NotificationEvent:
-        ev = self.db.execute(select(NotificationEvent).where(NotificationEvent.id == event_id)).scalars().first()
-        if not ev:
-            raise ValueError("Event not found")
-        ev.status = NotificationStatus.SENT.value
-        ev.sent_at = datetime.utcnow()
-        self.db.commit()
-        self.db.refresh(ev)
-        return ev
+        from fastapi import HTTPException
+        raise HTTPException(409, 'Delivery status cannot be manually marked sent. Only the delivery worker records provider acceptance.')

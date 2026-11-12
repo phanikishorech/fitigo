@@ -103,8 +103,14 @@ test('all owner business APIs use the existing shared request client', () => {
   assert.doesNotMatch(source, /\bfetch\(|\bauthFetch\(|\bas any\b|\bas never\b/)
   assert.match(source, /services\/client/)
 })
-test('unsupported capabilities are explicit, never mocked business values', () => {
-  for (const capability of Object.values(owner.capabilities)) { assert.equal(capability.available, false); assert.ok(capability.message.length > 20) }
+test('capabilities distinguish implemented APIs from unsupported workflows', () => {
+  assert.equal(owner.capabilities.members.available, true)
+  assert.equal(owner.capabilities.bookingActions.available, true)
+  assert.equal(owner.capabilities.photoManagement.available, false) // deletion remains unavailable
+  assert.equal(owner.capabilities.trends.available, false)
+  for (const capability of Object.values(owner.capabilities)) assert.ok(capability.message.length > 20)
+  assert.match(owner.capabilities.bookingActions.message, /server supplies permitted actions/)
+  assert.match(owner.capabilities.photoManagement.message, /deletion is unavailable/)
 })
 
 test('dashboard booking links use server attendance classification before pagination', async () => {

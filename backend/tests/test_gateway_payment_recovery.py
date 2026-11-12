@@ -35,6 +35,7 @@ def test_discounted_failed_attempt_can_be_cancelled_and_does_not_hide_matching_s
     record = checkout(api, {'kind': 'WALLET_TOPUP', 'amount': '500'})
     api[3].pay(record, 'FAILED', payment_amount=450)
     assert refresh(api, record).json()['status'] == 'FAILED'
+    api[3].orders[record['gateway_order_id']]['order_status'] = 'EXPIRED'
     cancelled = api[0].post(f"/api/v1/payments/checkouts/{record['id']}/cancel", headers=api[1][1])
     assert cancelled.status_code == 200 and cancelled.json()['status'] == 'CANCELLED'
     other = checkout(api, {'kind': 'WALLET_TOPUP', 'amount': '600'}, key='second-recharge')

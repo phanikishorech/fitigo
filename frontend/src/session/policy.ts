@@ -22,7 +22,7 @@ export function roleHome(roles: string[]) {
 function basePolicy(path: string): { portal: Portal | null; protected: boolean; login?: boolean; staffAllowed?: boolean } {
   const clean = path.replace(/\/+$/, '') || '/'
   if (['/login', '/auth', '/auth/login', '/auth/otp', '/owner/login', '/admin/login'].includes(clean)) return { portal: null, protected: false, login: true }
-  if (['/auth/forgot-password', '/auth/reset-password', '/owner/register', '/owner/verify', '/admin/access-denied', '/admin/session-expired'].includes(clean)) return { portal: null, protected: false }
+  if (['/auth/accept-invitation', '/auth/forgot-password', '/auth/reset-password', '/owner/register', '/owner/verify', '/admin/access-denied', '/admin/session-expired'].includes(clean)) return { portal: null, protected: false }
   if (/^\/admin(\/|$)/.test(clean)) return { portal: 'admin', protected: true }
   if (/^\/owner(\/|$)/.test(clean)) return { portal: 'owner', protected: true, staffAllowed: ['dashboard', 'check-in', 'settings', 'notifications', 'help', 'more'].includes(ownerRoute(clean).page) }
   if (clean === '/staff/check-in') return { portal: 'owner', protected: true, staffAllowed: true }

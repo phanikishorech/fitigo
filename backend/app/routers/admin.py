@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import Literal
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import require_role
@@ -35,10 +36,13 @@ from app.services.review_service import ReviewService
 from app.schemas.admin_users import AdminUpdateUserStatusRequest, AdminUserDetail, AdminUserListItem
 from app.services.admin_user_service import AdminUserService
 from app.services.admin_dashboard_service import AdminDashboardService
+from app.services.admin_revenue import eligible_admin_payment, admin_revenue_scope
 from app.schemas.admin_gyms import AdminGymListItem as AdminGymListItemSchema
 
 
 router = APIRouter(prefix="/admin")
+from app.routers.admin_audit import router as audit_router
+router.include_router(audit_router)
 
 
 @router.post("/reviews/{review_id}/hide", response_model=dict)
@@ -97,6 +101,18 @@ def admin_dashboard_summary(
 ):
     svc = AdminDashboardService(db)
     return svc.summary(date_from=date_from, date_to=date_to)
+
+
+@router.get('/analytics', response_model=dict)
+def analytics(response: Response, date_from: date | None = Query(None), date_to: date | None = Query(None),
+              grain: Literal['day', 'week', 'month'] = Query('day'), gym_id: int | None = Query(None, gt=0),
+              country: str | None = Query(None, max_length=100), state: str | None = Query(None, max_length=100),
+              city: str | None = Query(None, max_length=100), db: Session = Depends(get_db),
+              current_user: User = Depends(require_role({ROLE_ADMIN, ROLE_SUPER_ADMIN}))):
+    from app.services.admin_analytics_service import AdminAnalyticsService
+    response.headers['Cache-Control'] = 'no-store'
+    return AdminAnalyticsService(db).report(date_from=date_from, date_to=date_to, grain=grain,
+        gym_id=gym_id, country=country, state=state, city=city)
 
 
 @router.get("/users", response_model=list[AdminUserListItem])
@@ -163,7 +179,8 @@ def update_user_status(
     current_user: User = Depends(require_role({ROLE_ADMIN, ROLE_SUPER_ADMIN})),
 ):
     svc = AdminUserService(db)
-    u = svc.update_status(user_id=user_id, new_status=payload.status, reason=payload.reason)
+    u = svc.update_status(user_id=user_id, new_status=payload.status, reason=payload.reason,
+                          actor_id=current_user.id, reason_code=payload.reason_code)
     return {"status": "ok", "user_id": u.id, "new_status": u.status}
 
 
@@ -460,8 +477,10 @@ def admin_cancel_booking(
     current_user: User = Depends(require_role({ROLE_ADMIN, ROLE_SUPER_ADMIN})),
 ):
     svc = AdminBookingOpsService(db)
-    b = svc.cancel_booking(booking_id=booking_id, reason=payload.reason)
-    return {"status": "ok", "booking_id": b.id, "new_status": b.status}
+    b = svc.cancel_booking(booking_id=booking_id, reason=payload.reason, actor_id=current_user.id)
+    from app.schemas.booking import CANCELLATION_MESSAGE
+    return {"status": "ok", "booking_id": b.id, "new_status": b.status,
+            "refund_initiated": False, "cancellation_message": CANCELLATION_MESSAGE}
 
 
 @router.post("/bookings/{booking_id}/payment/status", response_model=dict)
@@ -477,6 +496,7 @@ def admin_update_payment_status(
         new_status=payload.status,
         external_ref=payload.external_ref,
         note=payload.note,
+        actor_id=current_user.id,
     )
     return {"status": "ok", "booking_id": b.id}
 
@@ -500,7 +520,7 @@ def report_daily_bookings(
             func.sum(case((Booking.status == "CONFIRMED", 1), else_=0)).label("confirmed_bookings"),
             func.sum(case((Booking.status == "CANCELLED", 1), else_=0)).label("cancelled_bookings"),
             func.sum(case((Booking.status == "EXPIRED", 1), else_=0)).label("expired_bookings"),
-            func.sum(case((Payment.status == "PAID", Payment.amount), else_=0)).label("paid_amount_total"),
+            func.sum(case((eligible_admin_payment(), Payment.amount), else_=0)).label("paid_amount_total"),
         )
         .select_from(Booking)
         .outerjoin(Payment, Payment.booking_id == Booking.id)
@@ -519,6 +539,7 @@ def report_daily_bookings(
     rows = db.execute(stmt).all()
     return [
         AdminDailyBookingReportRow(
+            **admin_revenue_scope(),
             day=r.day,
             total_bookings=int(r.total_bookings or 0),
             confirmed_bookings=int(r.confirmed_bookings or 0),

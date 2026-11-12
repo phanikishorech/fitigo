@@ -23,9 +23,14 @@ class RazorpayProvider:
     def normalize_order(self, row):
         if not isinstance(row, dict) or not re.fullmatch(r"order_[A-Za-z0-9]+", row.get("id", "")):
             raise HTTPException(409, detail="Invalid gateway order")
+        if row.get('status') not in {'created', 'attempted', 'paid'}:
+            raise HTTPException(409, detail="Unrecognized gateway order status. Refresh payment status.")
         return ProviderOrder(row["id"], row.get("receipt"), row.get("amount"), row.get("currency"),
             row.get("status") == "paid" and row.get("amount_paid") == row.get("amount") and row.get("amount_due") == 0,
-            row.get("status") != "paid")
+            row.get("status") != "paid", {
+                'unpaid_verified': row.get('status') in {'created', 'attempted'} and row.get('amount_paid') == 0
+                    and row.get('amount_due') == row.get('amount'),
+                'expected_attempts': row.get('attempts')})
 
     def create_order(self, checkout, customer):
         return self.normalize_order(self.gateway.create_order(checkout))
@@ -37,6 +42,9 @@ class RazorpayProvider:
     def order(self, order_id):
         return self.normalize_order(self.gateway.order(order_id))
 
+    def terminate_order(self, order_id):
+        raise HTTPException(409, detail="This gateway cannot safely close the previous order automatically. Resolve it through payment history or support before starting another payment.")
+
     def payments(self, order_id, payment_id=None):
         rows = ([self.gateway.payment(payment_id)] if payment_id else []) + self.gateway.payments(order_id)
         result = []
@@ -44,7 +52,9 @@ class RazorpayProvider:
             if not isinstance(row, dict) or not re.fullmatch(r"pay_[A-Za-z0-9]+", row.get("id", "")):
                 raise HTTPException(409, detail="Invalid gateway payment")
             row = self.gateway.payment(row["id"])
-            state = "SUCCESS" if row.get("status") == "captured" and row.get("captured") is True else "PENDING" if row.get("status") in {"authorized", "created"} else "FAILED"
+            if row.get('status') not in {'created', 'authorized', 'captured', 'refunded', 'failed'}:
+                raise HTTPException(409, detail="Unrecognized gateway payment status. Refresh payment status.")
+            state = "SUCCESS" if row.get("status") in {"captured", "refunded"} and row.get("captured") is True else "FAILED" if row.get('status') == 'failed' else "PENDING"
             result.append(ProviderPayment(row["id"], row.get("order_id"), row.get("amount"), row.get("currency"), state,
                 row.get("amount_refunded", 0)))
         return result

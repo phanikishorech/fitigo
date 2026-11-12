@@ -13,6 +13,8 @@ from app.services.auth_service import AuthService
 from app.services.gym_service import GymService
 from app.services.membership_service import MembershipService
 from app.services.staff_service import StaffService
+from legacy_access_fixtures import active_membership, assigned_staff
+from app.core.time import ist_today
 
 
 client = TestClient(app)
@@ -50,18 +52,15 @@ def test_membership_daily_qr_and_scan_flow():
         # Create a plan + purchase membership (active)
         msvc = MembershipService(db)
         plan = msvc.create_plan(owner_user_id=int(owner.id), gym_id=int(gym.id), data={"name": "Monthly", "duration_days": 30, "price": "999.00"})
-        _m = msvc.purchase_membership(user_id=int(customer.id), gym_id=int(gym.id), plan_id=int(plan.id))
+        _m = active_membership(db, customer.id, gym.id, plan.id)
 
         # Invite staff so they can scan
-        staff_email = f"qr_staff_{uuid.uuid4().hex[:8]}@example.com"
-        ssvc = StaffService(db)
-        invite = ssvc.invite_staff(owner_user_id=int(owner.id), gym_id=int(gym.id), email=staff_email, first_name="S", last_name="T")
-        staff_user_id = int(invite["staff_user_id"])
+        staff_user_id = assigned_staff(db, gym.id)
 
         cust_token = create_access_token(str(customer.id))
 
         # Calendar should load for current month
-        month = datetime.utcnow().strftime("%Y-%m")
+        month = ist_today().strftime("%Y-%m")
         rcal = client.get(
             "/api/v1/profile/membership/calendar",
             params={"gym_id": gym.id, "month": month},

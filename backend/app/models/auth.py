@@ -112,3 +112,17 @@ class AuthRateLimit(Base):
     key: Mapped[str] = mapped_column(String(64), primary_key=True)
     attempts: Mapped[int] = mapped_column(Integer, nullable=False)
     window_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class AccountOtp(Base):
+    __tablename__ = 'account_otps'
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    channel: Mapped[str] = mapped_column(String(10), nullable=False)
+    purpose: Mapped[str] = mapped_column(String(20), nullable=False)
+    user_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey('users.id'), nullable=True)
+    token_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    nonce: Mapped[str] = mapped_column(String(64), nullable=False)
+    code_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    attempts_left: Mapped[int] = mapped_column(Integer, nullable=False)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

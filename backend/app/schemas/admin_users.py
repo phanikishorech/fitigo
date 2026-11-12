@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, Field
+from typing import Literal
 
 
 class AdminUserListItem(BaseModel):
@@ -22,5 +23,6 @@ class AdminUserDetail(AdminUserListItem):
 
 
 class AdminUpdateUserStatusRequest(BaseModel):
-    status: str = Field(min_length=2, max_length=50)
+    status: Literal['ACTIVE', 'INACTIVE', 'SUSPENDED', 'BANNED']
     reason: str | None = Field(default=None, max_length=500)
+    reason_code: Literal['ADMIN_REQUEST', 'SECURITY', 'POLICY_VIOLATION', 'DUPLICATE', 'CORRECTION', 'OTHER'] = 'ADMIN_REQUEST'

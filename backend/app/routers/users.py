@@ -12,6 +12,8 @@ from app.repositories.user_repository import UserRepository
 from app.schemas.user import UserMeResponse, UserProfileUpdate
 from app.core.security import verify_password
 from app.services.password_service import PasswordService, now
+from app.services.operation_audit import record
+from app.services.notification_workflow import publish
 
 
 router = APIRouter(prefix="/users")
@@ -55,6 +57,8 @@ def update_me(payload: UserProfileUpdate, response: Response, db: Session = Depe
             user.token_version += 1
             db.execute(update(RefreshToken).where(RefreshToken.user_id == uid, RefreshToken.revoked_at.is_(None)).values(revoked_at=now()))
             db.execute(update(PasswordResetToken).where(PasswordResetToken.user_id == uid, PasswordResetToken.used_at.is_(None)).values(used_at=now()))
+        record(db, 'PROFILE_UPDATED', uid, uid, contact_changed=contact_changed)
+        publish(db, uid, 'PROFILE_UPDATED', uid)
         db.commit()
     except IntegrityError:
         db.rollback()

@@ -1,5 +1,11 @@
 import type { AccessCalendar, MembershipSummary } from '../services/accountService'
-import { dayPresentation, todayFrom } from './membership'
+import { dayPresentation, membershipOverviewState, todayFrom } from './membership'
+
+export function canOfferHomeMembership(summary: MembershipSummary, records: { status: string }[]) {
+  // Expired/cancelled plans may be renewed, but paused or uncertain records
+  // must not be mistaken for customers without a membership.
+  return membershipOverviewState(records, summary.status) === 'none'
+}
 
 // Copy only: the backend summary/calendar decide membership and daily access.
 export function memberHomePresentation(summary: MembershipSummary, calendar: AccessCalendar) {

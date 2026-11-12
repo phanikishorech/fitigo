@@ -1,3 +1,4 @@
+from test_database_guard import disposable_name
 """Opt-in concurrency verification in an isolated, uniquely named local MySQL database.
 
 FITIGO_MYSQL_WALLET_TESTS=1 enables this suite. Application data is never written.
@@ -29,7 +30,7 @@ def mysql_wallet():
     from app.models.wallet import WalletAccount
     assert settings.environment == 'development'
     assert application_engine.url.host in ('localhost','127.0.0.1','::1')
-    name = 'fitigo_wallet_test_' + uuid4().hex[:12]
+    name = disposable_name()
     control = create_engine(application_engine.url.set(database=None), isolation_level='AUTOCOMMIT')
     test_engine = None
     created = False

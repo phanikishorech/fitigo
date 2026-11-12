@@ -5,7 +5,7 @@ import ts from 'typescript'
 const read = path => readFileSync(new URL(path, import.meta.url), 'utf8')
 const compile = source => `data:text/javascript;base64,${Buffer.from(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText).toString('base64')}`
 globalThis.__membershipUtils = await import(compile(read('../src/utils/membership.ts')))
-const { memberHomePresentation } = await import(compile(read('../src/utils/memberHome.ts').replace(/import .* from '.\/membership'/, 'const {dayPresentation,todayFrom}=globalThis.__membershipUtils')))
+const { memberHomePresentation, canOfferHomeMembership } = await import(compile(read('../src/utils/memberHome.ts').replace(/import .* from '.\/membership'/, 'const {dayPresentation,membershipOverviewState,todayFrom}=globalThis.__membershipUtils')))
 const summary = { membership_id: 1, status: 'ACTIVE', membership_scope: 'MULTI_GYM', active_gyms: [] }
 const calendar = { access_type: 'MULTI_GYM', gym: null, days: [{ status: 'TODAY', qr_status: 'ACTIVE', qr_available: true, date: '2026-10-27' }] }
 test('active FitiGo member gets an invitation to My Access, not a new purchase', () => {
@@ -37,4 +37,23 @@ test('home card is authenticated customer-only and read-only', () => {
   assert.match(card, /validateAccessCalendar/)
   assert.doesNotMatch(card, /accessService.today|paymentService|bookingService/)
   assert.match(read('../src/pages/discovery/DiscoveryPage.tsx'), /home && <HomeMembershipCard/)
+})
+
+test('home offer requires confirmed absence of an active or paused membership', () => {
+  assert.equal(canOfferHomeMembership({ ...summary, membership_id: null, status: null }, []), true)
+  for (const status of ['EXPIRED', 'CANCELLED', 'INACTIVE', 'NONE']) {
+    assert.equal(canOfferHomeMembership({ ...summary, status }, [{ status }]), true)
+  }
+  for (const status of ['ACTIVE', 'PAUSED', 'UNKNOWN', 'PENDING']) {
+    assert.equal(canOfferHomeMembership({ ...summary, status }, []), false)
+    assert.equal(canOfferHomeMembership({ ...summary, status: null }, [{ status }]), false)
+  }
+})
+
+test('nonmember banner opens real plan catalog without prices or automatic purchase', () => {
+  const card = read('../src/components/membership/HomeMembershipCard.tsx')
+  assert.match(card, /to="\/membership\/multi-gym\/plans"/)
+  assert.match(card, /View FitiGo plans/)
+  assert.match(card, /canOfferHomeMembership\(summary, memberships\)/)
+  assert.doesNotMatch(card, /createOrder|payWallet|paymentService.create|₹/)
 })

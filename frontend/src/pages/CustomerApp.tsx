@@ -29,6 +29,7 @@ const AccessPage = lazy(() => import('./access/AccessPage'))
 const ReviewPage = lazy(() => import('./reviews/ReviewPage'))
 const StaffPage = lazy(() => import('./staff/StaffPage'))
 const PasswordRecoveryPage = lazy(() => import('./auth/PasswordRecoveryPage'))
+const StaffInvitationPage = lazy(() => import('./auth/StaffInvitationPage'))
 
 function SignIn({ path, authPage = false }: { path: string; authPage?: boolean }) {
   useEffect(() => { if (!authPage) return; const timer = window.setTimeout(() => openAuthModal(), 0); return () => window.clearTimeout(timer) }, [authPage, path])
@@ -76,6 +77,7 @@ export default function CustomerApp({ path }: { path: string }) {
     case 'review': page = <ReviewPage id={route.id} />; break
     case 'auth': page = <SignIn path={path} authPage />; break
     case 'forgotPassword': case 'resetPassword': page = <PasswordRecoveryPage reset={route.page === 'resetPassword'} />; break
+    case 'staffInvitation': page = <StaffInvitationPage />; break
     case 'staff': page = <StaffPage />; break
     default: page = <EmptyState title="This page took a wrong turn" description="Let’s get you back to your next workout." action={<Link to="/home" className="fg-button fg-button--primary">Back to home</Link>} />
   }

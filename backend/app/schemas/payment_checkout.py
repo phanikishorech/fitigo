@@ -1,6 +1,6 @@
 from typing import Literal
 from decimal import Decimal
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_validator
 
 
 class CheckoutCreate(BaseModel):
@@ -12,9 +12,16 @@ class CheckoutCreate(BaseModel):
     plan_id: int | None = Field(default=None, gt=0)
     order_id: str | None = Field(default=None, max_length=36)
     accepted_quote: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    cart_item_ids: list[int] | None = Field(default=None, min_length=1, max_length=100)
+    confirm_razorpay_replacement: StrictBool = False
 
     @model_validator(mode="after")
     def source(self):
+        if self.confirm_razorpay_replacement and (self.kind != 'CART' or not self.cart_item_ids):
+            raise ValueError('Replacement confirmation requires an explicit current cart')
+        if self.cart_item_ids is not None and (self.kind != 'CART' or
+                any(item <= 0 for item in self.cart_item_ids) or len(set(self.cart_item_ids)) != len(self.cart_item_ids)):
+            raise ValueError('Provide unique positive cart item IDs for a cart checkout')
         required = {"CART": [], "BOOKING": ["booking_id"], "SINGLE_GYM": ["gym_id", "plan_id", "accepted_quote"], "MULTI_GYM": ["order_id", "accepted_quote"], "WALLET_TOPUP": ["amount"]}[self.kind]
         if any(getattr(self, name) is None for name in required):
             raise ValueError("Missing checkout source fields")

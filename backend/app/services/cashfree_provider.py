@@ -78,7 +78,8 @@ class CashfreeProvider:
             if state == "ACTIVE" and (not isinstance(session, str) or not session):
                 raise ValueError()
             return ProviderOrder(order_id, reference, minor(row["order_amount"]), row["order_currency"],
-                state == "PAID", state == "ACTIVE", {"payment_session_id": session, "payable": state == "ACTIVE"})
+                state == "PAID", state == "ACTIVE", {"payment_session_id": session, "payable": state == "ACTIVE",
+                    "closed_unpaid": state in {"EXPIRED", "TERMINATED"}})
         except (KeyError, ValueError, TypeError, AttributeError):
             raise HTTPException(409, detail="Invalid Cashfree order response") from None
 
@@ -100,6 +101,11 @@ class CashfreeProvider:
 
     def order(self, order_id):
         return self.normalize_order(self.request("GET", f"orders/{order_id}"))
+
+    def terminate_order(self, order_id):
+        # PATCH is a request, not proof of closure. The service re-fetches the
+        # order and attempts before authorizing any replacement purchase.
+        return self.normalize_order(self.request("PATCH", f"orders/{order_id}", json={"order_status": "TERMINATED"}))
 
     def payments(self, order_id, payment_id=None):
         rows = self.request("GET", f"orders/{order_id}/payments")

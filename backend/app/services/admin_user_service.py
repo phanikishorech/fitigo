@@ -4,7 +4,8 @@ from fastapi import HTTPException, status
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
-from app.models.auth import User
+from app.models.auth import User, UserRole, Role
+from app.services.operation_audit import record
 from app.repositories.user_repository import UserRepository
 
 
@@ -38,18 +39,9 @@ class AdminUserService:
         if status_filter:
             stmt = stmt.where(User.status == status_filter)
 
-        users = list(self.db.execute(stmt).scalars().all())
-
         if role:
-            # Filter in-memory based on roles mapping (simple + clear; ok for admin lists).
-            out: list[User] = []
-            for u in users:
-                roles = set(self.repo.get_role_names(u.id))
-                if role in roles:
-                    out.append(u)
-            return out
-
-        return users
+            stmt = stmt.where(User.id.in_(select(UserRole.user_id).join(Role, Role.id == UserRole.role_id).where(Role.name == role)))
+        return list(self.db.execute(stmt).scalars().all())
 
     def get_user(self, *, user_id: int) -> User:
         u = self.repo.get_by_id(user_id)
@@ -57,12 +49,18 @@ class AdminUserService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
         return u
 
-    def update_status(self, *, user_id: int, new_status: str, reason: str | None = None) -> User:
-        u = self.get_user(user_id=user_id)
+    def update_status(self, *, user_id: int, new_status: str, reason: str | None = None,
+                      actor_id: int | None = None, reason_code: str = 'ADMIN_REQUEST') -> User:
+        if new_status not in {'ACTIVE', 'INACTIVE', 'SUSPENDED', 'BANNED'}:
+            raise HTTPException(422, 'Unsupported account status')
+        u = self.db.scalar(select(User).where(User.id == user_id).with_for_update().execution_options(populate_existing=True))
+        if not u: raise HTTPException(404, 'User not found')
+        old_status = u.status
         u.status = new_status
-        if reason:
-            # No dedicated audit table yet; store as a suffix on admin notes if ever added.
-            pass
+        if old_status != new_status:
+            from app.services.operation_audit import VALUES
+            record(self.db, 'USER_STATUS_CHANGED', user_id, actor_id, reason_code=reason_code,
+                   to_status=new_status, **({'from_status':old_status} if old_status in VALUES else {}))
         self.db.commit()
         self.db.refresh(u)
         return u

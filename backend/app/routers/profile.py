@@ -8,8 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func, select, exists
 from sqlalchemy.orm import Session
 
-from app.core.config import settings
-from app.core.dependencies import get_optional_user, require_role
+from app.core.dependencies import get_current_user, require_role
 from app.core.roles import ROLE_CUSTOMER
 from app.core.time import ist_today, ist_now, as_ist
 from app.services.access_service import AccessService
@@ -119,17 +118,8 @@ def get_membership_daily_qr(
     )
 
 
-def _get_dev_customer_id(db: Session) -> int | None:
-    """Dev-only fallback when frontend isn't sending Authorization yet."""
-
-    if settings.environment != "development":
-        return None
-    u = db.execute(select(User).where(User.email == "customer@example.com")).scalars().first()
-    return int(u.id) if u else None
-
-
 def _require_user_id(db: Session, current_user: User | None) -> int:
-    uid = int(current_user.id) if current_user else _get_dev_customer_id(db)
+    uid = int(current_user.id) if current_user else None
     if uid is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
     return uid
@@ -174,7 +164,7 @@ def _compute_streak(attended_dates: list[date]) -> int:
 
 
 @router.get("", response_model=ProfileResponse)
-def get_profile(db: Session = Depends(get_db), current_user: User | None = Depends(get_optional_user)):
+def get_profile(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     uid = _require_user_id(db, current_user)
     user = db.execute(select(User).where(User.id == uid)).scalars().first()
     if not user:
@@ -223,7 +213,7 @@ def get_profile(db: Session = Depends(get_db), current_user: User | None = Depen
 @router.get("/membership", response_model=MembershipSummaryResponse)
 def get_membership_summary(
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_optional_user),
+    current_user: User = Depends(get_current_user),
 ):
     uid = _require_user_id(db, current_user)
     now = datetime.utcnow()
@@ -518,7 +508,7 @@ def membership_visits(response: Response, year: int = Query(..., ge=2000, le=210
 @router.get("/activity", response_model=ProfileActivityResponse)
 def get_profile_activity(
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_optional_user),
+    current_user: User = Depends(get_current_user),
 ):
     uid = _require_user_id(db, current_user)
 
@@ -563,7 +553,7 @@ def get_profile_activity(
 @router.get("/favorites", response_model=FavoritesResponse)
 def get_favorites(
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_optional_user),
+    current_user: User = Depends(get_current_user),
 ):
     uid = _require_user_id(db, current_user)
     rows = list(
@@ -593,7 +583,7 @@ def get_favorites(
 @router.get("/membership/pass", response_model=MembershipPassResponse)
 def get_membership_pass(
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(get_optional_user),
+    current_user: User = Depends(get_current_user),
 ):
     uid = _require_user_id(db, current_user)
     user = db.execute(select(User).where(User.id == uid)).scalars().first()

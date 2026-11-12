@@ -28,6 +28,10 @@ function fixture(path, method, body, query) {
     return { total: 1, items: [{ id: 'checkout:fixture', source: 'checkout', kind: 'WALLET_TOPUP', status: 'REFUNDED', amount: '1000', currency: 'INR', provider: 'RAZORPAY', mode: 'test', created_at: '2026-10-27T12:00:00+05:30', checkout_id: record.id, provider_order_id: 'order_fixture', transaction_id: 'pay_fixture', failure_code: null, order_details: { requested_amount: '1000' }, bookings: [], membership_ids: [], wallet_entries: [{ id: 1, direction: 'IN', type: 'TOPUP', amount: '1000' }], attempts: [{ transaction_id: 'pay_fixture', status: 'REFUNDED', amount: '1000', refunded_amount: '1000', first_seen_at: '2026-10-27T12:00:00+05:30', updated_at: '2026-10-27T12:05:00+05:30' }] }] }
   }
   if (path.endsWith('/notifications/me')) return []
+  if (path.endsWith('/auth/otp/options')) return { email_available: false, mobile_available: false, expiry_seconds: 300, resend_seconds: 60 }
+  if (path.endsWith('/notifications/preferences')) return { enabled: false, operational_email: false, email_available: false, message: 'Disabled fixture' }
+  if (path.endsWith('/notifications/inbox')) return { enabled: false, items: [], total: 0, unread_count: 0 }
+  if (path.endsWith('/meta/support')) return { email: null, message: 'No configured contact', ticketing_available: false }
   throw Error(`Unexpected API ${method} ${path}`)
 }
 ws.onmessage = async event => {

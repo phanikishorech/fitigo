@@ -1,4 +1,5 @@
 import { useId, useState, type ReactNode } from 'react'
+import { paymentInstructions } from '../utils/paymentInstructions'
 import { navigate } from '../router'
 import { money } from '../services/client'
 import { planDuration, type PlatformPlan } from '../services/platformMembershipService'
@@ -20,7 +21,7 @@ function PlanList() {
   return <><PageHeader title="Membership Plans" subtitle="Manage Multi-Gym pricing, availability and promotions." action={<Link to={`${basePath}/new`} className="fg-button fg-button--primary"><Icon name="plus" size={18} />Create Plan</Link>} />
     <PaymentNotice /><Resource resource={resource}>{catalog => <>
       <div className="ad-plan-toolbar"><p>{catalog.items.length} configured plans · In backend display order</p><Button variant="secondary" onClick={resource.retry}>Refresh plans</Button></div>
-      {!catalog.items.length ? <EmptyState title="No Multi-Gym plans yet" description="Create a plan to configure pricing. Payment remains disabled." action={<Link to={`${basePath}/new`} className="fg-button fg-button--primary">Create Plan</Link>} /> : <div className="ad-plan-grid">{catalog.items.map(plan => <DataCard key={plan.id} title={plan.name} action={<StatusBadge status={plan.is_active ? 'ACTIVE' : 'INACTIVE'} />}>
+      {!catalog.items.length ? <EmptyState title="No Multi-Gym plans yet" description="Create a plan to configure pricing. Checkout availability is shown above." action={<Link to={`${basePath}/new`} className="fg-button fg-button--primary">Create Plan</Link>} /> : <div className="ad-plan-grid">{catalog.items.map(plan => <DataCard key={plan.id} title={plan.name} action={<StatusBadge status={plan.is_active ? 'ACTIVE' : 'INACTIVE'} />}>
         <p className="ad-plan-meta">{planDuration(plan)} · Display order {plan.display_order}</p>
         <PlanPrice plan={plan} />
         <p className="ad-plan-meta">{plan.offer?.title || (plan.offer ? 'Offer active' : 'No effective discount right now')}</p>
@@ -34,7 +35,7 @@ function PlanDetail({ id, offer }: { id: number; offer: boolean }) {
   const resource = useAdminResource(signal => adminMembershipPlans.detail(id, signal), `admin-plan:${id}`)
   return <Resource resource={resource}>{detail => offer ? <OfferEditor key={`${id}:${detail.plan.version}`} detail={detail} reload={resource.retry} /> : <PlanEditor key={`${id}:${detail.plan.version}`} detail={detail} reload={resource.retry} />}</Resource>
 }
-function PaymentNotice() { return <Alert>Controlled MVP: membership checkout uses wallet test credits in development only. External payments remain disabled. Configure eligible partner gyms from Gym details. Pause policy changes apply to future requests; accepted pauses remain honored.</Alert> }
+function PaymentNotice() { const resource = useAdminResource(signal => adminMembershipPlans.list(signal), 'payment-instructions'); return <Alert>{resource.error ? 'Unable to verify payment availability. Retry the plan list.' : resource.data ? paymentInstructions(resource.data) : 'Checking payment availability?'} Configure eligible partner gyms from Gym details. Accepted pauses remain honored.</Alert> }
 function PlanPrice({ plan }: { plan: PlatformPlan }) {
   return <div className="ad-plan-price">{plan.offer && <del>{money(plan.base_price, plan.currency)}</del>}<strong>{money(plan.final_price, plan.currency)}</strong><small>Current backend price{plan.offer && ` · ${plan.discount_percentage !== null ? `${Number(plan.discount_percentage)}% off` : `Save ${money(plan.discount_amount, plan.currency)}`}`}</small></div>
 }
@@ -89,7 +90,7 @@ function PlanEditor({ detail, reload }: { detail?: AdminPlanDetail; reload?: () 
     </form></DataCard>
     {plan && <DataCard title="Currently saved price"><PlanPrice plan={plan} /><p className="ad-plan-meta">This is the saved backend price, not a prediction of unsaved changes.</p><Link to={`${basePath}/${plan.id}/offer`} className="fg-button fg-button--secondary">Manage Offer</Link></DataCard>}</div>
     {pending && <SaveDialog title={plan ? 'Save plan changes?' : 'Create this plan?'} onClose={() => setPending(null)} save={() => plan ? adminMembershipPlans.update(plan.id, pending, plan.version) : adminMembershipPlans.create(pending)} onSaved={() => { toast(plan ? 'Membership plan updated.' : 'Membership plan created.'); navigate(basePath) }}>
-      {pending.name}: base price {money(pending.base_price, pending.currency)}. The plan will be {pending.is_active ? 'visible' : 'hidden'} in the customer catalog. External payments remain disabled; development checkout uses test credits.
+      {pending.name}: base price {money(pending.base_price, pending.currency)}. The plan will be {pending.is_active ? 'visible' : 'hidden'} in the customer catalog. Checkout uses the backend-configured payment method shown in the plan list; saving a plan does not take payment.
     </SaveDialog>}
   </>
 }
@@ -127,7 +128,7 @@ function OfferEditor({ detail, reload }: { detail: AdminPlanDetail; reload: () =
       </form>
     </DataCard><DataCard title="Currently saved price"><PlanPrice plan={plan} /><p className="ad-plan-meta">Final prices are calculated only by the backend. Save and reload to see the effective result.</p><Link to={`${basePath}/${plan.id}`} className="fg-button fg-button--secondary">Edit Plan</Link></DataCard></div>
     {pending && <SaveDialog title={pending.is_active ? 'Save this offer?' : 'Save disabled offer?'} onClose={() => setPending(null)} save={() => adminMembershipPlans.offer(plan.id, pending)} onSaved={() => { toast(pending.is_active ? 'Offer saved. The backend controls its schedule.' : 'Offer disabled.'); setPending(null); reload() }}>
-      {pending.kind === 'PERCENTAGE' ? `${pending.value}% off` : `${money(pending.value, plan.currency)} off`}. {pending.is_active ? `Scheduled from ${istInput(pending.starts_at).replace('T', ' ')} to ${istInput(pending.ends_at).replace('T', ' ')} IST.` : 'The offer will not apply to customer prices.'} External payments remain disabled.
+      {pending.kind === 'PERCENTAGE' ? `${pending.value}% off` : `${money(pending.value, plan.currency)} off`}. {pending.is_active ? `Scheduled from ${istInput(pending.starts_at).replace('T', ' ')} to ${istInput(pending.ends_at).replace('T', ' ')} IST.` : 'The offer will not apply to customer prices.'} This changes FitiGo pricing, not gateway-funded offers or refund policy.
     </SaveDialog>}
   </>
 }

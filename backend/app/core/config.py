@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from pathlib import Path
+import os
 from typing import Literal
-from pydantic import SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -68,12 +69,21 @@ class Settings(BaseSettings):
     # /health/db will report unhealthy until configured.
     database_url: str | None = None
 
-    jwt_secret: str = "CHANGE_ME"
+    # No shared development/test signing key. Configure every API instance.
+    jwt_secret: SecretStr = SecretStr("")
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
 
     upload_dir: str = "uploads"
+    # Enable only after df081ac34602 has been applied and storage permissions verified.
+    operational_workflows_enabled: bool = False
+    notification_workflows_enabled: bool = False
+    # Separate opt-in; queue creation must never start an external sender.
+    notification_email_enabled: bool = False
+    support_email: str = ''
+    # Activate only after f02a3ce56824; operational audit is required too.
+    support_workflows_enabled: bool = False
 
     # App download links (configurable; do not hardcode in frontend)
     android_app_url: str | None = None
@@ -82,17 +92,52 @@ class Settings(BaseSettings):
     allowed_origins: str = "http://localhost:5173"
 
     # Server-only SMTP credentials. Recovery never returns or logs reset tokens.
+    email_provider: Literal['smtp', 'disabled'] = 'smtp'
+    public_frontend_url: str = ''
     smtp_host: str | None = None
     smtp_port: int = 587
     smtp_username: str | None = None
-    smtp_password: str | None = None
+    smtp_password: SecretStr = SecretStr('')
     smtp_from: str | None = None
     smtp_security: str = "starttls"  # starttls or ssl; no plaintext delivery
-    password_reset_frontend_url: str = "http://localhost:5173/auth/reset-password"
+    # Legacy explicit reset URL remains supported; no implicit localhost link.
+    password_reset_frontend_url: str = ''
+    password_reset_expiry_minutes: int = Field(default=30, ge=5, le=120)
+    invitation_expiry_hours: int = Field(default=48, ge=1, le=168)
+    invitation_resend_seconds: int = Field(default=60, ge=30, le=3600)
+    otp_expiry_seconds: int = Field(default=600, ge=60, le=900)
+    otp_resend_seconds: int = Field(default=60, ge=30, le=600)
+    otp_max_attempts: int = Field(default=5, ge=1, le=10)
+    otp_send_limit: int = Field(default=5, ge=1, le=10)
+    sms_provider: Literal['disabled', 'twilio'] = 'disabled'
+    twilio_account_sid: str = ''
+    twilio_auth_token: SecretStr = SecretStr('')
+    twilio_from_number: str = ''
+
+    def validate_security(self) -> None:
+        """Fail closed at API startup, without including configuration values.
+
+        Apply the same policy in every environment: an ENVIRONMENT typo or a
+        copied development configuration must not bypass signing-key checks.
+        Length/placeholder checks are a floor, not proof of random entropy.
+        """
+        minimum = {"HS256": 32, "HS384": 48, "HS512": 64}.get(self.jwt_algorithm)
+        if minimum is None:
+            raise RuntimeError("JWT_ALGORITHM must be HS256, HS384 or HS512.")
+        secret = self.jwt_secret.get_secret_value()
+        normalized = "".join(c for c in secret.lower() if c.isalnum())
+        placeholders = ("changeme", "replacewith", "yoursecret", "yourjwt", "testonly", "developmentonly")
+        if (not secret or secret != secret.strip() or len(secret.encode("utf-8")) < minimum
+                or len(set(secret)) < 12 or any(value in normalized for value in placeholders)):
+            raise RuntimeError(
+                "JWT_SECRET is missing or insecure. Configure an independently generated random signing secret "
+                "of at least 32 bytes for HS256, 48 for HS384 or 64 for HS512; placeholders are not allowed."
+            )
 
     @property
     def allowed_origins_list(self) -> list[str]:
         return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
 
 
-settings = Settings()  # type: ignore[call-arg]
+# Tests receive all settings from their isolated child process, never local .env.
+settings = Settings(_env_file=None) if os.environ.get('FITIGO_TEST_BOOTSTRAPPED') == '1' else Settings()  # type: ignore[call-arg]

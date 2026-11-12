@@ -27,6 +27,9 @@ class CashfreeHTTP:
         self.creations = 0
         self.timeout = False
         self.unavailable = False
+        self.termination_state = 'TERMINATED'
+        self.termination_timeout = False
+        self.success_on_termination = False
 
     def __call__(self, request):
         self.calls.append(request)
@@ -50,6 +53,15 @@ class CashfreeHTTP:
         order_id = path[1]
         if order_id not in self.orders:
             return httpx.Response(404, json={'type': 'invalid_request_error', 'code': 'order_not_found'})
+        if request.method == 'PATCH':
+            assert json.loads(request.content) == {'order_status': 'TERMINATED'}
+            self.orders[order_id]['order_status'] = self.termination_state
+            if self.success_on_termination:
+                row = self.orders[order_id]
+                self.pay({'gateway_order_id': order_id, 'amount': row['order_amount'], 'currency': row['order_currency']})
+            if self.termination_timeout:
+                raise httpx.ReadTimeout('mock lost termination response', request=request)
+            return httpx.Response(200, json=self.orders[order_id])
         value = self.orders[order_id] if len(path) == 2 else self.attempts[order_id] if path[2] == 'payments' else self.refunds[order_id]
         return httpx.Response(200, json=value)
 
@@ -214,6 +226,7 @@ def test_unknown_create_stays_creating_without_charge_retry(api):
 
 def test_cancelled_checkout_late_success_requires_review(api):
     record = checkout(api)
+    api[3].orders[record['gateway_order_id']]['order_status'] = 'TERMINATED'
     assert api[0].post(f"/api/v1/payments/checkouts/{record['id']}/cancel", headers=api[1][1]).json()['status'] == 'CANCELLED'
     api[3].pay(record)
     assert webhook(api, record).status_code == 200

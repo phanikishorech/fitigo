@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from app.core.time import ist_today
+from datetime import timedelta
+
 import uuid
 from datetime import date
 
@@ -60,16 +63,18 @@ def test_customer_can_reschedule_pending_booking_and_capacity_moves():
         )
 
         bsvc = BookingService(db)
-        b = bsvc.create_booking(user_id=customer.id, gym_slot_id=s1.id, slot_date=date.today(), quantity=1, notes=None)
+        b = bsvc.create_booking(user_id=customer.id, gym_slot_id=s1.id, slot_date=(ist_today() + timedelta(days=1)), quantity=1, notes=None)
 
         token = create_access_token(str(customer.id))
         r = client.post(
             f"/api/v1/bookings/{b.id}/reschedule",
-            json={"gym_slot_id": s2.id, "slot_date": str(date.today()), "note": "later"},
+            json={"gym_slot_id": s2.id, "slot_date": str((ist_today() + timedelta(days=1))), "note": "later"},
             headers={"Authorization": f"Bearer {token}"},
         )
         assert r.status_code == 200
         assert r.json()["gym_slot_id"] == s2.id
+        assert f'from_slot={s1.id}' in r.json()['notes']
+        assert f'to_slot={s2.id}' in r.json()['notes']
     finally:
         db.close()
 
@@ -124,14 +129,14 @@ def test_reschedule_fails_when_new_slot_is_full():
         )
 
         bsvc = BookingService(db)
-        b_full = bsvc.create_booking(user_id=c1.id, gym_slot_id=s2.id, slot_date=date.today(), quantity=1, notes=None)
+        b_full = bsvc.create_booking(user_id=c1.id, gym_slot_id=s2.id, slot_date=(ist_today() + timedelta(days=1)), quantity=1, notes=None)
         assert b_full.id
-        b = bsvc.create_booking(user_id=c2.id, gym_slot_id=s1.id, slot_date=date.today(), quantity=1, notes=None)
+        b = bsvc.create_booking(user_id=c2.id, gym_slot_id=s1.id, slot_date=(ist_today() + timedelta(days=1)), quantity=1, notes=None)
 
         token = create_access_token(str(c2.id))
         r = client.post(
             f"/api/v1/bookings/{b.id}/reschedule",
-            json={"gym_slot_id": s2.id, "slot_date": str(date.today())},
+            json={"gym_slot_id": s2.id, "slot_date": str((ist_today() + timedelta(days=1)))},
             headers={"Authorization": f"Bearer {token}"},
         )
         assert r.status_code == 400

@@ -57,7 +57,10 @@ class OwnerMemberService:
         if not user: raise HTTPException(404, 'Member not found at this gym')
         bookings=select(Booking).where(Booking.user_id == user_id, Booking.gym_id == self.gym_id)
         visits=select(Checkin).where(Checkin.user_id == user_id, Checkin.gym_id == self.gym_id, Checkin.status == 'SUCCESS')
+        from app.services.membership_entitlement import active_memberships, covers
+        current_access = covers(active_memberships(self.db, user_id, utcnow()), self.db.get(Gym, self.gym_id))
         return {'id':user.id,'name':' '.join(n for n in (user.first_name,user.last_name) if n) or f'Member #{user.id}',
+            'current_membership_access': current_access,
             'memberships':self.memberships(user_id),
             'bookings':[{'id':b.id,'date':b.slot_date,'status':b.status,'attendance_status':b.attendance_status,'quantity':b.quantity}
                 for b in self.db.scalars(bookings.order_by(Booking.id.desc()).limit(limit).offset(offset))],

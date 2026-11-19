@@ -129,15 +129,7 @@ class MembershipService:
         )
 
     def cancel_membership(self, *, user_id: int, membership_id: int) -> UserMembership:
-        from app.models.auth import User
-        self.db.scalars(select(User).where(User.id == user_id).with_for_update()).first()
-        m = self.db.execute(select(UserMembership).where(UserMembership.id == membership_id, UserMembership.user_id == user_id).with_for_update().execution_options(populate_existing=True)).scalars().first()
-        if not m:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Membership not found")
-        if m.status != MembershipStatus.ACTIVE.value:
-            return m
-        m.status = MembershipStatus.CANCELLED.value
-        m.cancelled_at = datetime.now(timezone.utc)
-        self.db.commit()
-        self.db.refresh(m)
-        return m
+        membership = self.db.scalar(select(UserMembership).where(UserMembership.id == membership_id, UserMembership.user_id == user_id))
+        if not membership:
+            raise HTTPException(404, 'Membership not found')
+        raise HTTPException(409, 'Memberships cannot be cancelled. Access continues until expiry under the existing membership rules.')

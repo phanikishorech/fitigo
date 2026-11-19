@@ -1,0 +1,1 @@
+PASS compact dashboard: six primary cards, independent expansion/collapse without requests, no tables, scope/date/error recovery and responsive layout

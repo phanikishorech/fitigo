@@ -43,6 +43,8 @@ ws.onmessage = async event => {
   try {
     let body, responseCode = 200
     if (path.endsWith('/auth/session')) body = { user, roles: ['CUSTOMER'] }
+    else if (path.endsWith('/notifications/inbox')) body = { items: [], total: 0, unread_count: 0 }
+    else if (path.endsWith('/cart/summary')) body = { count: 0, total: '0.00', currency: 'INR' }
     else if (path.endsWith('/users/me')) body = user
     else if (path.endsWith('/payments/history')) {
       assert.equal(request.method, 'GET'); historyRequests.push(Object.fromEntries(url.searchParams))

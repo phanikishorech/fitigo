@@ -23,8 +23,10 @@ test('admin financial scope is explicit and unknown mode is not silently live', 
     assert.ok(html.includes('Booking counts cover all modes'))
   }
 })
-test('cancellation notice never promises a refund or wallet credit', () => {
+test('cancellation notice limits credit to eligible wallet-only cancellations and not arbitrary overrides', () => {
   const html = renderToStaticMarkup(React.createElement(CancellationNotice))
-  assert.ok(html.includes('does not initiate a gateway refund or wallet credit'))
-  assert.ok(html.includes('cancellation alone is not confirmation'))
+  assert.ok(html.includes('at least 3 hours before the scheduled start'))
+  assert.ok(html.includes('credit FitiGo Wallet, not the original payment method'))
+  assert.ok(html.includes('Administrative overrides do not authorize arbitrary credits'))
+  assert.ok(html.includes('review the recorded cancellation result'))
 })

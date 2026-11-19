@@ -1,0 +1,1064 @@
+{
+  "read_only": true,
+  "observed_ist_date": "2026-11-18",
+  "configured_mode": "test",
+  "wallet_funded_purchases": [
+    {
+      "checkout_id": "528518a8-be7f-4d81-8f99-c8478ef4aff6",
+      "kind": "CART",
+      "mode": "test",
+      "configured_provider": "RAZORPAY",
+      "checkout_status": "PAID",
+      "checkout_gateway_amount": "39.00",
+      "gateway_payment_id": "pay_TzcndTQNb2PimS",
+      "total_amount": "139.00",
+      "wallet_amount": "100.00",
+      "gateway_amount": "39.00",
+      "funding_state": "DEBITED",
+      "resolved_at": "2026-11-13 10:22:08",
+      "wallet_transaction_id": 60,
+      "direction": "OUT",
+      "txn_type": "PAYMENT",
+      "ledger_amount": "100.00",
+      "ledger_created_at": "2026-11-13 10:22:08",
+      "wallet_environment": "test",
+      "booking_id": 1277,
+      "gym_id": 1666,
+      "gym_name": "Max Fit Gym",
+      "booking_status": "CONFIRMED",
+      "slot_date": "2026-11-13",
+      "total_price": "139.00",
+      "payment_id": 1273,
+      "payment_provider": "RAZORPAY",
+      "payment_status": "PAID",
+      "payment_amount": "139.00",
+      "funding_resolved_ist": "2026-11-13T15:52:08+05:30"
+    },
+    {
+      "checkout_id": "098f74ed-12e6-47e1-8052-d94ffe101eed",
+      "kind": "CART",
+      "mode": "test",
+      "configured_provider": "RAZORPAY",
+      "checkout_status": "PAID",
+      "checkout_gateway_amount": "0.00",
+      "gateway_payment_id": null,
+      "total_amount": "150.00",
+      "wallet_amount": "150.00",
+      "gateway_amount": "0.00",
+      "funding_state": "DEBITED",
+      "resolved_at": "2026-11-17 17:20:37",
+      "wallet_transaction_id": 62,
+      "direction": "OUT",
+      "txn_type": "PAYMENT",
+      "ledger_amount": "150.00",
+      "ledger_created_at": "2026-11-17 17:20:37",
+      "wallet_environment": "test",
+      "booking_id": 1281,
+      "gym_id": 189,
+      "gym_name": "PowerHouse Strength Club",
+      "booking_status": "CANCELLED",
+      "slot_date": "2026-11-18",
+      "total_price": "150.00",
+      "payment_id": 1277,
+      "payment_provider": "WALLET",
+      "payment_status": "PAID",
+      "payment_amount": "150.00",
+      "funding_resolved_ist": "2026-11-17T22:50:37+05:30"
+    },
+    {
+      "checkout_id": "c0d86825-0aef-4e1d-a035-461b94f699db",
+      "kind": "CART",
+      "mode": "test",
+      "configured_provider": "RAZORPAY",
+      "checkout_status": "PAID",
+      "checkout_gateway_amount": "50.00",
+      "gateway_payment_id": "pay_U1K6EFSupX2ib8",
+      "total_amount": "150.00",
+      "wallet_amount": "100.00",
+      "gateway_amount": "50.00",
+      "funding_state": "DEBITED",
+      "resolved_at": "2026-11-17 17:22:24",
+      "wallet_transaction_id": 64,
+      "direction": "OUT",
+      "txn_type": "PAYMENT",
+      "ledger_amount": "100.00",
+      "ledger_created_at": "2026-11-17 17:22:24",
+      "wallet_environment": "test",
+      "booking_id": 1282,
+      "gym_id": 189,
+      "gym_name": "PowerHouse Strength Club",
+      "booking_status": "CANCELLED",
+      "slot_date": "2026-11-18",
+      "total_price": "150.00",
+      "payment_id": 1278,
+      "payment_provider": "RAZORPAY",
+      "payment_status": "PAID",
+      "payment_amount": "150.00",
+      "funding_resolved_ist": "2026-11-17T22:52:24+05:30"
+    },
+    {
+      "checkout_id": "d2f3ba65-182f-4037-923e-30ca7cb1b39c",
+      "kind": "CART",
+      "mode": "test",
+      "configured_provider": "RAZORPAY",
+      "checkout_status": "PAID",
+      "checkout_gateway_amount": "0.00",
+      "gateway_payment_id": null,
+      "total_amount": "150.00",
+      "wallet_amount": "150.00",
+      "gateway_amount": "0.00",
+      "funding_state": "DEBITED",
+      "resolved_at": "2026-11-17 17:32:12",
+      "wallet_transaction_id": 67,
+      "direction": "OUT",
+      "txn_type": "PAYMENT",
+      "ledger_amount": "150.00",
+      "ledger_created_at": "2026-11-17 17:32:12",
+      "wallet_environment": "test",
+      "booking_id": 1283,
+      "gym_id": 189,
+      "gym_name": "PowerHouse Strength Club",
+      "booking_status": "CONFIRMED",
+      "slot_date": "2026-11-18",
+      "total_price": "150.00",
+      "payment_id": 1279,
+      "payment_provider": "WALLET",
+      "payment_status": "PAID",
+      "payment_amount": "150.00",
+      "funding_resolved_ist": "2026-11-17T23:02:12+05:30"
+    }
+  ],
+  "cancellation_evidence": [
+    {
+      "cancellation_id": 4,
+      "booking_id": 1281,
+      "payment_id": 1277,
+      "amount": "150.00",
+      "currency": "INR",
+      "created_at": "2026-11-17 17:21:10",
+      "wallet_transaction_id": 63,
+      "direction": "IN",
+      "txn_type": "CANCELLATION_CREDIT",
+      "ledger_credit": "150.00",
+      "ledger_created_at": "2026-11-17 17:21:10",
+      "cancelled_ist": "2026-11-17T22:51:10+05:30"
+    },
+    {
+      "cancellation_id": 5,
+      "booking_id": 1282,
+      "payment_id": 1278,
+      "amount": "150.00",
+      "currency": "INR",
+      "created_at": "2026-11-17 17:26:52",
+      "wallet_transaction_id": 66,
+      "direction": "IN",
+      "txn_type": "CANCELLATION_CREDIT",
+      "ledger_credit": "150.00",
+      "ledger_created_at": "2026-11-17 17:26:52",
+      "cancelled_ist": "2026-11-17T22:56:52+05:30"
+    }
+  ],
+  "membership_evidence": [
+    {
+      "checkout_id": "146011bf-e851-46f4-816a-8c3a4ac73940",
+      "kind": "MULTI_GYM",
+      "mode": "test",
+      "checkout_status": "PAID",
+      "gateway_amount": "2199.00",
+      "membership_id": 430,
+      "gym_id": null,
+      "payment_status": "PAID",
+      "paid_amount": "2199.00",
+      "currency": "INR",
+      "attempt_status": "SUCCESS",
+      "attempt_amount": "2199.00",
+      "refunded_amount": "0.00"
+    },
+    {
+      "checkout_id": "4e00cb45-3886-470d-aeeb-d0f2240cf558",
+      "kind": "SINGLE_GYM",
+      "mode": "test",
+      "checkout_status": "PAID",
+      "gateway_amount": "1399.00",
+      "membership_id": 431,
+      "gym_id": 237,
+      "payment_status": "PAID",
+      "paid_amount": "1399.00",
+      "currency": "INR",
+      "attempt_status": "SUCCESS",
+      "attempt_amount": "1399.00",
+      "refunded_amount": "0.00"
+    },
+    {
+      "checkout_id": "b8496332-cde8-48b6-92ec-6b24aaf53522",
+      "kind": "MULTI_GYM",
+      "mode": "test",
+      "checkout_status": "PAID",
+      "gateway_amount": "2199.00",
+      "membership_id": 432,
+      "gym_id": null,
+      "payment_status": "PAID",
+      "paid_amount": "2199.00",
+      "currency": "INR",
+      "attempt_status": "SUCCESS",
+      "attempt_amount": "2199.00",
+      "refunded_amount": "0.00"
+    }
+  ],
+  "wallet_only_provider_attempts": [],
+  "api_matrix": {
+    "default": {
+      "request": "http://127.0.0.1:8000/api/v1/admin/business/summary",
+      "status": 200,
+      "cache_control": "no-store",
+      "requested_filters": {},
+      "date_from": "2026-10-20",
+      "date_to": "2026-11-18",
+      "mode": "test",
+      "collections": {
+        "categories": {
+          "individual": null,
+          "single_gym": null,
+          "multi_gym": null
+        },
+        "category_complete": {
+          "individual": false,
+          "single_gym": false,
+          "multi_gym": false
+        },
+        "excluded_by_category": {
+          "individual": 11,
+          "single_gym": 1,
+          "multi_gym": 2
+        },
+        "sharing_availability": {
+          "gym_gross_share": {
+            "status": "UNAVAILABLE",
+            "reason": "ALLOCATION_SCHEMA_MISSING",
+            "missing_tables": [
+              "financial_source_evidence",
+              "gym_monthly_calculations",
+              "gym_visit_payouts",
+              "marketplace_allocations",
+              "membership_visit_fees",
+              "owner_payouts"
+            ]
+          },
+          "fitigo_commission": {
+            "status": "UNAVAILABLE",
+            "reason": "ALLOCATION_SCHEMA_MISSING",
+            "missing_tables": [
+              "financial_source_evidence",
+              "gym_monthly_calculations",
+              "gym_visit_payouts",
+              "marketplace_allocations",
+              "membership_visit_fees",
+              "owner_payouts"
+            ]
+          }
+        },
+        "total": null,
+        "known_dated_total": "300.00",
+        "known_dated_categories": {
+          "individual": "300.00",
+          "single_gym": "0.00",
+          "multi_gym": "0.00"
+        },
+        "exclusions": [
+          {
+            "checkout_id": "0ff8679c-f405-475e-b97a-bf990bd637e9",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "139d1ba9-cdf9-4017-89bb-3d23fa8cd92e",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "146011bf-e851-46f4-816a-8c3a4ac73940",
+            "category": "multi_gym",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "2ca88dd7-a8a3-4d0a-b7e6-447da8b56a76",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "37d2af9f-58c7-485a-a7f9-4c994b21f949",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "3eda6b07-d757-4a74-aeb1-8ffe080f456f",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "4e00cb45-3886-470d-aeeb-d0f2240cf558",
+            "category": "single_gym",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "528518a8-be7f-4d81-8f99-c8478ef4aff6",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "7f223b1a-054e-410b-a3b7-6ed22fc0e9df",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "82dfdbc6-dad4-4397-8b3e-f72e58da438b",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "b5137748-4c77-4ae5-9cbc-4a597555f646",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "b8496332-cde8-48b6-92ec-6b24aaf53522",
+            "category": "multi_gym",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "c0d86825-0aef-4e1d-a035-461b94f699db",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "c5385fb2-6ac3-42f2-bc2f-6631c44fc4b8",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          }
+        ],
+        "exclusion_reasons": {
+          "PAYMENT_DATE_SCHEMA_MISSING": 14
+        },
+        "undated_purchases": 14,
+        "unattributed_purchases": 0,
+        "gym_gross_share": null,
+        "fitigo_commission": null,
+        "complete": false
+      },
+      "nonzero_days": [
+        {
+          "date": "2026-11-17",
+          "individual": 0,
+          "single_gym": 0,
+          "multi_gym": 0,
+          "individual_collections": "300.00",
+          "single_gym_collections": "0.00",
+          "multi_gym_collections": "0.00"
+        }
+      ]
+    },
+    "full_test": {
+      "request": "http://127.0.0.1:8000/api/v1/admin/business/summary?date_from=2026-01-01&date_to=2026-12-31&mode=test",
+      "status": 200,
+      "cache_control": "no-store",
+      "requested_filters": {
+        "date_from": "2026-01-01",
+        "date_to": "2026-12-31",
+        "mode": "test"
+      },
+      "date_from": "2026-01-01",
+      "date_to": "2026-12-31",
+      "mode": "test",
+      "collections": {
+        "categories": {
+          "individual": null,
+          "single_gym": null,
+          "multi_gym": null
+        },
+        "category_complete": {
+          "individual": false,
+          "single_gym": false,
+          "multi_gym": false
+        },
+        "excluded_by_category": {
+          "individual": 11,
+          "single_gym": 1,
+          "multi_gym": 2
+        },
+        "sharing_availability": {
+          "gym_gross_share": {
+            "status": "UNAVAILABLE",
+            "reason": "ALLOCATION_SCHEMA_MISSING",
+            "missing_tables": [
+              "financial_source_evidence",
+              "gym_monthly_calculations",
+              "gym_visit_payouts",
+              "marketplace_allocations",
+              "membership_visit_fees",
+              "owner_payouts"
+            ]
+          },
+          "fitigo_commission": {
+            "status": "UNAVAILABLE",
+            "reason": "ALLOCATION_SCHEMA_MISSING",
+            "missing_tables": [
+              "financial_source_evidence",
+              "gym_monthly_calculations",
+              "gym_visit_payouts",
+              "marketplace_allocations",
+              "membership_visit_fees",
+              "owner_payouts"
+            ]
+          }
+        },
+        "total": null,
+        "known_dated_total": "300.00",
+        "known_dated_categories": {
+          "individual": "300.00",
+          "single_gym": "0.00",
+          "multi_gym": "0.00"
+        },
+        "exclusions": [
+          {
+            "checkout_id": "0ff8679c-f405-475e-b97a-bf990bd637e9",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "139d1ba9-cdf9-4017-89bb-3d23fa8cd92e",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "146011bf-e851-46f4-816a-8c3a4ac73940",
+            "category": "multi_gym",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "2ca88dd7-a8a3-4d0a-b7e6-447da8b56a76",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "37d2af9f-58c7-485a-a7f9-4c994b21f949",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "3eda6b07-d757-4a74-aeb1-8ffe080f456f",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "4e00cb45-3886-470d-aeeb-d0f2240cf558",
+            "category": "single_gym",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "528518a8-be7f-4d81-8f99-c8478ef4aff6",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "7f223b1a-054e-410b-a3b7-6ed22fc0e9df",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "82dfdbc6-dad4-4397-8b3e-f72e58da438b",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "b5137748-4c77-4ae5-9cbc-4a597555f646",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "b8496332-cde8-48b6-92ec-6b24aaf53522",
+            "category": "multi_gym",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "c0d86825-0aef-4e1d-a035-461b94f699db",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "c5385fb2-6ac3-42f2-bc2f-6631c44fc4b8",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          }
+        ],
+        "exclusion_reasons": {
+          "PAYMENT_DATE_SCHEMA_MISSING": 14
+        },
+        "undated_purchases": 14,
+        "unattributed_purchases": 0,
+        "gym_gross_share": null,
+        "fitigo_commission": null,
+        "complete": false
+      },
+      "nonzero_days": [
+        {
+          "date": "2026-11-17",
+          "individual": 0,
+          "single_gym": 0,
+          "multi_gym": 0,
+          "individual_collections": "300.00",
+          "single_gym_collections": "0.00",
+          "multi_gym_collections": "0.00"
+        }
+      ]
+    },
+    "payment_day_test": {
+      "request": "http://127.0.0.1:8000/api/v1/admin/business/summary?date_from=2026-11-17&date_to=2026-11-17&mode=test",
+      "status": 200,
+      "cache_control": "no-store",
+      "requested_filters": {
+        "date_from": "2026-11-17",
+        "date_to": "2026-11-17",
+        "mode": "test"
+      },
+      "date_from": "2026-11-17",
+      "date_to": "2026-11-17",
+      "mode": "test",
+      "collections": {
+        "categories": {
+          "individual": null,
+          "single_gym": null,
+          "multi_gym": null
+        },
+        "category_complete": {
+          "individual": false,
+          "single_gym": false,
+          "multi_gym": false
+        },
+        "excluded_by_category": {
+          "individual": 11,
+          "single_gym": 1,
+          "multi_gym": 2
+        },
+        "sharing_availability": {
+          "gym_gross_share": {
+            "status": "UNAVAILABLE",
+            "reason": "ALLOCATION_SCHEMA_MISSING",
+            "missing_tables": [
+              "financial_source_evidence",
+              "gym_monthly_calculations",
+              "gym_visit_payouts",
+              "marketplace_allocations",
+              "membership_visit_fees",
+              "owner_payouts"
+            ]
+          },
+          "fitigo_commission": {
+            "status": "UNAVAILABLE",
+            "reason": "ALLOCATION_SCHEMA_MISSING",
+            "missing_tables": [
+              "financial_source_evidence",
+              "gym_monthly_calculations",
+              "gym_visit_payouts",
+              "marketplace_allocations",
+              "membership_visit_fees",
+              "owner_payouts"
+            ]
+          }
+        },
+        "total": null,
+        "known_dated_total": "300.00",
+        "known_dated_categories": {
+          "individual": "300.00",
+          "single_gym": "0.00",
+          "multi_gym": "0.00"
+        },
+        "exclusions": [
+          {
+            "checkout_id": "0ff8679c-f405-475e-b97a-bf990bd637e9",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "139d1ba9-cdf9-4017-89bb-3d23fa8cd92e",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "146011bf-e851-46f4-816a-8c3a4ac73940",
+            "category": "multi_gym",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "2ca88dd7-a8a3-4d0a-b7e6-447da8b56a76",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "37d2af9f-58c7-485a-a7f9-4c994b21f949",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "3eda6b07-d757-4a74-aeb1-8ffe080f456f",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "4e00cb45-3886-470d-aeeb-d0f2240cf558",
+            "category": "single_gym",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "528518a8-be7f-4d81-8f99-c8478ef4aff6",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "7f223b1a-054e-410b-a3b7-6ed22fc0e9df",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "82dfdbc6-dad4-4397-8b3e-f72e58da438b",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "b5137748-4c77-4ae5-9cbc-4a597555f646",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "b8496332-cde8-48b6-92ec-6b24aaf53522",
+            "category": "multi_gym",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "c0d86825-0aef-4e1d-a035-461b94f699db",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "c5385fb2-6ac3-42f2-bc2f-6631c44fc4b8",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          }
+        ],
+        "exclusion_reasons": {
+          "PAYMENT_DATE_SCHEMA_MISSING": 14
+        },
+        "undated_purchases": 14,
+        "unattributed_purchases": 0,
+        "gym_gross_share": null,
+        "fitigo_commission": null,
+        "complete": false
+      },
+      "nonzero_days": [
+        {
+          "date": "2026-11-17",
+          "individual": 0,
+          "single_gym": 0,
+          "multi_gym": 0,
+          "individual_collections": "300.00",
+          "single_gym_collections": "0.00",
+          "multi_gym_collections": "0.00"
+        }
+      ]
+    },
+    "booking_day_test": {
+      "request": "http://127.0.0.1:8000/api/v1/admin/business/summary?date_from=2026-11-18&date_to=2026-11-18&mode=test",
+      "status": 200,
+      "cache_control": "no-store",
+      "requested_filters": {
+        "date_from": "2026-11-18",
+        "date_to": "2026-11-18",
+        "mode": "test"
+      },
+      "date_from": "2026-11-18",
+      "date_to": "2026-11-18",
+      "mode": "test",
+      "collections": {
+        "categories": {
+          "individual": null,
+          "single_gym": null,
+          "multi_gym": null
+        },
+        "category_complete": {
+          "individual": false,
+          "single_gym": false,
+          "multi_gym": false
+        },
+        "excluded_by_category": {
+          "individual": 11,
+          "single_gym": 1,
+          "multi_gym": 2
+        },
+        "sharing_availability": {
+          "gym_gross_share": {
+            "status": "UNAVAILABLE",
+            "reason": "ALLOCATION_SCHEMA_MISSING",
+            "missing_tables": [
+              "financial_source_evidence",
+              "gym_monthly_calculations",
+              "gym_visit_payouts",
+              "marketplace_allocations",
+              "membership_visit_fees",
+              "owner_payouts"
+            ]
+          },
+          "fitigo_commission": {
+            "status": "UNAVAILABLE",
+            "reason": "ALLOCATION_SCHEMA_MISSING",
+            "missing_tables": [
+              "financial_source_evidence",
+              "gym_monthly_calculations",
+              "gym_visit_payouts",
+              "marketplace_allocations",
+              "membership_visit_fees",
+              "owner_payouts"
+            ]
+          }
+        },
+        "total": null,
+        "known_dated_total": "0.00",
+        "known_dated_categories": {
+          "individual": "0.00",
+          "single_gym": "0.00",
+          "multi_gym": "0.00"
+        },
+        "exclusions": [
+          {
+            "checkout_id": "0ff8679c-f405-475e-b97a-bf990bd637e9",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "139d1ba9-cdf9-4017-89bb-3d23fa8cd92e",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "146011bf-e851-46f4-816a-8c3a4ac73940",
+            "category": "multi_gym",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "2ca88dd7-a8a3-4d0a-b7e6-447da8b56a76",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "37d2af9f-58c7-485a-a7f9-4c994b21f949",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "3eda6b07-d757-4a74-aeb1-8ffe080f456f",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "4e00cb45-3886-470d-aeeb-d0f2240cf558",
+            "category": "single_gym",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "528518a8-be7f-4d81-8f99-c8478ef4aff6",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "7f223b1a-054e-410b-a3b7-6ed22fc0e9df",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "82dfdbc6-dad4-4397-8b3e-f72e58da438b",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "b5137748-4c77-4ae5-9cbc-4a597555f646",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "b8496332-cde8-48b6-92ec-6b24aaf53522",
+            "category": "multi_gym",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "c0d86825-0aef-4e1d-a035-461b94f699db",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "c5385fb2-6ac3-42f2-bc2f-6631c44fc4b8",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          }
+        ],
+        "exclusion_reasons": {
+          "PAYMENT_DATE_SCHEMA_MISSING": 14
+        },
+        "undated_purchases": 14,
+        "unattributed_purchases": 0,
+        "gym_gross_share": null,
+        "fitigo_commission": null,
+        "complete": false
+      },
+      "nonzero_days": []
+    },
+    "full_test_gym_189": {
+      "request": "http://127.0.0.1:8000/api/v1/admin/business/summary?date_from=2026-01-01&date_to=2026-12-31&mode=test&gym_id=189",
+      "status": 200,
+      "cache_control": "no-store",
+      "requested_filters": {
+        "date_from": "2026-01-01",
+        "date_to": "2026-12-31",
+        "mode": "test",
+        "gym_id": 189
+      },
+      "date_from": "2026-01-01",
+      "date_to": "2026-12-31",
+      "mode": "test",
+      "collections": {
+        "categories": {
+          "individual": null,
+          "single_gym": "0.00",
+          "multi_gym": "0.00"
+        },
+        "category_complete": {
+          "individual": false,
+          "single_gym": true,
+          "multi_gym": true
+        },
+        "excluded_by_category": {
+          "individual": 2,
+          "single_gym": 0,
+          "multi_gym": 0
+        },
+        "sharing_availability": {
+          "gym_gross_share": {
+            "status": "UNAVAILABLE",
+            "reason": "ALLOCATION_SCHEMA_MISSING",
+            "missing_tables": [
+              "financial_source_evidence",
+              "gym_monthly_calculations",
+              "gym_visit_payouts",
+              "marketplace_allocations",
+              "membership_visit_fees",
+              "owner_payouts"
+            ]
+          },
+          "fitigo_commission": {
+            "status": "UNAVAILABLE",
+            "reason": "ALLOCATION_SCHEMA_MISSING",
+            "missing_tables": [
+              "financial_source_evidence",
+              "gym_monthly_calculations",
+              "gym_visit_payouts",
+              "marketplace_allocations",
+              "membership_visit_fees",
+              "owner_payouts"
+            ]
+          }
+        },
+        "total": null,
+        "known_dated_total": "300.00",
+        "known_dated_categories": {
+          "individual": "300.00",
+          "single_gym": "0.00",
+          "multi_gym": "0.00"
+        },
+        "exclusions": [
+          {
+            "checkout_id": "7f223b1a-054e-410b-a3b7-6ed22fc0e9df",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "c0d86825-0aef-4e1d-a035-461b94f699db",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          }
+        ],
+        "exclusion_reasons": {
+          "PAYMENT_DATE_SCHEMA_MISSING": 2
+        },
+        "undated_purchases": 2,
+        "unattributed_purchases": 0,
+        "gym_gross_share": null,
+        "fitigo_commission": null,
+        "complete": false
+      },
+      "nonzero_days": [
+        {
+          "date": "2026-11-17",
+          "individual": 0,
+          "single_gym": 0,
+          "multi_gym": 0,
+          "individual_collections": "300.00",
+          "single_gym_collections": "0.00",
+          "multi_gym_collections": "0.00"
+        }
+      ]
+    },
+    "full_test_gym_188": {
+      "request": "http://127.0.0.1:8000/api/v1/admin/business/summary?date_from=2026-01-01&date_to=2026-12-31&mode=test&gym_id=188",
+      "status": 200,
+      "cache_control": "no-store",
+      "requested_filters": {
+        "date_from": "2026-01-01",
+        "date_to": "2026-12-31",
+        "mode": "test",
+        "gym_id": 188
+      },
+      "date_from": "2026-01-01",
+      "date_to": "2026-12-31",
+      "mode": "test",
+      "collections": {
+        "categories": {
+          "individual": null,
+          "single_gym": "0.00",
+          "multi_gym": "0.00"
+        },
+        "category_complete": {
+          "individual": false,
+          "single_gym": true,
+          "multi_gym": true
+        },
+        "excluded_by_category": {
+          "individual": 2,
+          "single_gym": 0,
+          "multi_gym": 0
+        },
+        "sharing_availability": {
+          "gym_gross_share": {
+            "status": "UNAVAILABLE",
+            "reason": "ALLOCATION_SCHEMA_MISSING",
+            "missing_tables": [
+              "financial_source_evidence",
+              "gym_monthly_calculations",
+              "gym_visit_payouts",
+              "marketplace_allocations",
+              "membership_visit_fees",
+              "owner_payouts"
+            ]
+          },
+          "fitigo_commission": {
+            "status": "UNAVAILABLE",
+            "reason": "ALLOCATION_SCHEMA_MISSING",
+            "missing_tables": [
+              "financial_source_evidence",
+              "gym_monthly_calculations",
+              "gym_visit_payouts",
+              "marketplace_allocations",
+              "membership_visit_fees",
+              "owner_payouts"
+            ]
+          }
+        },
+        "total": null,
+        "known_dated_total": "0.00",
+        "known_dated_categories": {
+          "individual": "0.00",
+          "single_gym": "0.00",
+          "multi_gym": "0.00"
+        },
+        "exclusions": [
+          {
+            "checkout_id": "82dfdbc6-dad4-4397-8b3e-f72e58da438b",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          },
+          {
+            "checkout_id": "c5385fb2-6ac3-42f2-bc2f-6631c44fc4b8",
+            "category": "individual",
+            "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+          }
+        ],
+        "exclusion_reasons": {
+          "PAYMENT_DATE_SCHEMA_MISSING": 2
+        },
+        "undated_purchases": 2,
+        "unattributed_purchases": 0,
+        "gym_gross_share": null,
+        "fitigo_commission": null,
+        "complete": false
+      },
+      "nonzero_days": []
+    },
+    "full_live": {
+      "request": "http://127.0.0.1:8000/api/v1/admin/business/summary?date_from=2026-01-01&date_to=2026-12-31&mode=live",
+      "status": 200,
+      "cache_control": "no-store",
+      "requested_filters": {
+        "date_from": "2026-01-01",
+        "date_to": "2026-12-31",
+        "mode": "live"
+      },
+      "date_from": "2026-01-01",
+      "date_to": "2026-12-31",
+      "mode": "live",
+      "collections": {
+        "categories": {
+          "individual": "0.00",
+          "single_gym": "0.00",
+          "multi_gym": "0.00"
+        },
+        "category_complete": {
+          "individual": true,
+          "single_gym": true,
+          "multi_gym": true
+        },
+        "excluded_by_category": {
+          "individual": 0,
+          "single_gym": 0,
+          "multi_gym": 0
+        },
+        "sharing_availability": {
+          "gym_gross_share": {
+            "status": "UNAVAILABLE",
+            "reason": "ALLOCATION_SCHEMA_MISSING",
+            "missing_tables": [
+              "financial_source_evidence",
+              "gym_monthly_calculations",
+              "gym_visit_payouts",
+              "marketplace_allocations",
+              "membership_visit_fees",
+              "owner_payouts"
+            ]
+          },
+          "fitigo_commission": {
+            "status": "UNAVAILABLE",
+            "reason": "ALLOCATION_SCHEMA_MISSING",
+            "missing_tables": [
+              "financial_source_evidence",
+              "gym_monthly_calculations",
+              "gym_visit_payouts",
+              "marketplace_allocations",
+              "membership_visit_fees",
+              "owner_payouts"
+            ]
+          }
+        },
+        "total": "0.00",
+        "known_dated_total": "0.00",
+        "known_dated_categories": {
+          "individual": "0.00",
+          "single_gym": "0.00",
+          "multi_gym": "0.00"
+        },
+        "exclusions": [],
+        "exclusion_reasons": {},
+        "undated_purchases": 0,
+        "unattributed_purchases": 0,
+        "gym_gross_share": null,
+        "fitigo_commission": null,
+        "complete": true
+      },
+      "nonzero_days": []
+    }
+  }
+}

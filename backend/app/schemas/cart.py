@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from datetime import date, time
+from datetime import date, datetime, time
+from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 from app.schemas.visitors import VisitorName
 
 
@@ -25,7 +26,30 @@ class CartItemCreateClassRequest(BaseModel):
     member_count: int = Field(default=1, ge=1, le=50)
 
 
+class CartItemUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    booking_type: Literal['GYM', 'CLASS']
+    gym_id: int = Field(gt=0)
+    booking_date: date
+    member_count: int = Field(ge=1, le=50)
+    visitor_names: list[VisitorName] = Field(min_length=1, max_length=50)
+    preferred_start_time: time | None = None
+    preferred_end_time: time | None = None
+    class_session_id: int | None = Field(default=None, gt=0)
+    expected_updated_at: datetime
+
+    @model_validator(mode='after')
+    def validate_selection(self):
+        if self.booking_type == 'GYM' and (self.preferred_start_time is None or self.class_session_id is not None):
+            raise ValueError('Gym visits require a start time and cannot include a class session.')
+        if self.booking_type == 'CLASS' and (self.class_session_id is None or self.preferred_start_time is not None or self.preferred_end_time is not None):
+            raise ValueError('Choose a class session; its schedule determines the visit times.')
+        return self
+
+
 class CartItemResponse(BaseModel):
+    updated_at: datetime
+    can_edit: bool = False
     visitor_names: list[str] | None = None
     id: int
     booking_type: str

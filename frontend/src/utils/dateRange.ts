@@ -1,5 +1,5 @@
 export type DateRange = { date_from: string; date_to: string }
-export type DatePreset = 'today' | 'yesterday' | 'week' | 'month' | 'last30' | 'custom'
+export type DatePreset = 'today' | 'yesterday' | 'week' | 'last7' | 'month' | 'last30' | 'custom'
 export const datePresets: { value: DatePreset; label: string }[] = [
   { value: 'today', label: 'Today' }, { value: 'yesterday', label: 'Yesterday' },
   { value: 'week', label: 'This week' }, { value: 'month', label: 'This month' },
@@ -27,6 +27,7 @@ export function presetRange(preset: Exclude<DatePreset, 'custom'>, today: string
   if (preset === 'week') offset = (day.getUTCDay() + 6) % 7
   if (preset === 'month') offset = day.getUTCDate() - 1
   if (preset === 'last30') offset = 29
+  if (preset === 'last7') offset = 6
   const start = new Date(day.getTime() - offset * dayMs).toISOString().slice(0, 10)
   return { date_from: start, date_to: preset === 'yesterday' ? start : today }
 }

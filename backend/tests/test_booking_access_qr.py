@@ -139,11 +139,17 @@ def test_group_visitors_have_independent_one_time_access(api):
 
 
 @pytest.mark.parametrize("change,expected", [("cancel", "BOOKING_CANCELLED"), ("FAILED", "PAYMENT_NOT_COMPLETED"), ("REFUNDED", "PAYMENT_NOT_COMPLETED"), ("EXPIRED", "BOOKING_EXPIRED"), ("PENDING_PAYMENT", "BOOKING_NOT_CONFIRMED"), ("visitor", "INVALID_VISITOR"), ("inactive", "CUSTOMER_NOT_ELIGIBLE")])
-def test_current_backend_state_overrides_previously_issued_qr(api, change, expected):
+def test_current_backend_state_overrides_previously_issued_qr(api, change, expected, monkeypatch):
     client, headers, engine = api
     booking = create(api, ["David"])
     token = qr(api, booking)[0]["qr_token"]
     if change == "cancel":
+        from policy_fixtures import fund_wallet_booking
+        from app.services import booking_cancellation
+        # The credential can exist before its entry window; cancel before cutoff.
+        monkeypatch.setattr(booking_cancellation, 'utcnow', lambda: NOW.replace(hour=7))
+        with Session(engine) as db:
+            fund_wallet_booking(db, booking['id']); db.commit()
         assert client.post(f"/api/v1/bookings/{booking['id']}/cancel", headers=headers[1], json={}).status_code == 200
     else:
         with Session(engine) as db:
@@ -240,10 +246,15 @@ def test_membership_covered_booking_cannot_bypass_daily_membership_rules(api):
         assert booking_access_service.BookingAccessService(db).summary(booking)["status"] == "MEMBERSHIP_ACCESS_REQUIRED"
 
 
-def test_reschedule_rotates_old_qr_and_used_booking_cannot_be_rescheduled(api):
+def test_reschedule_rotates_old_qr_and_used_booking_cannot_be_rescheduled(api, monkeypatch):
     client, headers, engine = api
     booking = create(api, ["David"])
     old = qr(api, booking)[0]["qr_token"]
+    from policy_fixtures import fund_wallet_booking
+    from app.services import booking_cancellation
+    monkeypatch.setattr(booking_cancellation, 'utcnow', lambda: NOW.replace(hour=7))
+    with Session(engine) as db:
+        fund_wallet_booking(db, booking['id']); db.commit()
     path = f"/api/v1/bookings/{booking['id']}/reschedule"
     response = client.post(path, headers=headers[1], json={"gym_slot_id": 1, "slot_date": (NOW.date() + timedelta(days=1)).isoformat()})
     assert response.status_code == 200, response.text
@@ -254,14 +265,18 @@ def test_reschedule_rotates_old_qr_and_used_booking_cannot_be_rescheduled(api):
     assert client.post(path, headers=headers[1], json={"gym_slot_id": 1, "slot_date": (NOW.date() + timedelta(days=1)).isoformat()}).status_code == 409
 
 
-def test_admin_confirmation_and_owner_cancellation_use_same_access_records(api):
+def test_admin_confirmation_and_owner_cancellation_use_same_access_records(api, monkeypatch):
     from app.services.admin_booking_ops_service import AdminBookingOpsService
     booking = create(api, ["David"], pay=False)
     with Session(api[2]) as db:
         AdminBookingOpsService(db).update_payment_status(booking_id=booking["id"], new_status="PAID")
         assert db.scalar(select(func.count(AccessQrToken.id))) == 1
     token = qr(api, booking)[0]["qr_token"]
+    from policy_fixtures import fund_wallet_booking
+    from app.services import booking_cancellation
+    monkeypatch.setattr(booking_cancellation, 'utcnow', lambda: NOW.replace(hour=7))
     with Session(api[2]) as db:
+        fund_wallet_booking(db, booking['id']); db.commit()
         BookingService(db).owner_cancel_booking(owner_user_id=2, booking_id=booking["id"])
         assert db.scalars(select(AccessQrToken)).one().status == "REVOKED"
     assert scan(api, token)["status"] == "BOOKING_CANCELLED"

@@ -84,7 +84,11 @@ def get_balance(db: Session = Depends(get_db), current_user: User = Depends(get_
         uid = _require_user_id(db, current_user)
         acct = _get_or_create_account(db, user_id=uid)
         bal = Decimal(str(acct.balance or 0)).quantize(Decimal("0.01"))
-        return WalletBalanceResponse(balance=str(bal), currency=acct.currency)
+        from app.services.checkout_funding import wallet_state
+        _, funds = wallet_state(db, uid)
+        return WalletBalanceResponse(balance=str(bal), currency=acct.currency,
+            wallet_unavailable_reason=funds['wallet_unavailable_reason'],
+            reserved_balance=funds['reserved_balance'], available_balance=funds['available_wallet_balance'])
     except Exception as e:
         _maybe_raise_migration_hint(e)
         raise
@@ -112,7 +116,17 @@ def list_transactions(
         )
 
         bal = Decimal(str(acct.balance or 0)).quantize(Decimal("0.01"))
+        from app.services.checkout_funding import wallet_state, available
+        from app.models.checkout_funding import CheckoutFunding
+        from app.core.time import as_ist
+        _, funds = wallet_state(db, uid)
+        reservations = [dict(checkout_id=f.checkout_id, amount=str(f.wallet_amount), state=f.state,
+            currency=f.currency, created_at=as_ist(f.created_at).isoformat(), resolved_at=as_ist(f.resolved_at).isoformat() if f.resolved_at else None)
+            for f in db.scalars(select(CheckoutFunding).where(CheckoutFunding.user_id == uid, CheckoutFunding.wallet_amount > 0)
+                               .order_by(CheckoutFunding.created_at.desc()).limit(limit))] if available(db) else []
         return WalletTransactionsResponse(
+            wallet_unavailable_reason=funds['wallet_unavailable_reason'],
+            reserved_balance=funds['reserved_balance'], available_balance=funds['available_wallet_balance'], reservations=reservations,
             balance=str(bal),
             currency=acct.currency,
             transactions=[_txn_to_response(t) for t in txns],

@@ -96,12 +96,15 @@ def test_admin_new_users_gyms_bookings_revenue_and_chart_share_range(api):
     assert summary['gyms']['in_period'] == 1 and summary['gyms']['total'] == 3
     assert summary['gyms']['pending_approval'] == 1
     assert summary['bookings']['in_period'] == summary['bookings']['confirmed_in_period'] == 2
-    assert float(summary['revenue']['in_period']) == 300
+    assert float(summary['revenue']['in_period']) == 0  # No successful QR admission.
     rows = get(api, 'admin/bookings', params, actor=6)
     chart = get(api, 'admin/reports/bookings/daily', {**params, 'limit': 366}, actor=6)
     assert len(rows) == 2
     assert sum(row['total_bookings'] for row in chart) == summary['bookings']['in_period']
-    assert sum(float(row['paid_amount_total']) for row in chart) == float(summary['revenue']['in_period'])
+    # Legacy daily endpoint remains a scheduled-date PAID allocation audit, not
+    # earned revenue. New financial endpoints share event-date recognition.
+    assert sum(float(row['paid_amount_total']) for row in chart) == 300
+    assert summary['revenue']['date_basis'] == 'FIRST_VALID_CHECKIN'
     assert get(api, 'admin/dashboard/summary', {"date_from": '2020-01-01', "date_to": '2020-01-01'}, actor=6)['bookings']['in_period'] == 0
     # No-filter callers retain their original fields.
     assert 'last_30d' in get(api, 'admin/dashboard/summary', {}, actor=6)['revenue']

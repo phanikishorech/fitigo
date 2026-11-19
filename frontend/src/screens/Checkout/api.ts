@@ -1,7 +1,7 @@
 import { authFetch } from '../../auth'
 import type { CartItemResponse } from '../GymAccess/types'
 
-export type WalletBalanceResponse = { balance: string; currency: string }
+export type WalletBalanceResponse = { balance: string; currency: string; available_balance?: string | null; reserved_balance?: string; wallet_unavailable_reason?: string | null }
 
 export type WalletTopupResponse = {
   transaction: {

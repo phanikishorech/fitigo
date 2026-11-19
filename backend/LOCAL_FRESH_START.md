@@ -48,7 +48,7 @@ deletion. Post-reset result matched the rehearsal before commit; repeated checks
 verified data, roles, credentials, preserved catalog and media after commit.
 Pre-existing activity orphans were removed with their approved activity tables.
 
-FitiGo on 8001 was stopped for maintenance and restarted; port 8000 was not
+FitiGo on 8000 was stopped for maintenance and restarted; port 8000 was not
 stopped. Table locks protected against concurrent writers. Isolated restore
 servers shut down; private diagnostic files retained.
 

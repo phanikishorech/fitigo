@@ -25,7 +25,7 @@ const service = await load('../src/session/returnIntent.ts', s => s
   .replace(/import .* from '..\/router'/, 'const navigate=globalThis.__returnNavigate'))
 const identity = (role, id=1) => ({ user:{id}, roles:[role] })
 const reset = () => { service.clearReturnIntent(); globalThis.__returnNavigate('/login'); destination=null }
-for (const [role, path] of [['CUSTOMER','/gyms/123?tab=membership#plans'],['USER','/membership/5/details'],['CUSTOMER','/gyms/1/book/schedule?type=CLASS'],['GYM_OWNER','/owner/revenue?gym=4#monthly'],['GYM_STAFF','/owner/check-in'],['ADMIN','/admin/settings#security'],['SUPER_ADMIN','/admin/users?page=2']]) {
+for (const [role, path] of [['CUSTOMER','/gyms/123?tab=membership#plans'],['USER','/membership/5/details'],['CUSTOMER','/gyms/1/book/schedule?type=CLASS'],['GYM_OWNER','/owner/revenue?gym=4#monthly'],['GYM_STAFF','/owner/check-in'],['ADMIN','/admin/commission-settings#security'],['SUPER_ADMIN','/admin/users?page=2']]) {
   test(`${role} restores exact authorized location ${path}`, () => {
     reset(); const intent=service.saveReturnIntent(service.validateReturnPath(path)); const before=JSON.parse([...data.values()][0])
     assert.equal(before.phase,'login');service.handlePostLoginRedirect(identity(role));assert.equal(destination,path)
@@ -34,7 +34,7 @@ for (const [role, path] of [['CUSTOMER','/gyms/123?tab=membership#plans'],['USER
   })
 }
 test('safe fallback for cross-role and staff-restricted routes; no replay', () => {
-  for (const [role,path,home] of [['CUSTOMER','/admin/settings','/home'],['GYM_OWNER','/admin/users','/owner/dashboard'],['GYM_STAFF','/owner/revenue','/owner/dashboard']]) {
+  for (const [role,path,home] of [['CUSTOMER','/admin/commission-settings','/home'],['GYM_OWNER','/admin/users','/owner/dashboard'],['GYM_STAFF','/owner/revenue','/owner/dashboard']]) {
     reset();service.saveReturnIntent(service.validateReturnPath(path));service.handlePostLoginRedirect(identity(role));assert.equal(destination,home);assert.equal(service.getReturnIntent(),null)
   }
 })
@@ -42,7 +42,7 @@ test('login with no intent uses role home', () => {
   for(const role of ['CUSTOMER','USER','GYM_OWNER','GYM_STAFF','ADMIN','SUPER_ADMIN']){reset();service.handlePostLoginRedirect(identity(role));assert.equal(destination,__returnPolicy.roleHome([role]))}
 })
 test('rejects external, normalization, encoding, unknown and authentication-loop destinations', () => {
-  for(const path of ['https://evil.test','//evil.test','/\\evil.test','/owner/../admin/settings','/%2f%2fevil.test','/gyms/%31','/home\n','/login','/auth/reset-password?token=secret','/owner/verify','/admin/session-expired','/owner/reports','/not-real','/home?token=secret','/home#access_token=secret','/home?email=person@example.test']) assert.equal(service.validateReturnPath(path),null,path)
+  for(const path of ['https://evil.test','//evil.test','/\\evil.test','/owner/../admin/commission-settings','/%2f%2fevil.test','/gyms/%31','/home\n','/login','/auth/reset-password?token=secret','/owner/verify','/admin/session-expired','/owner/reports','/not-real','/home?token=secret','/home#access_token=secret','/home?email=person@example.test']) assert.equal(service.validateReturnPath(path),null,path)
 })
 test('pending action is generic, validates identifiers and claims once after route restoration', () => {
   for(const [action,path,metadata,role] of [['BOOK_VISIT','/gyms/9?tab=membership#plans',{gymId:'9'},'CUSTOMER'],['ADD_TO_CART','/gyms/9/book/schedule',{gymId:'9'},'CUSTOMER'],['VIEW_REPORT','/owner/revenue',{},'GYM_OWNER'],['EDIT_GYM','/owner/gyms/9/edit',{gymId:'9'},'GYM_OWNER']]) {
@@ -65,7 +65,7 @@ test('expired, future-dated, malformed and different-account intents are not res
   reset();service.saveReturnIntent({pathname:'/membership',search:'',hash:''});service.handlePostLoginRedirect(identity('CUSTOMER'));globalThis.__returnNavigate('/login');service.handlePostLoginRedirect(identity('CUSTOMER',2));assert.equal(destination,'/home')
 })
 test('login returnTo works for every portal, rejects external value, no redirect loop', () => {
-  reset();globalThis.__returnNavigate('/login?returnTo=%2Fadmin%2Fsettings%3Ftab%3Dsecurity%23password');service.handlePostLoginRedirect(identity('ADMIN'));assert.equal(destination,'/admin/settings?tab=security#password')
+  reset();globalThis.__returnNavigate('/login?returnTo=%2Fadmin%2Fcommission-settings%3Ftab%3Dsecurity%23password');service.handlePostLoginRedirect(identity('ADMIN'));assert.equal(destination,'/admin/commission-settings?tab=security#password')
   reset();globalThis.__returnNavigate('/login?returnTo=https%3A%2F%2Fevil.test');service.handlePostLoginRedirect(identity('ADMIN'));assert.equal(destination,'/admin/dashboard')
 })
 test('expiration capture preserves a pending action without overwriting it at login', () => {

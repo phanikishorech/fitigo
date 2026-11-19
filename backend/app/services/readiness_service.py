@@ -41,6 +41,9 @@ def readiness(db):
     add('ACCOUNT_EMAIL_CONFIGURATION', 'CONFIGURED_NOT_VERIFIED' if account_delivery.email_ready() else 'DISABLED', 'OTP/invitation/reset transport configuration only; no message was sent.')
     add('SMS_CONFIGURATION', 'CONFIGURED_NOT_VERIFIED' if account_delivery.sms_ready() else 'DISABLED', 'SMS configuration only; no provider request was made.')
     add('WORKER_SCHEDULING', 'MANUAL_CHECK', 'No scheduler heartbeat exists. Verify the deployed scheduler and last worker run separately.')
+    from app.services.checkout_funding import available as funding_available
+    add('WALLET_FUNDING', 'CONFIGURED_NOT_VERIFIED' if funding_available(db) else 'BLOCKED',
+        'Funding migration required. ASGI lifespan reconciles due holds every minute; standalone recovery is available. Real sandbox acceptance remains required.')
     add('MEDIA_PERMISSIONS', 'MANUAL_CHECK', 'Verify media directory ownership, backup and restore externally. This endpoint does not inspect files or ACLs.')
     add('BACKUP_RECOVERY', 'MANUAL_CHECK', 'Perform an approved database and media restore rehearsal. Historical backup records are not proof of current recovery.')
     add('EXTERNAL_ACCEPTANCE', 'MANUAL_CHECK', 'Authorized inbox/handset delivery, provider sandbox and physical scanner acceptance remain separate.')
@@ -57,5 +60,5 @@ def readiness(db):
             key = state if state in {'PENDING', 'COMPLETE', 'BLOCKED'} else 'UNRECOGNIZED'
             counts['photo_cleanup'][key] = counts['photo_cleanup'].get(key, 0) + count
     return {'checks': checks, 'queue_counts': counts, 'production_certified': False,
-            'financial_workflows': {'refund_initiation': False, 'gateway_rescheduling': False, 'gateway_wallet_spending': False, 'gateway_offers': False},
+            'financial_workflows': {'refund_initiation': False, 'gateway_rescheduling': False, 'gateway_wallet_spending': funding_available(db), 'gateway_offers': False},
             'message': 'Read-only observations. PASS is limited to the named local check, not a release approval.'}

@@ -4,7 +4,7 @@ import { isolatedBrowserTarget } from './isolated-browser.mjs'
 const origin = process.env.FITIGO_TEST_ORIGIN || 'http://localhost:5173'
 const target = await isolatedBrowserTarget(), ws = new WebSocket(target.webSocketDebuggerUrl)
 await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject })
-let sequence = 0, balance = '0', profileUpdates = 0, verified = 0, selectedKind = ''
+let sequence = 0, balance = '0', profileUpdates = 0, verified = 0, selectedKind = '', walletBlocked = false
 const pending = new Map(), errors = []
 const user = { id: 1, first_name: 'Customer', last_name: 'Tester', email: 'customer@example.com', phone: '+919999999999', is_email_verified: true, is_phone_verified: false }
 const record = { id: '11111111-1111-4111-8111-111111111111', kind: 'WALLET_TOPUP', provider: 'RAZORPAY', environment: 'sandbox', mode: 'test', status: 'PENDING', amount: '1000.00', amount_minor: 100000, currency: 'INR', key_id: 'rzp_test_fixture', razorpay_order_id: 'order_fixture', gateway_order_id: 'order_fixture', booking_ids: [], membership_id: null, can_pay: true }
@@ -19,7 +19,9 @@ function fixture(path, method, body, query) {
     if (method === 'PATCH') { profileUpdates++; assert.equal(body.first_name, 'Edited'); return { user: { ...user, first_name: body.first_name }, reauthenticate: false } }
     return user
   }
-  if (path.endsWith('/wallet/transactions')) return { balance, currency: 'INR', transactions: [] }
+  if (path.endsWith('/wallet/transactions')) return { balance, available_balance: walletBlocked ? '0.00' : balance, reserved_balance: '0.00', wallet_unavailable_reason: walletBlocked ? 'Wallet spending requires the funding migration.' : null, currency: 'INR', transactions: [] }
+  if (path.endsWith('/notifications/inbox')) return { items: [], total: 0, unread_count: 0 }
+  if (path.endsWith('/cart/summary')) return { count: 0, total: '0.00', currency: 'INR' }
   if (path.endsWith('/payments/config')) return { enabled: true, gateway_required: true, provider: 'RAZORPAY', mode: 'test' }
   if (path.endsWith('/payments/checkouts') && method === 'POST') { assert.equal(body.kind, 'WALLET_TOPUP'); assert.equal(body.amount, '1000.00'); return record }
   if (path.endsWith('/verify')) { verified++; assert.equal(body.razorpay_order_id, 'order_fixture'); balance = '1000.00'; record.status = 'PAID'; record.can_pay = false; return record }
@@ -47,6 +49,18 @@ ws.onmessage = async event => {
 try {
   await command('Runtime.enable'); await command('Page.enable'); await command('Fetch.enable', { patterns: [{ urlPattern: '*/api/v1/*' }] })
   await command('Page.addScriptToEvaluateOnNewDocument', { source: `localStorage.setItem('fitigo:access_token','isolated-customer-fixture');window.Razorpay=class{constructor(options){this.options=options}on(){}open(){this.options.handler({razorpay_order_id:'order_fixture',razorpay_payment_id:'pay_fixture',razorpay_signature:'a'.repeat(64)})}}` })
+  balance = '300.00'; walletBlocked = true
+  await command('Page.navigate', { url: `${origin}/wallet` })
+  await until(`document.querySelector('[aria-label="Wallet spending status"]') !== null`)
+  assert.ok(await evaluate(`document.querySelector('.fg-wallet-card .fg-price').innerText.includes('300.00')`))
+  assert.ok(await evaluate(`document.querySelector('.fg-wallet-card').innerText.includes('Available to spend: ₹0.00')`))
+  assert.ok(await evaluate(`document.body.innerText.includes('Wallet spending requires the funding migration.')`))
+  walletBlocked = false
+  await click('Refresh wallet')
+  await until(`document.querySelector('.fg-wallet-card')?.innerText.includes('Available to spend: ₹300.00')`)
+  assert.equal(await evaluate(`document.querySelector('[aria-label="Wallet spending status"]') === null`), true)
+  for (const width of [320, 768, 1440]) { await command('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width < 640 }); await wait(80); assert.equal(await evaluate('document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1'), true) }
+  balance = '0'
   await command('Page.navigate', { url: `${origin}/wallet/recharge` })
   await until(`document.body.innerText.includes('Review secure recharge')`)
   assert.equal(balance, '0')
@@ -66,5 +80,5 @@ try {
   await click('Save profile'); await until(`document.body.innerText.includes('Profile saved')`); assert.equal(profileUpdates, 1)
   for (const width of [360, 768, 1440]) { await command('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width < 640 }); await wait(80); assert.equal(await evaluate('document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1'), true) }
   assert.deepEqual(errors, [])
-  console.log('PASS customer wallet gateway confirmation, payment history IDs/refunds/filtering, profile save, password form and responsive layout')
+  console.log('PASS wallet ledger balance preserved during restriction, reason displayed, refresh restores available funds; customer recharge/history/profile and responsive layout')
 } finally { ws.close(); await target.dispose() }

@@ -6,7 +6,7 @@ export type AccessPresentation = 'AVAILABLE' | 'USED' | 'VISITED' | 'PAUSED' | '
 // Unknown statuses must not be interpreted as an invitation to buy another plan.
 export function membershipOverviewState(records: { status: string }[], summaryStatus: string | null): 'active' | 'none' | 'unknown' {
   if (['ACTIVE', 'PAUSED'].includes(summaryStatus || '') || records.some(record => ['ACTIVE', 'PAUSED'].includes(record.status))) return 'active'
-  const nonActive = ['PAUSED', 'EXPIRED', 'INACTIVE', 'CANCELLED', 'NONE']
+  const nonActive = ['PAUSED', 'EXPIRED', 'INACTIVE', 'CANCELLED', 'TRANSFERRED', 'NONE']
   if ((summaryStatus === null || nonActive.includes(summaryStatus)) && records.every(record => nonActive.includes(record.status))) return 'none'
   return 'unknown'
 }
@@ -16,7 +16,7 @@ export function membershipOverviewState(records: { status: string }[], summarySt
 export function groupMembershipRecords<T extends { status: string }>(records: T[]): { current: T[]; history: T[] } {
   const current: T[] = []; const history: T[] = []
   for (const record of records) {
-    if (['EXPIRED', 'CANCELLED', 'INACTIVE', 'NONE'].includes(record.status)) history.push(record)
+    if (['EXPIRED', 'CANCELLED', 'INACTIVE', 'TRANSFERRED', 'NONE'].includes(record.status)) history.push(record)
     else current.push(record)
   }
   return { current, history }

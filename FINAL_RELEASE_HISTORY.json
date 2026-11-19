@@ -1,0 +1,299 @@
+{
+  "read_only": true,
+  "source_schema_available": false,
+  "historical_versions": 0,
+  "classification_counts": {
+    "Not eligible for financial allocation": 9,
+    "Complete": 3,
+    "Incomplete and requires manual review": 2
+  },
+  "recoverable_from_authoritative_source_confirmed": 0,
+  "records": [
+    {
+      "type": "purchase",
+      "record_id": "0ff8679c-f405-475e-b97a-bf990bd637e9",
+      "kind": "CART",
+      "mode": "test",
+      "status": "PAID",
+      "booking_ids": [
+        1273
+      ],
+      "membership_ids": [],
+      "missing_line_funding_booking_ids": [
+        1273
+      ],
+      "classification": "Not eligible for financial allocation",
+      "review_classification": "Incomplete and requires manual review",
+      "missing": [
+        "SOURCE_EVIDENCE",
+        "AUTHORITATIVE_PURCHASE_TAX",
+        "PINNED_HISTORICAL_GYM_CONFIGURATION",
+        "CHECKOUT_FUNDING",
+        "BOOKING_LINE_FUNDING",
+        "AUTHORITATIVE_PAYMENT_DATE"
+      ],
+      "provider_lookup_reference_present": true,
+      "provider_attempt_count": 2,
+      "recovery": "Provider reference may permit authenticated investigation; capture timestamp, tax and historical terms recovery is NOT verified. Do not backfill or allocate."
+    },
+    {
+      "type": "purchase",
+      "record_id": "139d1ba9-cdf9-4017-89bb-3d23fa8cd92e",
+      "kind": "CART",
+      "mode": "test",
+      "status": "PAID",
+      "booking_ids": [
+        1275
+      ],
+      "membership_ids": [],
+      "missing_line_funding_booking_ids": [
+        1275
+      ],
+      "classification": "Not eligible for financial allocation",
+      "review_classification": "Incomplete and requires manual review",
+      "missing": [
+        "SOURCE_EVIDENCE",
+        "AUTHORITATIVE_PURCHASE_TAX",
+        "PINNED_HISTORICAL_GYM_CONFIGURATION",
+        "CHECKOUT_FUNDING",
+        "BOOKING_LINE_FUNDING",
+        "AUTHORITATIVE_PAYMENT_DATE"
+      ],
+      "provider_lookup_reference_present": true,
+      "provider_attempt_count": 1,
+      "recovery": "Provider reference may permit authenticated investigation; capture timestamp, tax and historical terms recovery is NOT verified. Do not backfill or allocate."
+    },
+    {
+      "type": "purchase",
+      "record_id": "146011bf-e851-46f4-816a-8c3a4ac73940",
+      "kind": "MULTI_GYM",
+      "mode": "test",
+      "status": "PAID",
+      "booking_ids": [],
+      "membership_ids": [
+        430
+      ],
+      "missing_line_funding_booking_ids": [],
+      "classification": "Not eligible for financial allocation",
+      "review_classification": "Incomplete and requires manual review",
+      "missing": [
+        "SOURCE_EVIDENCE",
+        "AUTHORITATIVE_PURCHASE_TAX",
+        "PINNED_HISTORICAL_GYM_CONFIGURATION",
+        "CHECKOUT_FUNDING",
+        "AUTHORITATIVE_PAYMENT_DATE"
+      ],
+      "provider_lookup_reference_present": true,
+      "provider_attempt_count": 1,
+      "recovery": "Provider reference may permit authenticated investigation; capture timestamp, tax and historical terms recovery is NOT verified. Do not backfill or allocate."
+    },
+    {
+      "type": "purchase",
+      "record_id": "2ca88dd7-a8a3-4d0a-b7e6-447da8b56a76",
+      "kind": "CART",
+      "mode": "test",
+      "status": "PAID",
+      "booking_ids": [
+        1276
+      ],
+      "membership_ids": [],
+      "missing_line_funding_booking_ids": [
+        1276
+      ],
+      "classification": "Not eligible for financial allocation",
+      "review_classification": "Incomplete and requires manual review",
+      "missing": [
+        "SOURCE_EVIDENCE",
+        "AUTHORITATIVE_PURCHASE_TAX",
+        "PINNED_HISTORICAL_GYM_CONFIGURATION",
+        "CHECKOUT_FUNDING",
+        "BOOKING_LINE_FUNDING",
+        "AUTHORITATIVE_PAYMENT_DATE"
+      ],
+      "provider_lookup_reference_present": true,
+      "provider_attempt_count": 1,
+      "recovery": "Provider reference may permit authenticated investigation; capture timestamp, tax and historical terms recovery is NOT verified. Do not backfill or allocate."
+    },
+    {
+      "type": "purchase",
+      "record_id": "3eda6b07-d757-4a74-aeb1-8ffe080f456f",
+      "kind": "CART",
+      "mode": "test",
+      "status": "PAID",
+      "booking_ids": [
+        1271
+      ],
+      "membership_ids": [],
+      "missing_line_funding_booking_ids": [
+        1271
+      ],
+      "classification": "Not eligible for financial allocation",
+      "review_classification": "Incomplete and requires manual review",
+      "missing": [
+        "SOURCE_EVIDENCE",
+        "AUTHORITATIVE_PURCHASE_TAX",
+        "PINNED_HISTORICAL_GYM_CONFIGURATION",
+        "CHECKOUT_FUNDING",
+        "BOOKING_LINE_FUNDING",
+        "AUTHORITATIVE_PAYMENT_DATE"
+      ],
+      "provider_lookup_reference_present": true,
+      "provider_attempt_count": 1,
+      "recovery": "Provider reference may permit authenticated investigation; capture timestamp, tax and historical terms recovery is NOT verified. Do not backfill or allocate."
+    },
+    {
+      "type": "purchase",
+      "record_id": "528518a8-be7f-4d81-8f99-c8478ef4aff6",
+      "kind": "CART",
+      "mode": "test",
+      "status": "PAID",
+      "booking_ids": [
+        1277
+      ],
+      "membership_ids": [],
+      "missing_line_funding_booking_ids": [],
+      "classification": "Not eligible for financial allocation",
+      "review_classification": "Incomplete and requires manual review",
+      "missing": [
+        "SOURCE_EVIDENCE",
+        "AUTHORITATIVE_PURCHASE_TAX",
+        "PINNED_HISTORICAL_GYM_CONFIGURATION",
+        "AUTHORITATIVE_PAYMENT_DATE"
+      ],
+      "provider_lookup_reference_present": true,
+      "provider_attempt_count": 1,
+      "recovery": "Provider reference may permit authenticated investigation; capture timestamp, tax and historical terms recovery is NOT verified. Do not backfill or allocate."
+    },
+    {
+      "type": "purchase",
+      "record_id": "82dfdbc6-dad4-4397-8b3e-f72e58da438b",
+      "kind": "CART",
+      "mode": "test",
+      "status": "PAID",
+      "booking_ids": [
+        1274
+      ],
+      "membership_ids": [],
+      "missing_line_funding_booking_ids": [
+        1274
+      ],
+      "classification": "Not eligible for financial allocation",
+      "review_classification": "Incomplete and requires manual review",
+      "missing": [
+        "SOURCE_EVIDENCE",
+        "AUTHORITATIVE_PURCHASE_TAX",
+        "PINNED_HISTORICAL_GYM_CONFIGURATION",
+        "CHECKOUT_FUNDING",
+        "BOOKING_LINE_FUNDING",
+        "AUTHORITATIVE_PAYMENT_DATE"
+      ],
+      "provider_lookup_reference_present": true,
+      "provider_attempt_count": 1,
+      "recovery": "Provider reference may permit authenticated investigation; capture timestamp, tax and historical terms recovery is NOT verified. Do not backfill or allocate."
+    },
+    {
+      "type": "purchase",
+      "record_id": "b5137748-4c77-4ae5-9cbc-4a597555f646",
+      "kind": "CART",
+      "mode": "test",
+      "status": "PAID",
+      "booking_ids": [
+        1272
+      ],
+      "membership_ids": [],
+      "missing_line_funding_booking_ids": [
+        1272
+      ],
+      "classification": "Not eligible for financial allocation",
+      "review_classification": "Incomplete and requires manual review",
+      "missing": [
+        "SOURCE_EVIDENCE",
+        "AUTHORITATIVE_PURCHASE_TAX",
+        "PINNED_HISTORICAL_GYM_CONFIGURATION",
+        "CHECKOUT_FUNDING",
+        "BOOKING_LINE_FUNDING",
+        "AUTHORITATIVE_PAYMENT_DATE"
+      ],
+      "provider_lookup_reference_present": true,
+      "provider_attempt_count": 1,
+      "recovery": "Provider reference may permit authenticated investigation; capture timestamp, tax and historical terms recovery is NOT verified. Do not backfill or allocate."
+    },
+    {
+      "type": "purchase",
+      "record_id": "c5385fb2-6ac3-42f2-bc2f-6631c44fc4b8",
+      "kind": "CART",
+      "mode": "test",
+      "status": "PAID",
+      "booking_ids": [
+        1270
+      ],
+      "membership_ids": [],
+      "missing_line_funding_booking_ids": [
+        1270
+      ],
+      "classification": "Not eligible for financial allocation",
+      "review_classification": "Incomplete and requires manual review",
+      "missing": [
+        "SOURCE_EVIDENCE",
+        "AUTHORITATIVE_PURCHASE_TAX",
+        "PINNED_HISTORICAL_GYM_CONFIGURATION",
+        "CHECKOUT_FUNDING",
+        "BOOKING_LINE_FUNDING",
+        "AUTHORITATIVE_PAYMENT_DATE"
+      ],
+      "provider_lookup_reference_present": true,
+      "provider_attempt_count": 1,
+      "recovery": "Provider reference may permit authenticated investigation; capture timestamp, tax and historical terms recovery is NOT verified. Do not backfill or allocate."
+    },
+    {
+      "type": "admission",
+      "record_id": 165,
+      "booking_id": 1270,
+      "membership_id": null,
+      "classification": "Complete",
+      "classification_scope": "QR/source evidence only",
+      "missing": [],
+      "allocation_classification": "Not eligible for financial allocation: purchase/configuration evidence missing"
+    },
+    {
+      "type": "admission",
+      "record_id": 166,
+      "booking_id": null,
+      "membership_id": 430,
+      "classification": "Incomplete and requires manual review",
+      "classification_scope": "QR/source evidence only",
+      "missing": [
+        "QR_VALIDITY_WINDOW"
+      ],
+      "allocation_classification": "Not eligible for financial allocation: purchase/configuration evidence missing"
+    },
+    {
+      "type": "cancellation",
+      "record_id": 1272,
+      "classification": "Incomplete and requires manual review",
+      "classification_scope": "Cancellation-to-wallet-credit consistency",
+      "cancellation_id": null,
+      "wallet_transaction_id": null,
+      "reason": "No matching permanent cancellation/credit evidence; eligibility must not be inferred"
+    },
+    {
+      "type": "cancellation",
+      "record_id": 1273,
+      "classification": "Complete",
+      "classification_scope": "Cancellation-to-wallet-credit consistency",
+      "cancellation_id": 1,
+      "wallet_transaction_id": 58,
+      "reason": "Linked credit matches"
+    },
+    {
+      "type": "cancellation",
+      "record_id": 1274,
+      "classification": "Complete",
+      "classification_scope": "Cancellation-to-wallet-credit consistency",
+      "cancellation_id": 2,
+      "wallet_transaction_id": 59,
+      "reason": "Linked credit matches"
+    }
+  ],
+  "limitations": "Complete admission/cancellation evidence does not make its purchase allocation-ready. No source was fabricated and no recovery was executed."
+}

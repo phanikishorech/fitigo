@@ -1,3 +1,4 @@
+import type { TransferPolicy } from '../components/membership/MembershipTransfer'
 import type { GymMembershipPlan, PurchaseMembershipResponse } from '../screens/GymDetails/api'
 import type { WalletBalanceResponse } from '../screens/Checkout/api'
 import { post, request } from './client'
@@ -5,17 +6,17 @@ import { post, request } from './client'
 export type Profile = { user_id: number; full_name: string; profile_image: string | null; member_since: string; membership_status: string | null; has_membership_history?: boolean }
 export type User = { id: number; first_name: string | null; last_name: string | null; email: string; phone: string | null; is_email_verified?: boolean; is_phone_verified?: boolean }
 export type MembershipSummary = { membership_id: number | null; plan_name: string | null; status: string | null; start_date: string | null; end_date: string | null; membership_scope: string | null; active_gyms: { gym_id: number; gym_name: string; locality?: string | null; city?: string | null }[]; membership_features: string[] }
-export type Membership = Omit<PurchaseMembershipResponse, 'gym_id' | 'plan_id'> & { gym_id: number | null; plan_id: number | null; payment_provider: string; payment_status: string; membership_type?: 'SINGLE_GYM' | 'MULTI_GYM'; terms_snapshot?: { name: string; duration_value: number; duration_unit: string } | null; wallet_transaction_id?: number | null }
-export type WalletTransaction = { id: number; direction: string; txn_type: string; amount: string; currency: string; description: string | null; created_at: string }
-export type Wallet = WalletBalanceResponse & { transactions: WalletTransaction[] }
+export type Membership = Omit<PurchaseMembershipResponse, 'gym_id' | 'plan_id'> & { transfer?: TransferPolicy; gym_id: number | null; plan_id: number | null; payment_provider: string; payment_status: string; membership_type?: 'SINGLE_GYM' | 'MULTI_GYM'; terms_snapshot?: { name: string; duration_value: number; duration_unit: string } | null; wallet_transaction_id?: number | null }
+export type WalletTransaction = { id: number; direction: string; txn_type: string; amount: string; currency: string; reference?: string | null; description: string | null; created_at: string }
+export type Wallet = WalletBalanceResponse & { transactions: WalletTransaction[]; reservations?: { checkout_id: string; amount: string; currency: string; state: string; created_at: string; resolved_at: string | null }[] }
 export type AccessDay = { date: string; status: string; qr_available: boolean; qr_status: string | null; gym_id?: number | null; gym_name: string | null; checkin_time: string | null }
 export type AccessCalendar = { days: AccessDay[]; access_type: string | null; gym: { id: number; name: string } | null }
 export type TodayAccess = { status: 'ACTIVE'; qr_token: string; expires_at: string; access_type: string; gym: { id: number; name: string } | null } | { status: 'USED'; gym_name: string | null; used_at: string } | { status: 'PAUSED' | 'EXPIRED' | 'NO_ACCESS' }
 export const profileService = { get: () => request<Profile>('/profile'), me: () => request<User>('/users/me'),
   update: (body: { first_name: string; last_name: string; email: string; phone: string | null; current_password?: string }) => request<{ user: User; reauthenticate: boolean }>('/users/me', { method: 'PATCH', body: JSON.stringify(body) }) }
 export const walletService = {
-  balance: () => request<WalletBalanceResponse>('/wallet/balance'),
-  transactions: () => request<Wallet>('/wallet/transactions?limit=100'),
+  balance: () => request<WalletBalanceResponse>('/wallet/balance', { cache: 'no-store' }),
+  transactions: () => request<Wallet>('/wallet/transactions?limit=100', { cache: 'no-store' }),
   recharge: (_amount: number) => Promise.reject(new Error('Use secure gateway checkout from Recharge wallet. No credit has been added.'))
 }
 export const membershipService = {

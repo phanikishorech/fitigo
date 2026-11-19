@@ -35,7 +35,7 @@ function Application() {
       <SessionGuard path={path}>
       <Suspense fallback={<div className="fg-app fg-main"><Skeleton /></div>}>
       {!/^\/(owner|admin)(\/|$)/.test(path) ? (
-        <CustomerApp key={location.split('#')[0]} path={path} />
+        <CustomerApp key={`${session.status === 'authenticated' ? session.identity.user.id : 'guest'}:${location.split('#')[0]}`} path={path} />
       ) : /^\/owner(\/|$)/.test(path) ? (
         <OwnerApp path={path} />
       ) : (

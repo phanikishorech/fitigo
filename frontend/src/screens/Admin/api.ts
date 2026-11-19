@@ -1,3 +1,4 @@
+import type { CancellationPolicy } from '../../components/booking/BookingCancellation'
 import { request, post } from '../../services/client'
 import type { DateRange } from '../../utils/dateRange'
 
@@ -19,6 +20,8 @@ export type AdminGymListItem = {
   is_active: boolean; is_featured?: boolean; created_at: string
 }
 export type AdminBooking = {
+  funding?: { purchase_amount: string; wallet_amount: string; gateway_amount: string } | null
+  cancellation?: CancellationPolicy | null
   id: number; status: string; slot_date: string; quantity: number; total_price: string; currency: string
   customer: { id: number; first_name: string | null; last_name: string | null; email: string; phone: string | null }
   gym: { id: number; name: string; city: string | null; status: string; is_active: boolean; owner_user_id: number }

@@ -1,0 +1,1 @@
+PASS: mocked geolocation, four radii, marker/details, map/list, three viewports, sidebar-only directions without Maps configuration or permission, external URL, manual areas, empty/error/retry, missing coordinates and Maps failure.

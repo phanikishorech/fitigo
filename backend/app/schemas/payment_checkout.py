@@ -14,9 +14,15 @@ class CheckoutCreate(BaseModel):
     accepted_quote: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     cart_item_ids: list[int] | None = Field(default=None, min_length=1, max_length=100)
     confirm_razorpay_replacement: StrictBool = False
+    use_wallet: StrictBool = False
+    wallet_amount: Decimal | None = Field(default=None, ge=0, le=9999999999, max_digits=12, decimal_places=2)
 
     @model_validator(mode="after")
     def source(self):
+        if self.kind == 'WALLET_TOPUP' and (self.use_wallet or self.wallet_amount is not None):
+            raise ValueError('Wallet recharges cannot be funded from the wallet')
+        if self.wallet_amount is not None and not self.use_wallet:
+            raise ValueError('Enable wallet usage before requesting a contribution')
         if self.confirm_razorpay_replacement and (self.kind != 'CART' or not self.cart_item_ids):
             raise ValueError('Replacement confirmation requires an explicit current cart')
         if self.cart_item_ids is not None and (self.kind != 'CART' or

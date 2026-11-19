@@ -69,18 +69,18 @@ global server configuration. No uploads or server accounts were modified.
 
 - Only the verified FitiGo port-8000 Python launcher and children were stopped.
   The unrelated listener on 8000 was preserved.
-- Backend started on `127.0.0.1:8001` using the existing local application config.
-- Both Vite proxies now target `127.0.0.1:8001`. The existing frontend reloaded
+- Backend started on `127.0.0.1:8000` using the existing local application config.
+- Both Vite proxies now target `127.0.0.1:8000`. The existing frontend reloaded
   its config; direct and proxied health/API requests succeeded.
 - `C:/Users/ckishor/.cline/data/workspaces/chat/fitigo/scripts/start-dev.ps1`
-  now defaults to 8001, probes port availability and refuses busy ports instead
+  now defaults to 8000, probes port availability and refuses busy ports instead
   of killing arbitrary processes. `-CheckOnly` performs a non-starting check.
 - Script parser, free-port check and busy-port rejection were verified. The busy
   port's process survived, and the actual backend startup succeeded.
 - Runtime logs:
   `C:/Users/ckishor/AppData/Local/FitiGo/runtime/backend-20261111-103730-41b8c7ca`
 - User-facing frontend remains `http://localhost:5173`; API docs are at
-  `http://127.0.0.1:8001/docs`.
+  `http://127.0.0.1:8000/docs`.
 
 No new plaintext credentials were written to source. Previous accumulated
 uncommitted changes remain; no git reset/stash/commit/push was performed.

@@ -51,5 +51,10 @@ def owner_actions(db, booking, actor_id, *, lock=False):
             reasons['CANCEL'] = 'Class booking cancellation requires coordinated session-capacity review. Contact support.'
         if booking.checkout_id and booking.status == 'PENDING_PAYMENT':
             reasons['CANCEL'] = 'A gateway payment is pending. Resolve checkout before an owner cancellation.'
+    from app.services.booking_cancellation import summary
+    cancellation = summary(db, booking)
+    from app.services.checkout_funding import booking_breakdown
+    if not cancellation['eligible']: reasons['CANCEL'] = cancellation['reason']
+    else: reasons.pop('CANCEL', None)
     return {'allowed_actions': [key for key in ('CANCEL', 'MARK_ATTENDED', 'MARK_NO_SHOW') if key not in reasons],
-            'action_unavailable_reasons': reasons, 'cancellation_policy': CANCELLATION_MESSAGE}
+            'action_unavailable_reasons': reasons, 'cancellation_policy': CANCELLATION_MESSAGE, 'cancellation': cancellation, 'funding': booking_breakdown(db, booking)}

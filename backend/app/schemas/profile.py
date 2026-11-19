@@ -42,6 +42,7 @@ class MembershipSummaryResponse(ISTResponse):
 
 
 class BookingItemResponse(ISTResponse):
+    cancellation: dict | None = None
     can_review: bool = False
     review_id: int | None = None
     review_rating: int | None = None

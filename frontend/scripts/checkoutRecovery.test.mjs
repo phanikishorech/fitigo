@@ -40,3 +40,11 @@ test('replaced orders never resume or pretend to be cancelled at the gateway', (
   assert.equal(pendingCartCheckout([row]), undefined)
   assert.match(checkoutMessage(row), /gateway order was not cancelled/)
 })
+
+test('cancellation request is not safe closure or a wallet release', () => {
+  const message = checkoutMessage({ status: 'FAILED', payment_blocked_reason: 'CANCELLATION_PENDING', wallet_status: 'HELD' })
+  assert.match(message, /do not pay again/)
+  assert.match(message, /stay reserved/)
+  assert.doesNotMatch(message, /safely cancelled/)
+  assert.match(checkoutMessage({ status: 'CANCELLED', replacement_safe: true, wallet_status: 'RELEASED' }), /safely cancelled/)
+})

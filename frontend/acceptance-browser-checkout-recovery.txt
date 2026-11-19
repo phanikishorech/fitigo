@@ -1,0 +1,1 @@
+PASS redesigned checkout: first-click gateway, exact cart/total, double-click/reload reuse, review-required/expiry states, keyboard details, 360/768/1440 layout; screenshots: C:\Users\ckishor\AppData\Local\Temp\fitigo-checkout-redesign

@@ -33,9 +33,13 @@ from app.routers.payments import router as payments_router
 def create_app() -> FastAPI:
     # Validate even when an ASGI host disables lifespan events.
     settings.validate_security()
+    from app.services.financial_startup import validate_configuration
+    from app.database.session import engine as financial_engine
+    validate_configuration(settings,financial_engine)
     @asynccontextmanager
     async def lifespan(app):
         settings.validate_security()
+        validate_configuration(settings,financial_engine)
         if settings.support_workflows_enabled:
             from sqlalchemy import inspect
             from app.database.session import engine
@@ -54,7 +58,15 @@ def create_app() -> FastAPI:
         from starlette.concurrency import run_in_threadpool
         from app.services.payment_providers import validate_startup
         await run_in_threadpool(validate_startup)
-        yield
+        import asyncio
+        from app.services.wallet_hold_recovery import recovery_loop
+        stop = asyncio.Event()
+        recovery = asyncio.create_task(recovery_loop(stop))
+        try:
+            yield
+        finally:
+            stop.set()
+            await recovery
 
     app = FastAPI(
         lifespan=lifespan,

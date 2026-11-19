@@ -7,6 +7,9 @@ from pydantic import BaseModel, Field
 
 
 class WalletBalanceResponse(ISTResponse):
+    wallet_unavailable_reason: str | None = None
+    reserved_balance: str = '0.00'
+    available_balance: str | None = None
     balance: str
     currency: str = "INR"
 
@@ -35,6 +38,10 @@ class WalletTopupResponse(ISTResponse):
 
 
 class WalletTransactionsResponse(ISTResponse):
+    wallet_unavailable_reason: str | None = None
+    reserved_balance: str = '0.00'
+    available_balance: str | None = None
+    reservations: list[dict] = Field(default_factory=list)
     balance: str
     currency: str = "INR"
     transactions: list[WalletTransactionResponse]

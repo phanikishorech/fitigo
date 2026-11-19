@@ -25,7 +25,7 @@ class OwnerAnalyticsService(OwnerDashboardService):
         buckets = [(first + timedelta(days=i), min(last, first + timedelta(days=i + width - 1)))
                    for i in range(0, (last - first).days + 1, width)]
         visits = self._visits(scope, first, last)
-        sales = sales_query(scope, first, last)
+        sales = sales_query(scope, first, last, self.db)
         visit_columns, revenue_columns = [], []
         for index, (start, end) in enumerate(buckets):
             low, high = ist_day_bounds(start)[0], ist_day_bounds(end)[1]
@@ -70,7 +70,7 @@ class OwnerAnalyticsService(OwnerDashboardService):
 
     def transactions(self, owner_user_id, gym_id=None, date_from=None, date_to=None, category=None, payment_status=None, limit=20, offset=0):
         first, last = self.period(date_from, date_to)
-        sales = sales_query(self._scope(owner_user_id, gym_id), first, last)
+        sales = sales_query(self._scope(owner_user_id, gym_id), first, last, self.db)
         query = select(sales)
         if category:
             query = query.where(sales.c.category == category)
@@ -79,7 +79,7 @@ class OwnerAnalyticsService(OwnerDashboardService):
         rows, total = self.page(query.order_by(sales.c.recorded_at.desc(), sales.c.category, sales.c.record_id.desc()), limit, offset)
         return {'total': total, 'items': [{**{k: r[k] for k in ['record_id', 'category', 'gym_id', 'gym_name', 'payment_status', 'checkout_status', 'currency', 'mode', 'booking_id', 'provider', 'transaction_id', 'exclusion_reason']},
             'id': f"{r['category']}:{r['record_id']}", 'recorded_at': as_ist(r['recorded_at']).isoformat(),
-            'amount': str(r['amount']), 'recognized_amount': str(r['recognized_amount']), 'included': bool(r['included'])} for r in rows]}
+            'purchase_amount': str(r['purchase_amount']), 'wallet_amount': str(r['wallet_amount']), 'gateway_amount': str(r['gateway_amount']), 'amount': str(r['amount']), 'recognized_amount': str(r['recognized_amount']), 'included': bool(r['included'])} for r in rows]}
 
     def attendance_page(self, owner_user_id, gym_id=None, date_from=None, date_to=None, limit=20, offset=0):
         first, last = self.period(date_from, date_to)

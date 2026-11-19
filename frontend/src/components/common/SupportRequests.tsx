@@ -8,15 +8,17 @@ type Ticket = { id: number; user_id: number; category: string; subject: string; 
 type Detail = Ticket & { messages: { id: number; author_kind: string; body: string; created_at: string }[]; message_total: number; can_reply: boolean; can_change_status: boolean }
 const statuses = ['OPEN', 'WAITING_USER', 'RESOLVED']
 
-export default function SupportRequests({ admin = false }: { admin?: boolean }) {
+export type SupportPrefill = { category: string; subject: string; body: string }
+
+export default function SupportRequests({ admin = false, prefill }: { admin?: boolean; prefill?: SupportPrefill }) {
   const capability = useResource(() => request<{ ticketing_available: boolean }>('/meta/support', { cache: 'no-store' }), 'support-availability')
   if (capability.loading) return <Skeleton cards={1} />
   if (capability.error) return <ErrorState message={capability.error} retry={capability.retry} />
   if (!capability.data?.ticketing_available) return <p>In-app support requests are not enabled in this deployment. No request has been submitted.</p>
-  return <TicketList admin={admin} />
+  return <TicketList admin={admin} prefill={prefill} />
 }
 
-function TicketList({ admin }: { admin: boolean }) {
+function TicketList({ admin, prefill }: { admin: boolean; prefill?: SupportPrefill }) {
   const base = admin ? '/admin/support/tickets' : '/support/tickets'
   const [selected, setSelected] = useState<number | null>(null)
   const [page, setPage] = useState(0); const [status, setStatus] = useState(''); const [q, setQ] = useState(''); const [search, setSearch] = useState('')
@@ -24,7 +26,7 @@ function TicketList({ admin }: { admin: boolean }) {
   if (selected !== null) return <Conversation key={`${base}:${selected}`} base={base} id={selected} back={() => { setSelected(null); resource.retry() }} />
   return <section className="fg-stack"><h2>{admin ? 'Support queue' : 'My support requests'}</h2>
     <p>Messages are visible to the requester and authorized administrators. Do not include passwords, OTPs, QR tokens or payment credentials. No attachments, email delivery or response-time promise.</p>
-    {!admin && <NewTicket onCreated={setSelected} />}
+    {!admin && <NewTicket onCreated={setSelected} prefill={prefill} />}
     <form className="fg-stack" onSubmit={e => { e.preventDefault(); setQ(search.trim()); setPage(0) }}><label className="fg-field">Search subject<input value={search} maxLength={100} onChange={e => setSearch(e.target.value)} /></label><Button type="submit" variant="secondary">Search requests</Button></form>
     <label className="fg-field">Status<select value={status} onChange={e => { setStatus(e.target.value); setPage(0) }}><option value="">All statuses</option>{statuses.map(s => <option key={s}>{s}</option>)}</select></label>
     <Button variant="secondary" onClick={resource.retry}>Refresh requests</Button>
@@ -36,16 +38,16 @@ function TicketList({ admin }: { admin: boolean }) {
   </section>
 }
 
-function NewTicket({ onCreated }: { onCreated: (id: number) => void }) {
+function NewTicket({ onCreated, prefill }: { onCreated: (id: number) => void; prefill?: SupportPrefill }) {
   const mutation = useMutation(); const attempt = useRef<{ payload: string; key: string } | null>(null)
-  return <details className="fg-panel"><summary>Create a support request</summary><form className="fg-stack" onSubmit={e => {
+  return <details className="fg-panel" open={prefill ? true : undefined}><summary>Create a support request</summary><form className="fg-stack" onSubmit={e => {
     e.preventDefault(); const form = new FormData(e.currentTarget)
     const payload = JSON.stringify({ category: String(form.get('category')), subject: String(form.get('subject')).trim(), body: String(form.get('body')).trim() })
     if (!attempt.current || attempt.current.payload !== payload) attempt.current = { payload, key: crypto.randomUUID() }
     const current = attempt.current
     void mutation.run(async () => { const ticket = await request<Ticket>('/support/tickets', { method: 'POST', headers: { 'Idempotency-Key': current.key }, body: current.payload }); onCreated(ticket.id) })
-  }}><label className="fg-field">Category<select name="category" disabled={mutation.pending}>{['ACCOUNT', 'BOOKING', 'GYM', 'TECHNICAL', 'OTHER'].map(c => <option key={c}>{c}</option>)}</select></label>
-    <label className="fg-field">Subject<input name="subject" required maxLength={120} disabled={mutation.pending} /></label><label className="fg-field">Describe the issue<textarea name="body" required maxLength={2000} rows={5} disabled={mutation.pending} /></label>
+  }}><label className="fg-field">Category<select name="category" defaultValue={prefill?.category} disabled={mutation.pending}>{['ACCOUNT', 'BOOKING', 'GYM', 'TECHNICAL', 'OTHER'].map(c => <option key={c}>{c}</option>)}</select></label>
+    <label className="fg-field">Subject<input name="subject" defaultValue={prefill?.subject} required maxLength={120} disabled={mutation.pending} /></label><label className="fg-field">Describe the issue<textarea name="body" defaultValue={prefill?.body} required maxLength={2000} rows={5} disabled={mutation.pending} /></label>
     {mutation.error && <Alert>{mutation.error}</Alert>}<Button type="submit" loading={mutation.pending}>Submit support request</Button>
   </form></details>
 }

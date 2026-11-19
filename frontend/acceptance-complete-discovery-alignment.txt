@@ -1,0 +1,1 @@
+PASS Home/Explore controls: aligned desktop baseline, equal 46px heights, orderly mobile rows, no overflow or clipped text at 320/360/390/640/768/1024/1440px.

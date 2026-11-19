@@ -17,6 +17,8 @@ async function until(expression) { for (let i = 0; i < 120; i++) { if (await eva
 async function visit(path, text) { await command('Page.navigate', { url: origin + path }); await until(`document.body.innerText.includes(${JSON.stringify(text)})`); await wait(150) }
 async function widths() { for (const width of [360, 390, 768, 1440]) { await command('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width < 640 }); await wait(60); assert.equal(await evaluate('document.documentElement.scrollWidth<=innerWidth+1'), true, `Overflow ${width}`) } }
 function fixture(path) {
+  if (path.endsWith('/notifications/inbox')) return { items: [], total: 0, unread_count: 0 }
+  if (path.endsWith('/cart/summary')) return { count: 0, total: '0.00', currency: 'INR' }
   if (path.endsWith('/auth/session')) return { user, roles: ['CUSTOMER'] }
   if (path.endsWith('/users/me')) return user
   const status = state === 'USED' ? 'ACTIVE' : state

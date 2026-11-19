@@ -4,7 +4,7 @@ import re
 from fastapi import HTTPException
 from app.core.config import settings
 from app.services.razorpay_gateway import RazorpayGateway, verify_signature
-from app.services.payment_provider import ProviderOrder, ProviderPayment, ProviderEvent
+from app.services.payment_provider import ProviderOrder, ProviderPayment, ProviderEvent, ProviderRefund
 
 
 class RazorpayProvider:
@@ -55,8 +55,23 @@ class RazorpayProvider:
             if row.get('status') not in {'created', 'authorized', 'captured', 'refunded', 'failed'}:
                 raise HTTPException(409, detail="Unrecognized gateway payment status. Refresh payment status.")
             state = "SUCCESS" if row.get("status") in {"captured", "refunded"} and row.get("captured") is True else "FAILED" if row.get('status') == 'failed' else "PENDING"
-            result.append(ProviderPayment(row["id"], row.get("order_id"), row.get("amount"), row.get("currency"), state,
-                row.get("amount_refunded", 0)))
+            payment = ProviderPayment(row["id"], row.get("order_id"), row.get("amount"), row.get("currency"), state,
+                row.get("amount_refunded", 0), collection_state='CAPTURED' if state == 'SUCCESS' else
+                    'FAILED' if state == 'FAILED' else 'AUTHORIZED' if row['status']=='authorized' else 'INITIATED')
+            # Payment created_at is NOT capture time. REST payment entity provides
+            # no authoritative captured_at: retain null rather than fabricate it.
+            payment.fee = row.get('fee') if type(row.get('fee')) is int and row['fee'] >= 0 else None
+            payment.fee_tax = row.get('tax') if type(row.get('tax')) is int and row['tax'] >= 0 else None
+            payment.fee_basis = 'INCLUDING_TAX' if payment.fee is not None else 'UNAVAILABLE'
+            if settings.source_evidence_enabled and payment.refunded and hasattr(self.gateway, 'refunds'):
+                for refund in self.gateway.refunds(payment.id):
+                    if not isinstance(refund, dict) or not re.fullmatch(r'rfnd_[A-Za-z0-9]+', refund.get('id', '')) or refund.get('payment_id') != payment.id or refund.get('currency') != payment.currency or type(refund.get('amount')) is not int or refund['amount'] < 0:
+                        raise HTTPException(409, 'Invalid provider refund evidence')
+                    # Refund created_at is not a successful processing timestamp.
+                    payment.refunds.append(ProviderRefund(refund['id'], payment.id, refund['amount'], payment.currency,
+                        refund.get('status', 'UNKNOWN')))
+                payment.refund_evidence_status = 'PROVIDER_FETCHED'
+            result.append(payment)
         return result
 
     def verify_confirmation(self, checkout, payment_id, signature, order_id):

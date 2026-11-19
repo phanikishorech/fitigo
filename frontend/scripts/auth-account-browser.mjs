@@ -33,6 +33,9 @@ ws.onmessage=async event=>{
     else if(path==='/api/v1/meta/gym-types'||path==='/api/v1/facilities')body=[]
     else if(path==='/api/v1/users/me')body={id:1,first_name:'Account',last_name:'Fixture',email:'new@example.com',phone:null}
    else if(path==='/api/v1/users/me/roles')body=roles
+    else if(path.endsWith('/notifications/inbox'))body={items:[],total:0,unread_count:0}
+    else if(path.endsWith('/cart/summary'))body={count:0,total:'0.00',currency:'INR'}
+    else if(path.endsWith('/notifications/preferences'))body={enabled:true,operational_email:false,email_available:false,message:'Fixture preferences'}
    else if(path==='/api/v1/gym-owner/gyms'||path==='/api/v1/gym-staff/gyms')body=[]
     else if(path==='/api/v1/memberships/me')body=[]
    else throw Error(`Unexpected API: ${path}`)
@@ -99,7 +102,7 @@ try{
  for(const role of ['GYM_OWNER','GYM_STAFF']){
   roles=[role];await evaluate(`localStorage.setItem('fitigo:access_token','fixture-owner-token')`)
   await visit('/owner/settings','Change password');await click('Change password')
-  await fill('input[name="current_password"]','Password123!');await fill('input[name="new_password"]','Replacement123!');await fill('input[name="confirmation"]','Replacement123!')
+  await fill('form:has(input[name="new_password"]) input[name="current_password"]','Password123!');await fill('input[name="new_password"]','Replacement123!');await fill('input[name="confirmation"]','Replacement123!')
   mode='wrong';await click('Change password');await until(`document.body.innerText.includes('current password is incorrect')`)
   mode='ok';await click('Change password');await until(`document.body.innerText.includes('Password updated. Sign in with your new password.')`)
   assert.equal(await evaluate(`localStorage.getItem('fitigo:access_token')`),null)

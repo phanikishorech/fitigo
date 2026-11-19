@@ -1,7 +1,8 @@
 export type CustomerRoute =
   | { page: 'home' | 'explore' | 'location' | 'cart' | 'checkout' | 'wallet' | 'recharge' | 'bookings' | 'membership' | 'membershipCheckout' | 'membershipSuccess' | 'profile' | 'access' | 'calendar' | 'history' | 'visits' | 'reviews' | 'settings' | 'auth' | 'staff' | 'notFound' }
   | { page: 'gym' | 'bookingAccess' | 'bookingSchedule' | 'plans' | 'bookingDetail' | 'bookingSuccess' | 'review' | 'membershipRecord' | 'membershipDetails' | 'confirmVisit'; id: number }
-  | { page: 'membershipPause' | 'membershipGyms' | 'multiGymPlans' | 'forgotPassword' | 'resetPassword' | 'staffInvitation' | 'payments' }
+  | { page: 'membershipPause' | 'membershipGyms' | 'multiGymPlans' | 'forgotPassword' | 'resetPassword' | 'staffInvitation' | 'payments' | 'notifications' }
+  | { page: 'cartEdit'; id: number }
 
 export function customerRoute(path: string): CustomerRoute {
   const normalized = path.replace(/\/+$/, '') || '/'
@@ -12,6 +13,7 @@ export function customerRoute(path: string): CustomerRoute {
     '/gyms': 'membershipGyms', '/membership/gyms': 'membershipGyms', '/membership/pause': 'membershipPause',
     '/membership/multi-gym/plans': 'multiGymPlans',
     '/profile/payments': 'payments',
+    '/notifications': 'notifications',
     '/auth/forgot-password': 'forgotPassword', '/auth/reset-password': 'resetPassword',
     '/auth/accept-invitation': 'staffInvitation',
     '/membership/checkout': 'membershipCheckout', '/membership/success': 'membershipSuccess', '/profile': 'profile',
@@ -20,6 +22,8 @@ export function customerRoute(path: string): CustomerRoute {
     '/login': 'auth', '/auth': 'auth', '/auth/login': 'auth', '/auth/otp': 'auth', '/auth/profile-setup': 'settings', '/staff/check-in': 'staff'
   }
   if (aliases[normalized]) return { page: aliases[normalized] } as CustomerRoute
+  const edit = normalized.match(/^\/cart\/items\/(\d+)\/edit$/)
+  if (edit && Number.isSafeInteger(Number(edit[1])) && Number(edit[1]) > 0) return { page: 'cartEdit', id: Number(edit[1]) }
   const patterns: [RegExp, 'gym' | 'bookingAccess' | 'bookingSchedule' | 'plans' | 'bookingDetail' | 'bookingSuccess' | 'review' | 'membershipRecord' | 'membershipDetails' | 'confirmVisit'][] = [
     [/^\/membership\/(\d+)$/, 'membershipRecord'], [/^\/membership\/(\d+)\/details$/, 'membershipDetails'], [/^\/gyms\/(\d+)\/visit$/, 'confirmVisit'],
     [/^\/gyms\/(\d+)$/, 'gym'], [/^\/gyms\/(\d+)\/(?:access|book\/access)$/, 'bookingAccess'],

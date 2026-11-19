@@ -9,11 +9,12 @@ import hmac
 import json
 import re
 from uuid import UUID, uuid4
+from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
 
 import httpx
 from fastapi import HTTPException
 from app.core.config import settings
-from app.services.payment_provider import ProviderOrder, ProviderPayment, ProviderEvent, minor
+from app.services.payment_provider import ProviderOrder, ProviderPayment, ProviderEvent, ProviderRefund, minor, provider_time
 
 
 class CashfreeProvider:
@@ -85,13 +86,20 @@ class CashfreeProvider:
 
     def create_order(self, checkout, customer):
         self.validate_purchase(checkout, customer)
+        # Bind the return to this exact checkout; URL parameters are navigation
+        # hints only. The authenticated return page verifies with the backend.
+        destination = urlsplit(settings.payment_return_url)
+        query = [(key, value) for key, value in parse_qsl(destination.query, keep_blank_values=True)
+            if key not in {'payment_checkout_id', 'order_id'}]
+        query.append(('payment_checkout_id', checkout.id))
+        return_url = urlunsplit((destination.scheme, destination.netloc, destination.path, urlencode(query), destination.fragment))
         # JSON number is serialized from exact minor units; never frontend pricing.
         row = self.request("POST", "orders", headers={"x-idempotency-key": checkout.id}, json={
             "order_id": self.external_id(checkout.id), "order_amount": minor(checkout.amount) / 100,
             "order_currency": checkout.currency,
             "customer_details": {"customer_id": f"fitigo_user_{customer.id}",
                 "customer_phone": re.sub(r"[\s()-]", "", customer.phone), "customer_email": customer.email},
-            "order_meta": {"return_url": settings.payment_return_url},
+            "order_meta": {"return_url": return_url},
             "order_tags": {"fitigo_checkout_id": checkout.id}})
         return self.normalize_order(row)
 
@@ -124,7 +132,10 @@ class CashfreeProvider:
                     state = "PENDING"
                 elif state != "SUCCESS":
                     state = "FAILED"
-                result.append(ProviderPayment(identifier, row["order_id"], minor(row["payment_amount"]), row["payment_currency"], state))
+                captured_at = provider_time(row.get('payment_completion_time')) if state == 'SUCCESS' and row.get('is_captured') is True and not row.get('authorization') else None
+                result.append(ProviderPayment(identifier, row["order_id"], minor(row["payment_amount"]), row["payment_currency"], state,
+                    collection_state='CAPTURED' if state=='SUCCESS' else 'AUTHORIZED' if row.get('payment_status')=='SUCCESS' and row.get('is_captured') is False else 'FAILED' if state=='FAILED' else 'INITIATED',
+                    captured_at=captured_at, timestamp_source='PAYMENT_COMPLETION_TIME' if captured_at else 'UNAVAILABLE'))
             except (KeyError, ValueError, TypeError):
                 raise HTTPException(409, detail="Invalid Cashfree payment response") from None
         # Preserve the existing dashboard-refund reconciliation capability.
@@ -136,14 +147,19 @@ class CashfreeProvider:
             for row in refunds:
                 if not isinstance(row, dict):
                     raise HTTPException(409, detail="Invalid Cashfree refund response")
-                if row.get("refund_status") != "SUCCESS":
-                    continue
                 identifier = str(row.get("cf_refund_id", ""))
                 payment = next((p for p in result if p.id == str(row.get("cf_payment_id"))), None)
+                if row.get('refund_status') != 'SUCCESS' and not settings.source_evidence_enabled:
+                    continue
                 if not identifier or not payment or row.get("order_id") != order_id or row.get("refund_currency") != payment.currency:
                     raise HTTPException(409, detail="Cashfree refund does not match payment")
                 if identifier not in seen:
-                    payment.refunded += minor(row.get("refund_amount"))
+                    refund_amount = minor(row.get('refund_amount'))
+                    occurred = provider_time(row.get('processed_at')) if row.get('refund_status') == 'SUCCESS' else None
+                    payment.refunds.append(ProviderRefund(identifier, payment.id, refund_amount, payment.currency,
+                        row.get('refund_status', 'UNKNOWN'), occurred, 'PROCESSED_AT' if occurred else 'UNAVAILABLE'))
+                    payment.refund_evidence_status = 'PROVIDER_FETCHED'
+                    if row.get('refund_status') == 'SUCCESS': payment.refunded += refund_amount
                     seen.add(identifier)
         return result
 

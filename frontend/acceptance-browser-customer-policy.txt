@@ -1,0 +1,1 @@
+PASS: backend-driven cancellation/denial/deadline, wallet confirmation and conflict; explicit one-time transfer with stable retry key, transferred ownership views, Single-Gym restrictions; dialogs at 360/768/1440px.

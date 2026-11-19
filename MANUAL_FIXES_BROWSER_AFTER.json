@@ -1,0 +1,2966 @@
+{
+  "read_only": true,
+  "calls": [
+    {
+      "path": "/api/v1/admin/financial-settings/gyms?q=&limit=20&offset=0",
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 1642,
+            "name": "AdminSearch Gym"
+          },
+          {
+            "id": 1644,
+            "name": "AdminSearch Gym"
+          },
+          {
+            "id": 1646,
+            "name": "AdminSearch Gym"
+          },
+          {
+            "id": 1647,
+            "name": "Cap Gym"
+          },
+          {
+            "id": 1638,
+            "name": "Concurrent Scan Gym"
+          },
+          {
+            "id": 1652,
+            "name": "Concurrent Scan Gym"
+          },
+          {
+            "id": 1659,
+            "name": "Cust Gym"
+          },
+          {
+            "id": 1667,
+            "name": "Cust Gym"
+          },
+          {
+            "id": 1649,
+            "name": "Expiry Gym"
+          },
+          {
+            "id": 188,
+            "name": "FitZone Premium Gym"
+          },
+          {
+            "id": 1662,
+            "name": "Gym 1"
+          },
+          {
+            "id": 1663,
+            "name": "Gym 2"
+          },
+          {
+            "id": 1660,
+            "name": "Gym 436c52"
+          },
+          {
+            "id": 1639,
+            "name": "Gym A"
+          },
+          {
+            "id": 1653,
+            "name": "Gym A"
+          },
+          {
+            "id": 1655,
+            "name": "Gym A"
+          },
+          {
+            "id": 1657,
+            "name": "Gym A"
+          },
+          {
+            "id": 1658,
+            "name": "Gym A"
+          },
+          {
+            "id": 1640,
+            "name": "Gym B"
+          },
+          {
+            "id": 1654,
+            "name": "Gym B"
+          }
+        ],
+        "total": 39
+      }
+    },
+    {
+      "path": "/api/v1/admin/financial-settings/gyms?q=&limit=20&offset=0",
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 1642,
+            "name": "AdminSearch Gym"
+          },
+          {
+            "id": 1644,
+            "name": "AdminSearch Gym"
+          },
+          {
+            "id": 1646,
+            "name": "AdminSearch Gym"
+          },
+          {
+            "id": 1647,
+            "name": "Cap Gym"
+          },
+          {
+            "id": 1638,
+            "name": "Concurrent Scan Gym"
+          },
+          {
+            "id": 1652,
+            "name": "Concurrent Scan Gym"
+          },
+          {
+            "id": 1659,
+            "name": "Cust Gym"
+          },
+          {
+            "id": 1667,
+            "name": "Cust Gym"
+          },
+          {
+            "id": 1649,
+            "name": "Expiry Gym"
+          },
+          {
+            "id": 188,
+            "name": "FitZone Premium Gym"
+          },
+          {
+            "id": 1662,
+            "name": "Gym 1"
+          },
+          {
+            "id": 1663,
+            "name": "Gym 2"
+          },
+          {
+            "id": 1660,
+            "name": "Gym 436c52"
+          },
+          {
+            "id": 1639,
+            "name": "Gym A"
+          },
+          {
+            "id": 1653,
+            "name": "Gym A"
+          },
+          {
+            "id": 1655,
+            "name": "Gym A"
+          },
+          {
+            "id": 1657,
+            "name": "Gym A"
+          },
+          {
+            "id": 1658,
+            "name": "Gym A"
+          },
+          {
+            "id": 1640,
+            "name": "Gym B"
+          },
+          {
+            "id": 1654,
+            "name": "Gym B"
+          }
+        ],
+        "total": 39
+      }
+    },
+    {
+      "path": "/api/v1/admin/financial-settings?mode=test&gym_id=188&limit=20&offset=0",
+      "status": 200,
+      "body": {
+        "gym_id": 188,
+        "gym_name": "FitZone Premium Gym",
+        "mode": "test",
+        "available": true,
+        "posting_enabled": false,
+        "statutory_reporting_enabled": false,
+        "processing_blockers": [
+          "SOURCE_TAX_EVIDENCE_REQUIRED",
+          "PROCESSING_REQUIRES_SEPARATE_ACTIVATION",
+          "SETTLEMENT_TIMING_NOT_FULLY_CONFIGURED"
+        ],
+        "settlement_readiness": {
+          "ATTENDED_BOOKING": {
+            "ready": false,
+            "missing": [
+              "minimum_payout",
+              "timezone",
+              "holding_days",
+              "eligible_deductions",
+              "payout_eligibility",
+              "partial_settlement",
+              "failed_settlement",
+              "booking_cycle",
+              "cutoff_time"
+            ]
+          },
+          "NO_SHOW": {
+            "ready": false,
+            "missing": [
+              "minimum_payout",
+              "timezone",
+              "holding_days",
+              "eligible_deductions",
+              "payout_eligibility",
+              "partial_settlement",
+              "failed_settlement",
+              "booking_cycle",
+              "cutoff_time"
+            ]
+          },
+          "SINGLE_GYM": {
+            "ready": false,
+            "missing": [
+              "minimum_payout",
+              "timezone",
+              "holding_days",
+              "eligible_deductions",
+              "payout_eligibility",
+              "partial_settlement",
+              "failed_settlement",
+              "single_gym_cycle",
+              "cutoff_time"
+            ]
+          },
+          "MULTI_GYM": {
+            "ready": false,
+            "missing": [
+              "minimum_payout",
+              "timezone",
+              "holding_days",
+              "eligible_deductions",
+              "payout_eligibility",
+              "partial_settlement",
+              "failed_settlement",
+              "multi_gym_cycle",
+              "cutoff_time"
+            ]
+          }
+        },
+        "latest_version": 0,
+        "latest": null,
+        "effective": null,
+        "template": {
+          "contract_version": 1,
+          "individual": {
+            "revenue": {
+              "gym_percent": "85",
+              "fitigo_percent": "15"
+            },
+            "gateway_fee": {
+              "gym_percent": "50",
+              "fitigo_percent": "50"
+            }
+          },
+          "single_gym": {
+            "revenue": {
+              "gym_percent": "85",
+              "fitigo_percent": "15"
+            },
+            "gateway_fee": {
+              "gym_percent": "50",
+              "fitigo_percent": "50"
+            }
+          },
+          "no_show": {
+            "revenue": {
+              "gym_percent": "70",
+              "fitigo_percent": "30"
+            },
+            "gateway_fee": {
+              "gym_percent": "50",
+              "fitigo_percent": "50"
+            }
+          },
+          "multi_gym": {
+            "method": "MONTHLY_VERIFIED_VISIT_VOLUME",
+            "reference_amount": "3000.00",
+            "reference_visits": 100,
+            "gateway_fee": {
+              "gym_percent": "0",
+              "fitigo_percent": "100"
+            },
+            "period_timezone": "Asia/Kolkata",
+            "rounding": "MONTHLY_TOTAL_HALF_UP",
+            "version_boundary": "PIN_AT_ADMISSION",
+            "purchase_fee_attribution": "MEMBERSHIP_COMPLETE_EQUAL_VISITS",
+            "invalidated_visit_correction": "APPEND_ONLY_SOURCE_BACKED",
+            "fitigo_earnings": "NOT_APPROVED"
+          },
+          "settlements": {
+            "booking_cycle": null,
+            "multi_gym_cycle": null,
+            "minimum_payout": null,
+            "admin_approval_required": true,
+            "automatic_transfers": false,
+            "single_gym_cycle": null,
+            "cutoff_time": null,
+            "timezone": null,
+            "weekly_cutoff_day": null,
+            "monthly_cutoff_day": null,
+            "short_month": null,
+            "holding_days": null,
+            "eligible_deductions": null,
+            "payout_eligibility": null,
+            "partial_settlement": null,
+            "failed_settlement": null
+          },
+          "single_gym_entitlement": "UPFRONT_ON_VERIFIED_PURCHASE",
+          "no_show_eligibility": "EXPLICIT_AUTHORIZATION_ONLY",
+          "gateway_fee_basis": "ACTUAL_PROVIDER_EVIDENCE_ONLY",
+          "unknown_fee": "GROSS_RECORDED_NET_PENDING",
+          "wallet_gateway_fee": "NONE"
+        },
+        "legacy_replacement_required": false,
+        "history": [],
+        "total": 0
+      }
+    },
+    {
+      "path": "/api/v1/admin/financial-settings?mode=test&gym_id=188&limit=20&offset=0",
+      "status": 200,
+      "body": {
+        "gym_id": 188,
+        "gym_name": "FitZone Premium Gym",
+        "mode": "test",
+        "available": true,
+        "posting_enabled": false,
+        "statutory_reporting_enabled": false,
+        "processing_blockers": [
+          "SOURCE_TAX_EVIDENCE_REQUIRED",
+          "PROCESSING_REQUIRES_SEPARATE_ACTIVATION",
+          "SETTLEMENT_TIMING_NOT_FULLY_CONFIGURED"
+        ],
+        "settlement_readiness": {
+          "ATTENDED_BOOKING": {
+            "ready": false,
+            "missing": [
+              "minimum_payout",
+              "timezone",
+              "holding_days",
+              "eligible_deductions",
+              "payout_eligibility",
+              "partial_settlement",
+              "failed_settlement",
+              "booking_cycle",
+              "cutoff_time"
+            ]
+          },
+          "NO_SHOW": {
+            "ready": false,
+            "missing": [
+              "minimum_payout",
+              "timezone",
+              "holding_days",
+              "eligible_deductions",
+              "payout_eligibility",
+              "partial_settlement",
+              "failed_settlement",
+              "booking_cycle",
+              "cutoff_time"
+            ]
+          },
+          "SINGLE_GYM": {
+            "ready": false,
+            "missing": [
+              "minimum_payout",
+              "timezone",
+              "holding_days",
+              "eligible_deductions",
+              "payout_eligibility",
+              "partial_settlement",
+              "failed_settlement",
+              "single_gym_cycle",
+              "cutoff_time"
+            ]
+          },
+          "MULTI_GYM": {
+            "ready": false,
+            "missing": [
+              "minimum_payout",
+              "timezone",
+              "holding_days",
+              "eligible_deductions",
+              "payout_eligibility",
+              "partial_settlement",
+              "failed_settlement",
+              "multi_gym_cycle",
+              "cutoff_time"
+            ]
+          }
+        },
+        "latest_version": 0,
+        "latest": null,
+        "effective": null,
+        "template": {
+          "contract_version": 1,
+          "individual": {
+            "revenue": {
+              "gym_percent": "85",
+              "fitigo_percent": "15"
+            },
+            "gateway_fee": {
+              "gym_percent": "50",
+              "fitigo_percent": "50"
+            }
+          },
+          "single_gym": {
+            "revenue": {
+              "gym_percent": "85",
+              "fitigo_percent": "15"
+            },
+            "gateway_fee": {
+              "gym_percent": "50",
+              "fitigo_percent": "50"
+            }
+          },
+          "no_show": {
+            "revenue": {
+              "gym_percent": "70",
+              "fitigo_percent": "30"
+            },
+            "gateway_fee": {
+              "gym_percent": "50",
+              "fitigo_percent": "50"
+            }
+          },
+          "multi_gym": {
+            "method": "MONTHLY_VERIFIED_VISIT_VOLUME",
+            "reference_amount": "3000.00",
+            "reference_visits": 100,
+            "gateway_fee": {
+              "gym_percent": "0",
+              "fitigo_percent": "100"
+            },
+            "period_timezone": "Asia/Kolkata",
+            "rounding": "MONTHLY_TOTAL_HALF_UP",
+            "version_boundary": "PIN_AT_ADMISSION",
+            "purchase_fee_attribution": "MEMBERSHIP_COMPLETE_EQUAL_VISITS",
+            "invalidated_visit_correction": "APPEND_ONLY_SOURCE_BACKED",
+            "fitigo_earnings": "NOT_APPROVED"
+          },
+          "settlements": {
+            "booking_cycle": null,
+            "multi_gym_cycle": null,
+            "minimum_payout": null,
+            "admin_approval_required": true,
+            "automatic_transfers": false,
+            "single_gym_cycle": null,
+            "cutoff_time": null,
+            "timezone": null,
+            "weekly_cutoff_day": null,
+            "monthly_cutoff_day": null,
+            "short_month": null,
+            "holding_days": null,
+            "eligible_deductions": null,
+            "payout_eligibility": null,
+            "partial_settlement": null,
+            "failed_settlement": null
+          },
+          "single_gym_entitlement": "UPFRONT_ON_VERIFIED_PURCHASE",
+          "no_show_eligibility": "EXPLICIT_AUTHORIZATION_ONLY",
+          "gateway_fee_basis": "ACTUAL_PROVIDER_EVIDENCE_ONLY",
+          "unknown_fee": "GROSS_RECORDED_NET_PENDING",
+          "wallet_gateway_fee": "NONE"
+        },
+        "legacy_replacement_required": false,
+        "history": [],
+        "total": 0
+      }
+    },
+    {
+      "path": "/api/v1/admin/financial-settings/gyms?q=&limit=20&offset=20",
+      "status": 200,
+      "body": {
+        "items": [
+          {
+            "id": 1656,
+            "name": "Gym B"
+          },
+          {
+            "id": 1648,
+            "name": "Idem Gym"
+          },
+          {
+            "id": 192,
+            "name": "IronTemple Fitness"
+          },
+          {
+            "id": 1666,
+            "name": "Max Fit Gym"
+          },
+          {
+            "id": 237,
+            "name": "Nexus Fit Gym"
+          },
+          {
+            "id": 1641,
+            "name": "Ops Gym"
+          },
+          {
+            "id": 1643,
+            "name": "Ops Gym"
+          },
+          {
+            "id": 1645,
+            "name": "Ops Gym"
+          },
+          {
+            "id": 189,
+            "name": "PowerHouse Strength Club"
+          },
+          {
+            "id": 191,
+            "name": "Pulse Cardio Gym"
+          },
+          {
+            "id": 1661,
+            "name": "QR Gym"
+          },
+          {
+            "id": 1650,
+            "name": "Reschedule Gym"
+          },
+          {
+            "id": 1651,
+            "name": "Reschedule Gym2"
+          },
+          {
+            "id": 1665,
+            "name": "RevGym"
+          },
+          {
+            "id": 1664,
+            "name": "SlotGym"
+          },
+          {
+            "id": 1668,
+            "name": "SlotGym"
+          },
+          {
+            "id": 1637,
+            "name": "Test"
+          },
+          {
+            "id": 238,
+            "name": "Test GYM"
+          },
+          {
+            "id": 190,
+            "name": "Zen Yoga & Mobility Studio"
+          }
+        ],
+        "total": 39
+      }
+    },
+    {
+      "path": "/api/v1/admin/business/summary?date_from=2026-11-17&date_to=2026-11-17&gym_id=188",
+      "status": 200,
+      "body": {
+        "date_from": "2026-11-17",
+        "date_to": "2026-11-17",
+        "mode": "test",
+        "options": [
+          {
+            "id": 1646,
+            "name": "AdminSearch Gym"
+          },
+          {
+            "id": 1642,
+            "name": "AdminSearch Gym"
+          },
+          {
+            "id": 1644,
+            "name": "AdminSearch Gym"
+          },
+          {
+            "id": 1647,
+            "name": "Cap Gym"
+          },
+          {
+            "id": 1652,
+            "name": "Concurrent Scan Gym"
+          },
+          {
+            "id": 1638,
+            "name": "Concurrent Scan Gym"
+          },
+          {
+            "id": 1667,
+            "name": "Cust Gym"
+          },
+          {
+            "id": 1659,
+            "name": "Cust Gym"
+          },
+          {
+            "id": 1649,
+            "name": "Expiry Gym"
+          },
+          {
+            "id": 188,
+            "name": "FitZone Premium Gym"
+          },
+          {
+            "id": 1662,
+            "name": "Gym 1"
+          },
+          {
+            "id": 1663,
+            "name": "Gym 2"
+          },
+          {
+            "id": 1660,
+            "name": "Gym 436c52"
+          },
+          {
+            "id": 1639,
+            "name": "Gym A"
+          },
+          {
+            "id": 1653,
+            "name": "Gym A"
+          },
+          {
+            "id": 1655,
+            "name": "Gym A"
+          },
+          {
+            "id": 1657,
+            "name": "Gym A"
+          },
+          {
+            "id": 1658,
+            "name": "Gym A"
+          },
+          {
+            "id": 1640,
+            "name": "Gym B"
+          },
+          {
+            "id": 1654,
+            "name": "Gym B"
+          },
+          {
+            "id": 1656,
+            "name": "Gym B"
+          },
+          {
+            "id": 1648,
+            "name": "Idem Gym"
+          },
+          {
+            "id": 192,
+            "name": "IronTemple Fitness"
+          },
+          {
+            "id": 1666,
+            "name": "Max Fit Gym"
+          },
+          {
+            "id": 237,
+            "name": "Nexus Fit Gym"
+          },
+          {
+            "id": 1641,
+            "name": "Ops Gym"
+          },
+          {
+            "id": 1645,
+            "name": "Ops Gym"
+          },
+          {
+            "id": 1643,
+            "name": "Ops Gym"
+          },
+          {
+            "id": 189,
+            "name": "PowerHouse Strength Club"
+          },
+          {
+            "id": 191,
+            "name": "Pulse Cardio Gym"
+          },
+          {
+            "id": 1661,
+            "name": "QR Gym"
+          },
+          {
+            "id": 1650,
+            "name": "Reschedule Gym"
+          },
+          {
+            "id": 1651,
+            "name": "Reschedule Gym2"
+          },
+          {
+            "id": 1665,
+            "name": "RevGym"
+          },
+          {
+            "id": 1664,
+            "name": "SlotGym"
+          },
+          {
+            "id": 1668,
+            "name": "SlotGym"
+          },
+          {
+            "id": 1637,
+            "name": "Test"
+          },
+          {
+            "id": 238,
+            "name": "Test GYM"
+          },
+          {
+            "id": 190,
+            "name": "Zen Yoga & Mobility Studio"
+          }
+        ],
+        "overall": {
+          "visits": 0,
+          "bookings": 0,
+          "users": 6,
+          "gyms": 39,
+          "active_memberships": 0
+        },
+        "visits": {
+          "individual": 0,
+          "single_gym": 0,
+          "multi_gym": 0,
+          "completed": 0,
+          "upcoming": 0,
+          "no_shows": 0,
+          "cancelled": 0
+        },
+        "collections": {
+          "categories": {
+            "individual": null,
+            "single_gym": null,
+            "multi_gym": null
+          },
+          "total": null,
+          "known_dated_total": "0.00",
+          "known_dated_categories": {
+            "individual": "0.00",
+            "single_gym": "0.00",
+            "multi_gym": "0.00"
+          },
+          "exclusions": [
+            {
+              "checkout_id": "82dfdbc6-dad4-4397-8b3e-f72e58da438b",
+              "category": "individual",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            },
+            {
+              "checkout_id": "c5385fb2-6ac3-42f2-bc2f-6631c44fc4b8",
+              "category": "individual",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            }
+          ],
+          "exclusion_reasons": {
+            "PAYMENT_DATE_SCHEMA_MISSING": 2
+          },
+          "undated_purchases": 2,
+          "unattributed_purchases": 0,
+          "gym_gross_share": null,
+          "fitigo_commission": null,
+          "complete": false
+        },
+        "wallet": {
+          "applicable": false,
+          "reason": "Wallet liability is platform-wide. Remaining credits cannot be attributed to a gym or original provider without credit-consumption allocations.",
+          "outstanding": null,
+          "stored_balance": null,
+          "credits": null,
+          "spending": null
+        },
+        "bookings": {
+          "total": 0,
+          "confirmed": 0,
+          "cancelled": 0,
+          "attended": 0,
+          "no_show": 0,
+          "pending": 0,
+          "expired": 0,
+          "upcoming": 0,
+          "cancellation_rate": null,
+          "no_show_rate": null
+        },
+        "memberships": {
+          "categories": {
+            "SINGLE_GYM": {
+              "sales_count": 0,
+              "sales_value": "0.00",
+              "gateway_funded_value": "0.00",
+              "wallet_funded_value": "0.00",
+              "recognized_revenue": {
+                "value": null,
+                "status": "NOT_CONFIGURED",
+                "reason": "Membership recognition schedule, pause treatment and principal/agent policy are not configured."
+              },
+              "active": 0,
+              "paused": 0,
+              "expired": 0,
+              "expiring_30_days": 0
+            },
+            "MULTI_GYM": {
+              "sales_count": 0,
+              "sales_value": "0.00",
+              "gateway_funded_value": "0.00",
+              "wallet_funded_value": "0.00",
+              "recognized_revenue": {
+                "value": null,
+                "status": "NOT_CONFIGURED",
+                "reason": "Membership recognition schedule, pause treatment and principal/agent policy are not configured."
+              },
+              "active": 0,
+              "paused": 0,
+              "expired": 0,
+              "expiring_30_days": 0
+            }
+          },
+          "transfers": 0,
+          "renewals": {
+            "value": null,
+            "status": "NOT_CONFIGURED",
+            "reason": "Renewal lineage is not recorded; another purchase is not assumed to be a renewal."
+          },
+          "plan_popularity": []
+        },
+        "customers": {
+          "active": 0,
+          "repeat": 0,
+          "previous_active": 0,
+          "retained": 0,
+          "retention_rate": null,
+          "visits_per_active": null,
+          "membership_conversion": {
+            "value": null,
+            "status": "NOT_CONFIGURED",
+            "reason": "A conversion cohort and attribution window have not been approved."
+          },
+          "most_active": []
+        },
+        "gyms": [
+          {
+            "id": 188,
+            "name": "FitZone Premium Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          }
+        ],
+        "series": [
+          {
+            "date": "2026-11-17",
+            "individual": 0,
+            "single_gym": 0,
+            "multi_gym": 0,
+            "individual_collections": "0.00",
+            "single_gym_collections": "0.00",
+            "multi_gym_collections": "0.00"
+          }
+        ],
+        "definitions": {
+          "collections": "Verified, fulfilled and unrefunded purchases, counted once on confirmed payment date; includes wallet-funded consideration, excludes wallet top-ups. Missing dates are not guessed.",
+          "earnings": "Recorded gym entitlement and FitiGo net commission only; may cover fewer transactions than collections. Multi-Gym collections are not FitiGo earnings.",
+          "visits": "Successful matched check-ins within the QR validity window, deduplicated by purchased visitor or membership daily access.",
+          "rates": "Cancellation rate: cancelled / scheduled bookings. No-show rate: authorized no-shows / (attended bookings + authorized no-shows).",
+          "inventory": "Registered users, gyms, active memberships and unused wallet are current balances. Other measures follow the selected dates."
+        }
+      }
+    },
+    {
+      "path": "/api/v1/admin/business/summary?date_from=2026-11-17&date_to=2026-11-17&gym_id=188",
+      "status": 200,
+      "body": {
+        "date_from": "2026-11-17",
+        "date_to": "2026-11-17",
+        "mode": "test",
+        "options": [
+          {
+            "id": 1646,
+            "name": "AdminSearch Gym"
+          },
+          {
+            "id": 1642,
+            "name": "AdminSearch Gym"
+          },
+          {
+            "id": 1644,
+            "name": "AdminSearch Gym"
+          },
+          {
+            "id": 1647,
+            "name": "Cap Gym"
+          },
+          {
+            "id": 1652,
+            "name": "Concurrent Scan Gym"
+          },
+          {
+            "id": 1638,
+            "name": "Concurrent Scan Gym"
+          },
+          {
+            "id": 1667,
+            "name": "Cust Gym"
+          },
+          {
+            "id": 1659,
+            "name": "Cust Gym"
+          },
+          {
+            "id": 1649,
+            "name": "Expiry Gym"
+          },
+          {
+            "id": 188,
+            "name": "FitZone Premium Gym"
+          },
+          {
+            "id": 1662,
+            "name": "Gym 1"
+          },
+          {
+            "id": 1663,
+            "name": "Gym 2"
+          },
+          {
+            "id": 1660,
+            "name": "Gym 436c52"
+          },
+          {
+            "id": 1639,
+            "name": "Gym A"
+          },
+          {
+            "id": 1653,
+            "name": "Gym A"
+          },
+          {
+            "id": 1655,
+            "name": "Gym A"
+          },
+          {
+            "id": 1657,
+            "name": "Gym A"
+          },
+          {
+            "id": 1658,
+            "name": "Gym A"
+          },
+          {
+            "id": 1640,
+            "name": "Gym B"
+          },
+          {
+            "id": 1654,
+            "name": "Gym B"
+          },
+          {
+            "id": 1656,
+            "name": "Gym B"
+          },
+          {
+            "id": 1648,
+            "name": "Idem Gym"
+          },
+          {
+            "id": 192,
+            "name": "IronTemple Fitness"
+          },
+          {
+            "id": 1666,
+            "name": "Max Fit Gym"
+          },
+          {
+            "id": 237,
+            "name": "Nexus Fit Gym"
+          },
+          {
+            "id": 1641,
+            "name": "Ops Gym"
+          },
+          {
+            "id": 1645,
+            "name": "Ops Gym"
+          },
+          {
+            "id": 1643,
+            "name": "Ops Gym"
+          },
+          {
+            "id": 189,
+            "name": "PowerHouse Strength Club"
+          },
+          {
+            "id": 191,
+            "name": "Pulse Cardio Gym"
+          },
+          {
+            "id": 1661,
+            "name": "QR Gym"
+          },
+          {
+            "id": 1650,
+            "name": "Reschedule Gym"
+          },
+          {
+            "id": 1651,
+            "name": "Reschedule Gym2"
+          },
+          {
+            "id": 1665,
+            "name": "RevGym"
+          },
+          {
+            "id": 1664,
+            "name": "SlotGym"
+          },
+          {
+            "id": 1668,
+            "name": "SlotGym"
+          },
+          {
+            "id": 1637,
+            "name": "Test"
+          },
+          {
+            "id": 238,
+            "name": "Test GYM"
+          },
+          {
+            "id": 190,
+            "name": "Zen Yoga & Mobility Studio"
+          }
+        ],
+        "overall": {
+          "visits": 0,
+          "bookings": 0,
+          "users": 6,
+          "gyms": 39,
+          "active_memberships": 0
+        },
+        "visits": {
+          "individual": 0,
+          "single_gym": 0,
+          "multi_gym": 0,
+          "completed": 0,
+          "upcoming": 0,
+          "no_shows": 0,
+          "cancelled": 0
+        },
+        "collections": {
+          "categories": {
+            "individual": null,
+            "single_gym": null,
+            "multi_gym": null
+          },
+          "total": null,
+          "known_dated_total": "0.00",
+          "known_dated_categories": {
+            "individual": "0.00",
+            "single_gym": "0.00",
+            "multi_gym": "0.00"
+          },
+          "exclusions": [
+            {
+              "checkout_id": "82dfdbc6-dad4-4397-8b3e-f72e58da438b",
+              "category": "individual",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            },
+            {
+              "checkout_id": "c5385fb2-6ac3-42f2-bc2f-6631c44fc4b8",
+              "category": "individual",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            }
+          ],
+          "exclusion_reasons": {
+            "PAYMENT_DATE_SCHEMA_MISSING": 2
+          },
+          "undated_purchases": 2,
+          "unattributed_purchases": 0,
+          "gym_gross_share": null,
+          "fitigo_commission": null,
+          "complete": false
+        },
+        "wallet": {
+          "applicable": false,
+          "reason": "Wallet liability is platform-wide. Remaining credits cannot be attributed to a gym or original provider without credit-consumption allocations.",
+          "outstanding": null,
+          "stored_balance": null,
+          "credits": null,
+          "spending": null
+        },
+        "bookings": {
+          "total": 0,
+          "confirmed": 0,
+          "cancelled": 0,
+          "attended": 0,
+          "no_show": 0,
+          "pending": 0,
+          "expired": 0,
+          "upcoming": 0,
+          "cancellation_rate": null,
+          "no_show_rate": null
+        },
+        "memberships": {
+          "categories": {
+            "SINGLE_GYM": {
+              "sales_count": 0,
+              "sales_value": "0.00",
+              "gateway_funded_value": "0.00",
+              "wallet_funded_value": "0.00",
+              "recognized_revenue": {
+                "value": null,
+                "status": "NOT_CONFIGURED",
+                "reason": "Membership recognition schedule, pause treatment and principal/agent policy are not configured."
+              },
+              "active": 0,
+              "paused": 0,
+              "expired": 0,
+              "expiring_30_days": 0
+            },
+            "MULTI_GYM": {
+              "sales_count": 0,
+              "sales_value": "0.00",
+              "gateway_funded_value": "0.00",
+              "wallet_funded_value": "0.00",
+              "recognized_revenue": {
+                "value": null,
+                "status": "NOT_CONFIGURED",
+                "reason": "Membership recognition schedule, pause treatment and principal/agent policy are not configured."
+              },
+              "active": 0,
+              "paused": 0,
+              "expired": 0,
+              "expiring_30_days": 0
+            }
+          },
+          "transfers": 0,
+          "renewals": {
+            "value": null,
+            "status": "NOT_CONFIGURED",
+            "reason": "Renewal lineage is not recorded; another purchase is not assumed to be a renewal."
+          },
+          "plan_popularity": []
+        },
+        "customers": {
+          "active": 0,
+          "repeat": 0,
+          "previous_active": 0,
+          "retained": 0,
+          "retention_rate": null,
+          "visits_per_active": null,
+          "membership_conversion": {
+            "value": null,
+            "status": "NOT_CONFIGURED",
+            "reason": "A conversion cohort and attribution window have not been approved."
+          },
+          "most_active": []
+        },
+        "gyms": [
+          {
+            "id": 188,
+            "name": "FitZone Premium Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          }
+        ],
+        "series": [
+          {
+            "date": "2026-11-17",
+            "individual": 0,
+            "single_gym": 0,
+            "multi_gym": 0,
+            "individual_collections": "0.00",
+            "single_gym_collections": "0.00",
+            "multi_gym_collections": "0.00"
+          }
+        ],
+        "definitions": {
+          "collections": "Verified, fulfilled and unrefunded purchases, counted once on confirmed payment date; includes wallet-funded consideration, excludes wallet top-ups. Missing dates are not guessed.",
+          "earnings": "Recorded gym entitlement and FitiGo net commission only; may cover fewer transactions than collections. Multi-Gym collections are not FitiGo earnings.",
+          "visits": "Successful matched check-ins within the QR validity window, deduplicated by purchased visitor or membership daily access.",
+          "rates": "Cancellation rate: cancelled / scheduled bookings. No-show rate: authorized no-shows / (attended bookings + authorized no-shows).",
+          "inventory": "Registered users, gyms, active memberships and unused wallet are current balances. Other measures follow the selected dates."
+        }
+      }
+    },
+    {
+      "path": "/api/v1/admin/business/summary?date_from=2026-11-17&date_to=2026-11-17",
+      "status": 200,
+      "body": {
+        "date_from": "2026-11-17",
+        "date_to": "2026-11-17",
+        "mode": "test",
+        "options": [
+          {
+            "id": 1646,
+            "name": "AdminSearch Gym"
+          },
+          {
+            "id": 1642,
+            "name": "AdminSearch Gym"
+          },
+          {
+            "id": 1644,
+            "name": "AdminSearch Gym"
+          },
+          {
+            "id": 1647,
+            "name": "Cap Gym"
+          },
+          {
+            "id": 1652,
+            "name": "Concurrent Scan Gym"
+          },
+          {
+            "id": 1638,
+            "name": "Concurrent Scan Gym"
+          },
+          {
+            "id": 1667,
+            "name": "Cust Gym"
+          },
+          {
+            "id": 1659,
+            "name": "Cust Gym"
+          },
+          {
+            "id": 1649,
+            "name": "Expiry Gym"
+          },
+          {
+            "id": 188,
+            "name": "FitZone Premium Gym"
+          },
+          {
+            "id": 1662,
+            "name": "Gym 1"
+          },
+          {
+            "id": 1663,
+            "name": "Gym 2"
+          },
+          {
+            "id": 1660,
+            "name": "Gym 436c52"
+          },
+          {
+            "id": 1639,
+            "name": "Gym A"
+          },
+          {
+            "id": 1653,
+            "name": "Gym A"
+          },
+          {
+            "id": 1655,
+            "name": "Gym A"
+          },
+          {
+            "id": 1657,
+            "name": "Gym A"
+          },
+          {
+            "id": 1658,
+            "name": "Gym A"
+          },
+          {
+            "id": 1640,
+            "name": "Gym B"
+          },
+          {
+            "id": 1654,
+            "name": "Gym B"
+          },
+          {
+            "id": 1656,
+            "name": "Gym B"
+          },
+          {
+            "id": 1648,
+            "name": "Idem Gym"
+          },
+          {
+            "id": 192,
+            "name": "IronTemple Fitness"
+          },
+          {
+            "id": 1666,
+            "name": "Max Fit Gym"
+          },
+          {
+            "id": 237,
+            "name": "Nexus Fit Gym"
+          },
+          {
+            "id": 1641,
+            "name": "Ops Gym"
+          },
+          {
+            "id": 1645,
+            "name": "Ops Gym"
+          },
+          {
+            "id": 1643,
+            "name": "Ops Gym"
+          },
+          {
+            "id": 189,
+            "name": "PowerHouse Strength Club"
+          },
+          {
+            "id": 191,
+            "name": "Pulse Cardio Gym"
+          },
+          {
+            "id": 1661,
+            "name": "QR Gym"
+          },
+          {
+            "id": 1650,
+            "name": "Reschedule Gym"
+          },
+          {
+            "id": 1651,
+            "name": "Reschedule Gym2"
+          },
+          {
+            "id": 1665,
+            "name": "RevGym"
+          },
+          {
+            "id": 1664,
+            "name": "SlotGym"
+          },
+          {
+            "id": 1668,
+            "name": "SlotGym"
+          },
+          {
+            "id": 1637,
+            "name": "Test"
+          },
+          {
+            "id": 238,
+            "name": "Test GYM"
+          },
+          {
+            "id": 190,
+            "name": "Zen Yoga & Mobility Studio"
+          }
+        ],
+        "overall": {
+          "visits": 0,
+          "bookings": 0,
+          "users": 6,
+          "gyms": 39,
+          "active_memberships": 3
+        },
+        "visits": {
+          "individual": 0,
+          "single_gym": 0,
+          "multi_gym": 0,
+          "completed": 0,
+          "upcoming": 0,
+          "no_shows": 0,
+          "cancelled": 0
+        },
+        "collections": {
+          "categories": {
+            "individual": null,
+            "single_gym": null,
+            "multi_gym": null
+          },
+          "total": null,
+          "known_dated_total": "300.00",
+          "known_dated_categories": {
+            "individual": "300.00",
+            "single_gym": "0.00",
+            "multi_gym": "0.00"
+          },
+          "exclusions": [
+            {
+              "checkout_id": "0ff8679c-f405-475e-b97a-bf990bd637e9",
+              "category": "individual",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            },
+            {
+              "checkout_id": "139d1ba9-cdf9-4017-89bb-3d23fa8cd92e",
+              "category": "individual",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            },
+            {
+              "checkout_id": "146011bf-e851-46f4-816a-8c3a4ac73940",
+              "category": "multi_gym",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            },
+            {
+              "checkout_id": "2ca88dd7-a8a3-4d0a-b7e6-447da8b56a76",
+              "category": "individual",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            },
+            {
+              "checkout_id": "37d2af9f-58c7-485a-a7f9-4c994b21f949",
+              "category": "individual",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            },
+            {
+              "checkout_id": "3eda6b07-d757-4a74-aeb1-8ffe080f456f",
+              "category": "individual",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            },
+            {
+              "checkout_id": "4e00cb45-3886-470d-aeeb-d0f2240cf558",
+              "category": "single_gym",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            },
+            {
+              "checkout_id": "528518a8-be7f-4d81-8f99-c8478ef4aff6",
+              "category": "individual",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            },
+            {
+              "checkout_id": "7f223b1a-054e-410b-a3b7-6ed22fc0e9df",
+              "category": "individual",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            },
+            {
+              "checkout_id": "82dfdbc6-dad4-4397-8b3e-f72e58da438b",
+              "category": "individual",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            },
+            {
+              "checkout_id": "b5137748-4c77-4ae5-9cbc-4a597555f646",
+              "category": "individual",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            },
+            {
+              "checkout_id": "b8496332-cde8-48b6-92ec-6b24aaf53522",
+              "category": "multi_gym",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            },
+            {
+              "checkout_id": "c0d86825-0aef-4e1d-a035-461b94f699db",
+              "category": "individual",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            },
+            {
+              "checkout_id": "c5385fb2-6ac3-42f2-bc2f-6631c44fc4b8",
+              "category": "individual",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            }
+          ],
+          "exclusion_reasons": {
+            "PAYMENT_DATE_SCHEMA_MISSING": 14
+          },
+          "undated_purchases": 14,
+          "unattributed_purchases": 0,
+          "gym_gross_share": null,
+          "fitigo_commission": null,
+          "complete": false
+        },
+        "wallet": {
+          "applicable": true,
+          "outstanding": "750.00",
+          "reason": null,
+          "review_accounts": [],
+          "ledger_net": "750.00",
+          "stored_balance": "750.00",
+          "reconciliation_difference": "0.00",
+          "mismatched_accounts": 0,
+          "status": "RECONCILED",
+          "unclassified_mode_balance": "0.00",
+          "credits": "950.00",
+          "debits": "400.00",
+          "spending": "400.00",
+          "booking_spending": "400.00",
+          "membership_spending": "0.00",
+          "unallocated_spending": "0.00",
+          "cancellation_credits": "450.00",
+          "opening_ledger_balance": "200.00",
+          "closing_ledger_balance": "750.00",
+          "movements_by_type": [
+            {
+              "txn_type": "CANCELLATION_CREDIT",
+              "direction": "IN",
+              "amount": "450.00",
+              "count": 3
+            },
+            {
+              "txn_type": "PAYMENT",
+              "direction": "OUT",
+              "amount": "400.00",
+              "count": 3
+            },
+            {
+              "txn_type": "TOPUP",
+              "direction": "IN",
+              "amount": "500.00",
+              "count": 1
+            }
+          ],
+          "promotional_credits": {
+            "value": null,
+            "status": "NOT_CONFIGURED",
+            "reason": "No approved promotional credit classification exists."
+          },
+          "adjustments": {
+            "value": null,
+            "status": "NOT_CONFIGURED",
+            "reason": "No approved wallet-adjustment taxonomy/workflow exists; recorded transaction types remain visible."
+          },
+          "expirations": {
+            "value": null,
+            "status": "NOT_CONFIGURED",
+            "reason": "Wallet expiration is not implemented."
+          },
+          "source_liability": {
+            "value": null,
+            "status": "NOT_CONFIGURED",
+            "reason": "Debits are not allocated to original credits. FIFO is not assumed."
+          },
+          "liability_aging": {
+            "value": null,
+            "status": "NOT_CONFIGURED",
+            "reason": "Remaining credit lots and their consumption order are not recorded."
+          }
+        },
+        "bookings": {
+          "total": 0,
+          "confirmed": 0,
+          "cancelled": 0,
+          "attended": 0,
+          "no_show": 0,
+          "pending": 0,
+          "expired": 0,
+          "upcoming": 0,
+          "cancellation_rate": null,
+          "no_show_rate": null
+        },
+        "memberships": {
+          "categories": {
+            "SINGLE_GYM": {
+              "sales_count": 1,
+              "sales_value": "1399.00",
+              "gateway_funded_value": "1399.00",
+              "wallet_funded_value": "0.00",
+              "recognized_revenue": {
+                "value": null,
+                "status": "NOT_CONFIGURED",
+                "reason": "Membership recognition schedule, pause treatment and principal/agent policy are not configured."
+              },
+              "active": 1,
+              "paused": 0,
+              "expired": 0,
+              "expiring_30_days": 1
+            },
+            "MULTI_GYM": {
+              "sales_count": 1,
+              "sales_value": "2199.00",
+              "gateway_funded_value": "2199.00",
+              "wallet_funded_value": "0.00",
+              "recognized_revenue": {
+                "value": null,
+                "status": "NOT_CONFIGURED",
+                "reason": "Membership recognition schedule, pause treatment and principal/agent policy are not configured."
+              },
+              "active": 2,
+              "paused": 0,
+              "expired": 0,
+              "expiring_30_days": 1
+            }
+          },
+          "transfers": 0,
+          "renewals": {
+            "value": null,
+            "status": "NOT_CONFIGURED",
+            "reason": "Renewal lineage is not recorded; another purchase is not assumed to be a renewal."
+          },
+          "plan_popularity": [
+            {
+              "membership_type": "SINGLE_GYM",
+              "plan_id": 37,
+              "platform_plan_id": null,
+              "sales": 1,
+              "sales_value": "1399.00"
+            },
+            {
+              "membership_type": "MULTI_GYM",
+              "plan_id": null,
+              "platform_plan_id": 1,
+              "sales": 1,
+              "sales_value": "2199.00"
+            }
+          ]
+        },
+        "customers": {
+          "active": 0,
+          "repeat": 0,
+          "previous_active": 0,
+          "retained": 0,
+          "retention_rate": null,
+          "visits_per_active": null,
+          "membership_conversion": {
+            "value": null,
+            "status": "NOT_CONFIGURED",
+            "reason": "A conversion cohort and attribution window have not been approved."
+          },
+          "most_active": []
+        },
+        "gyms": [
+          {
+            "id": 1646,
+            "name": "AdminSearch Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1642,
+            "name": "AdminSearch Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1644,
+            "name": "AdminSearch Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1647,
+            "name": "Cap Gym",
+            "status": "APPROVED",
+            "is_active": false,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1652,
+            "name": "Concurrent Scan Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1638,
+            "name": "Concurrent Scan Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1667,
+            "name": "Cust Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1659,
+            "name": "Cust Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1649,
+            "name": "Expiry Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 188,
+            "name": "FitZone Premium Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1662,
+            "name": "Gym 1",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1663,
+            "name": "Gym 2",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1660,
+            "name": "Gym 436c52",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1639,
+            "name": "Gym A",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1653,
+            "name": "Gym A",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1655,
+            "name": "Gym A",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1657,
+            "name": "Gym A",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1658,
+            "name": "Gym A",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1640,
+            "name": "Gym B",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1654,
+            "name": "Gym B",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1656,
+            "name": "Gym B",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1648,
+            "name": "Idem Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 192,
+            "name": "IronTemple Fitness",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1666,
+            "name": "Max Fit Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 237,
+            "name": "Nexus Fit Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "1399.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1641,
+            "name": "Ops Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1645,
+            "name": "Ops Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1643,
+            "name": "Ops Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 189,
+            "name": "PowerHouse Strength Club",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 191,
+            "name": "Pulse Cardio Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1661,
+            "name": "QR Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1650,
+            "name": "Reschedule Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1651,
+            "name": "Reschedule Gym2",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1665,
+            "name": "RevGym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1664,
+            "name": "SlotGym",
+            "status": "DRAFT",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1668,
+            "name": "SlotGym",
+            "status": "DRAFT",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1637,
+            "name": "Test",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 238,
+            "name": "Test GYM",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 190,
+            "name": "Zen Yoga & Mobility Studio",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          }
+        ],
+        "series": [
+          {
+            "date": "2026-11-17",
+            "individual": 0,
+            "single_gym": 0,
+            "multi_gym": 0,
+            "individual_collections": "300.00",
+            "single_gym_collections": "0.00",
+            "multi_gym_collections": "0.00"
+          }
+        ],
+        "definitions": {
+          "collections": "Verified, fulfilled and unrefunded purchases, counted once on confirmed payment date; includes wallet-funded consideration, excludes wallet top-ups. Missing dates are not guessed.",
+          "earnings": "Recorded gym entitlement and FitiGo net commission only; may cover fewer transactions than collections. Multi-Gym collections are not FitiGo earnings.",
+          "visits": "Successful matched check-ins within the QR validity window, deduplicated by purchased visitor or membership daily access.",
+          "rates": "Cancellation rate: cancelled / scheduled bookings. No-show rate: authorized no-shows / (attended bookings + authorized no-shows).",
+          "inventory": "Registered users, gyms, active memberships and unused wallet are current balances. Other measures follow the selected dates."
+        }
+      }
+    },
+    {
+      "path": "/api/v1/admin/business/summary?date_from=2026-11-17&date_to=2026-11-17",
+      "status": 200,
+      "body": {
+        "date_from": "2026-11-17",
+        "date_to": "2026-11-17",
+        "mode": "test",
+        "options": [
+          {
+            "id": 1646,
+            "name": "AdminSearch Gym"
+          },
+          {
+            "id": 1642,
+            "name": "AdminSearch Gym"
+          },
+          {
+            "id": 1644,
+            "name": "AdminSearch Gym"
+          },
+          {
+            "id": 1647,
+            "name": "Cap Gym"
+          },
+          {
+            "id": 1652,
+            "name": "Concurrent Scan Gym"
+          },
+          {
+            "id": 1638,
+            "name": "Concurrent Scan Gym"
+          },
+          {
+            "id": 1667,
+            "name": "Cust Gym"
+          },
+          {
+            "id": 1659,
+            "name": "Cust Gym"
+          },
+          {
+            "id": 1649,
+            "name": "Expiry Gym"
+          },
+          {
+            "id": 188,
+            "name": "FitZone Premium Gym"
+          },
+          {
+            "id": 1662,
+            "name": "Gym 1"
+          },
+          {
+            "id": 1663,
+            "name": "Gym 2"
+          },
+          {
+            "id": 1660,
+            "name": "Gym 436c52"
+          },
+          {
+            "id": 1639,
+            "name": "Gym A"
+          },
+          {
+            "id": 1653,
+            "name": "Gym A"
+          },
+          {
+            "id": 1655,
+            "name": "Gym A"
+          },
+          {
+            "id": 1657,
+            "name": "Gym A"
+          },
+          {
+            "id": 1658,
+            "name": "Gym A"
+          },
+          {
+            "id": 1640,
+            "name": "Gym B"
+          },
+          {
+            "id": 1654,
+            "name": "Gym B"
+          },
+          {
+            "id": 1656,
+            "name": "Gym B"
+          },
+          {
+            "id": 1648,
+            "name": "Idem Gym"
+          },
+          {
+            "id": 192,
+            "name": "IronTemple Fitness"
+          },
+          {
+            "id": 1666,
+            "name": "Max Fit Gym"
+          },
+          {
+            "id": 237,
+            "name": "Nexus Fit Gym"
+          },
+          {
+            "id": 1641,
+            "name": "Ops Gym"
+          },
+          {
+            "id": 1645,
+            "name": "Ops Gym"
+          },
+          {
+            "id": 1643,
+            "name": "Ops Gym"
+          },
+          {
+            "id": 189,
+            "name": "PowerHouse Strength Club"
+          },
+          {
+            "id": 191,
+            "name": "Pulse Cardio Gym"
+          },
+          {
+            "id": 1661,
+            "name": "QR Gym"
+          },
+          {
+            "id": 1650,
+            "name": "Reschedule Gym"
+          },
+          {
+            "id": 1651,
+            "name": "Reschedule Gym2"
+          },
+          {
+            "id": 1665,
+            "name": "RevGym"
+          },
+          {
+            "id": 1664,
+            "name": "SlotGym"
+          },
+          {
+            "id": 1668,
+            "name": "SlotGym"
+          },
+          {
+            "id": 1637,
+            "name": "Test"
+          },
+          {
+            "id": 238,
+            "name": "Test GYM"
+          },
+          {
+            "id": 190,
+            "name": "Zen Yoga & Mobility Studio"
+          }
+        ],
+        "overall": {
+          "visits": 0,
+          "bookings": 0,
+          "users": 6,
+          "gyms": 39,
+          "active_memberships": 3
+        },
+        "visits": {
+          "individual": 0,
+          "single_gym": 0,
+          "multi_gym": 0,
+          "completed": 0,
+          "upcoming": 0,
+          "no_shows": 0,
+          "cancelled": 0
+        },
+        "collections": {
+          "categories": {
+            "individual": null,
+            "single_gym": null,
+            "multi_gym": null
+          },
+          "total": null,
+          "known_dated_total": "300.00",
+          "known_dated_categories": {
+            "individual": "300.00",
+            "single_gym": "0.00",
+            "multi_gym": "0.00"
+          },
+          "exclusions": [
+            {
+              "checkout_id": "0ff8679c-f405-475e-b97a-bf990bd637e9",
+              "category": "individual",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            },
+            {
+              "checkout_id": "139d1ba9-cdf9-4017-89bb-3d23fa8cd92e",
+              "category": "individual",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            },
+            {
+              "checkout_id": "146011bf-e851-46f4-816a-8c3a4ac73940",
+              "category": "multi_gym",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            },
+            {
+              "checkout_id": "2ca88dd7-a8a3-4d0a-b7e6-447da8b56a76",
+              "category": "individual",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            },
+            {
+              "checkout_id": "37d2af9f-58c7-485a-a7f9-4c994b21f949",
+              "category": "individual",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            },
+            {
+              "checkout_id": "3eda6b07-d757-4a74-aeb1-8ffe080f456f",
+              "category": "individual",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            },
+            {
+              "checkout_id": "4e00cb45-3886-470d-aeeb-d0f2240cf558",
+              "category": "single_gym",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            },
+            {
+              "checkout_id": "528518a8-be7f-4d81-8f99-c8478ef4aff6",
+              "category": "individual",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            },
+            {
+              "checkout_id": "7f223b1a-054e-410b-a3b7-6ed22fc0e9df",
+              "category": "individual",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            },
+            {
+              "checkout_id": "82dfdbc6-dad4-4397-8b3e-f72e58da438b",
+              "category": "individual",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            },
+            {
+              "checkout_id": "b5137748-4c77-4ae5-9cbc-4a597555f646",
+              "category": "individual",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            },
+            {
+              "checkout_id": "b8496332-cde8-48b6-92ec-6b24aaf53522",
+              "category": "multi_gym",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            },
+            {
+              "checkout_id": "c0d86825-0aef-4e1d-a035-461b94f699db",
+              "category": "individual",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            },
+            {
+              "checkout_id": "c5385fb2-6ac3-42f2-bc2f-6631c44fc4b8",
+              "category": "individual",
+              "reason": "PAYMENT_DATE_SCHEMA_MISSING"
+            }
+          ],
+          "exclusion_reasons": {
+            "PAYMENT_DATE_SCHEMA_MISSING": 14
+          },
+          "undated_purchases": 14,
+          "unattributed_purchases": 0,
+          "gym_gross_share": null,
+          "fitigo_commission": null,
+          "complete": false
+        },
+        "wallet": {
+          "applicable": true,
+          "outstanding": "750.00",
+          "reason": null,
+          "review_accounts": [],
+          "ledger_net": "750.00",
+          "stored_balance": "750.00",
+          "reconciliation_difference": "0.00",
+          "mismatched_accounts": 0,
+          "status": "RECONCILED",
+          "unclassified_mode_balance": "0.00",
+          "credits": "950.00",
+          "debits": "400.00",
+          "spending": "400.00",
+          "booking_spending": "400.00",
+          "membership_spending": "0.00",
+          "unallocated_spending": "0.00",
+          "cancellation_credits": "450.00",
+          "opening_ledger_balance": "200.00",
+          "closing_ledger_balance": "750.00",
+          "movements_by_type": [
+            {
+              "txn_type": "CANCELLATION_CREDIT",
+              "direction": "IN",
+              "amount": "450.00",
+              "count": 3
+            },
+            {
+              "txn_type": "PAYMENT",
+              "direction": "OUT",
+              "amount": "400.00",
+              "count": 3
+            },
+            {
+              "txn_type": "TOPUP",
+              "direction": "IN",
+              "amount": "500.00",
+              "count": 1
+            }
+          ],
+          "promotional_credits": {
+            "value": null,
+            "status": "NOT_CONFIGURED",
+            "reason": "No approved promotional credit classification exists."
+          },
+          "adjustments": {
+            "value": null,
+            "status": "NOT_CONFIGURED",
+            "reason": "No approved wallet-adjustment taxonomy/workflow exists; recorded transaction types remain visible."
+          },
+          "expirations": {
+            "value": null,
+            "status": "NOT_CONFIGURED",
+            "reason": "Wallet expiration is not implemented."
+          },
+          "source_liability": {
+            "value": null,
+            "status": "NOT_CONFIGURED",
+            "reason": "Debits are not allocated to original credits. FIFO is not assumed."
+          },
+          "liability_aging": {
+            "value": null,
+            "status": "NOT_CONFIGURED",
+            "reason": "Remaining credit lots and their consumption order are not recorded."
+          }
+        },
+        "bookings": {
+          "total": 0,
+          "confirmed": 0,
+          "cancelled": 0,
+          "attended": 0,
+          "no_show": 0,
+          "pending": 0,
+          "expired": 0,
+          "upcoming": 0,
+          "cancellation_rate": null,
+          "no_show_rate": null
+        },
+        "memberships": {
+          "categories": {
+            "SINGLE_GYM": {
+              "sales_count": 1,
+              "sales_value": "1399.00",
+              "gateway_funded_value": "1399.00",
+              "wallet_funded_value": "0.00",
+              "recognized_revenue": {
+                "value": null,
+                "status": "NOT_CONFIGURED",
+                "reason": "Membership recognition schedule, pause treatment and principal/agent policy are not configured."
+              },
+              "active": 1,
+              "paused": 0,
+              "expired": 0,
+              "expiring_30_days": 1
+            },
+            "MULTI_GYM": {
+              "sales_count": 1,
+              "sales_value": "2199.00",
+              "gateway_funded_value": "2199.00",
+              "wallet_funded_value": "0.00",
+              "recognized_revenue": {
+                "value": null,
+                "status": "NOT_CONFIGURED",
+                "reason": "Membership recognition schedule, pause treatment and principal/agent policy are not configured."
+              },
+              "active": 2,
+              "paused": 0,
+              "expired": 0,
+              "expiring_30_days": 1
+            }
+          },
+          "transfers": 0,
+          "renewals": {
+            "value": null,
+            "status": "NOT_CONFIGURED",
+            "reason": "Renewal lineage is not recorded; another purchase is not assumed to be a renewal."
+          },
+          "plan_popularity": [
+            {
+              "membership_type": "SINGLE_GYM",
+              "plan_id": 37,
+              "platform_plan_id": null,
+              "sales": 1,
+              "sales_value": "1399.00"
+            },
+            {
+              "membership_type": "MULTI_GYM",
+              "plan_id": null,
+              "platform_plan_id": 1,
+              "sales": 1,
+              "sales_value": "2199.00"
+            }
+          ]
+        },
+        "customers": {
+          "active": 0,
+          "repeat": 0,
+          "previous_active": 0,
+          "retained": 0,
+          "retention_rate": null,
+          "visits_per_active": null,
+          "membership_conversion": {
+            "value": null,
+            "status": "NOT_CONFIGURED",
+            "reason": "A conversion cohort and attribution window have not been approved."
+          },
+          "most_active": []
+        },
+        "gyms": [
+          {
+            "id": 1646,
+            "name": "AdminSearch Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1642,
+            "name": "AdminSearch Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1644,
+            "name": "AdminSearch Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1647,
+            "name": "Cap Gym",
+            "status": "APPROVED",
+            "is_active": false,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1652,
+            "name": "Concurrent Scan Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1638,
+            "name": "Concurrent Scan Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1667,
+            "name": "Cust Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1659,
+            "name": "Cust Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1649,
+            "name": "Expiry Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 188,
+            "name": "FitZone Premium Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1662,
+            "name": "Gym 1",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1663,
+            "name": "Gym 2",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1660,
+            "name": "Gym 436c52",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1639,
+            "name": "Gym A",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1653,
+            "name": "Gym A",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1655,
+            "name": "Gym A",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1657,
+            "name": "Gym A",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1658,
+            "name": "Gym A",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1640,
+            "name": "Gym B",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1654,
+            "name": "Gym B",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1656,
+            "name": "Gym B",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1648,
+            "name": "Idem Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 192,
+            "name": "IronTemple Fitness",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1666,
+            "name": "Max Fit Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 237,
+            "name": "Nexus Fit Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "1399.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1641,
+            "name": "Ops Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1645,
+            "name": "Ops Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1643,
+            "name": "Ops Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 189,
+            "name": "PowerHouse Strength Club",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 191,
+            "name": "Pulse Cardio Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1661,
+            "name": "QR Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1650,
+            "name": "Reschedule Gym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1651,
+            "name": "Reschedule Gym2",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1665,
+            "name": "RevGym",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1664,
+            "name": "SlotGym",
+            "status": "DRAFT",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1668,
+            "name": "SlotGym",
+            "status": "DRAFT",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 1637,
+            "name": "Test",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 238,
+            "name": "Test GYM",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          },
+          {
+            "id": 190,
+            "name": "Zen Yoga & Mobility Studio",
+            "status": "APPROVED",
+            "is_active": true,
+            "visits": 0,
+            "attended_value": "0.00",
+            "single_membership_sales_value": "0.00",
+            "owner_payable": null,
+            "utilization": null
+          }
+        ],
+        "series": [
+          {
+            "date": "2026-11-17",
+            "individual": 0,
+            "single_gym": 0,
+            "multi_gym": 0,
+            "individual_collections": "300.00",
+            "single_gym_collections": "0.00",
+            "multi_gym_collections": "0.00"
+          }
+        ],
+        "definitions": {
+          "collections": "Verified, fulfilled and unrefunded purchases, counted once on confirmed payment date; includes wallet-funded consideration, excludes wallet top-ups. Missing dates are not guessed.",
+          "earnings": "Recorded gym entitlement and FitiGo net commission only; may cover fewer transactions than collections. Multi-Gym collections are not FitiGo earnings.",
+          "visits": "Successful matched check-ins within the QR validity window, deduplicated by purchased visitor or membership daily access.",
+          "rates": "Cancellation rate: cancelled / scheduled bookings. No-show rate: authorized no-shows / (attended bookings + authorized no-shows).",
+          "inventory": "Registered users, gyms, active memberships and unused wallet are current balances. Other measures follow the selected dates."
+        }
+      }
+    }
+  ]
+}

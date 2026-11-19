@@ -10,10 +10,10 @@ def test_operations_upgrade_roundtrip_and_archive_guards(schema):
     command.upgrade(config,'cef70fb23591')
     with engine.begin() as c:
         c.execute(text("INSERT INTO users(id,email,password_hash,status,is_email_verified,is_phone_verified,token_version,created_at,updated_at) VALUES(1,'fixture@example.com','unchanged','ACTIVE',0,0,0,NOW(),NOW())"))
-    command.upgrade(config,'head')
+    command.upgrade(config,'df081ac34602')
     with engine.connect() as c:assert {'operation_audits','photo_deletions'}<=set(inspect(c).get_table_names())
     command.downgrade(config,'cef70fb23591')
-    command.upgrade(config,'head')
+    command.upgrade(config,'df081ac34602')
     with engine.begin() as c:
         assert c.scalar(text('SELECT password_hash FROM users'))=='unchanged'
         c.execute(text("INSERT INTO operation_audits(actor_id,action,resource_type,resource_id,reason_code,context,created_at) VALUES(1,'PROFILE_UPDATED','USER',1,'USER_REQUEST','{}',NOW())"))

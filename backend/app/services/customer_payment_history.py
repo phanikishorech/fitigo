@@ -1,5 +1,5 @@
 """Customer gateway payments only; wallet spending stays in the wallet ledger."""
-from sqlalchemy import cast, func, literal, select, String, union_all
+from sqlalchemy import cast, func, literal, select, String, union_all, or_
 from app.core.time import as_ist
 from app.models.booking import Booking, Payment
 from app.models.membership import UserMembership
@@ -9,11 +9,15 @@ from app.models.platform_membership import PlatformMembershipOrder
 
 
 def history(db, user_id, limit, offset, status=None, kind=None):
+    from app.services.checkout_funding import available
+    from app.models.checkout_funding import CheckoutFunding
+    has_value = PaymentCheckout.amount > 0
+    if available(db): has_value = or_(has_value, select(CheckoutFunding.checkout_id).where(CheckoutFunding.checkout_id == PaymentCheckout.id, CheckoutFunding.total_amount > 0).exists())
     # One gateway checkout row for an entire cart; booking allocations appear as
     # details rather than double-counted purchases.
     queries = [select(PaymentCheckout.id.label('id'), literal('checkout').label('source'),
         PaymentCheckout.kind.label('kind'), PaymentCheckout.status.label('status'), PaymentCheckout.created_at.label('created_at'))
-        .where(PaymentCheckout.user_id == user_id, PaymentCheckout.provider.in_(['RAZORPAY', 'CASHFREE']), PaymentCheckout.amount > 0)]
+        .where(PaymentCheckout.user_id == user_id, PaymentCheckout.provider.in_(['RAZORPAY', 'CASHFREE']), has_value)]
     queries.append(select(cast(Payment.id, String).label('id'), literal('booking').label('source'), literal('BOOKING').label('kind'),
         Payment.status.label('status'), Payment.created_at.label('created_at')).join(Booking, Booking.id == Payment.booking_id)
         .where(Booking.user_id == user_id, Booking.checkout_id.is_(None), Payment.provider.in_(['RAZORPAY', 'CASHFREE']), Payment.amount > 0))
@@ -38,6 +42,8 @@ def history(db, user_id, limit, offset, status=None, kind=None):
                     transaction_id=None, checkout_id=None, mode=None, order_details=None, failure_code=None)
         if row['source'] == 'checkout':
             purchase = db.get(PaymentCheckout, row['id'])
+            from app.services.checkout_funding import breakdown
+            item.update(breakdown(db, purchase))
             item.update(checkout_id=purchase.id, amount=str(purchase.amount), currency=purchase.currency,
                 provider=purchase.provider, mode=purchase.mode, provider_order_id=purchase.gateway_order_id,
                 transaction_id=purchase.gateway_payment_id, failure_code=purchase.failure_code,

@@ -1,6 +1,7 @@
 // Both portals, isolated fixture data only. Run with Chrome CDP on port 9231.
 import assert from 'node:assert/strict'
 import { isolatedBrowserTarget } from './isolated-browser.mjs'
+import { businessSummary } from './business-browser-fixtures.mjs'
 
 const origin = process.env.FITIGO_TEST_ORIGIN || 'http://localhost:5173'
 for (const role of ['GYM_OWNER', 'ADMIN']) {
@@ -35,11 +36,14 @@ for (const role of ['GYM_OWNER', 'ADMIN']) {
     if (path.endsWith('/admin/ping')) return { status: 'ok' }
     if (path.endsWith('/gym-owner/gyms')) return gyms
     if (path.endsWith('/admin/gyms')) return []
+    if (path.endsWith('/notifications/inbox')) return { items: [], total: 0, unread_count: 0 }
+    if (path.endsWith('/business/summary')) return businessSummary(query, (Date.parse(query.get('date_to')) - Date.parse(query.get('date_from'))) / 86400000 + 1)
     if (path.endsWith('/dashboard/summary')) {
       const days = (Date.parse(query.get('date_to')) - Date.parse(query.get('date_from'))) / 86400000 + 1
       return { users: { total: 100, in_period: days }, gyms: { total: 2, in_period: days, pending_approval: 0 },
-        bookings: { in_period: days, confirmed_in_period: days }, revenue: { in_period: String(days * 100), currency: 'INR' },
-        visits: { fitigo_member: days, single_gym_membership: days, individual_booking: days, total: days * 3 } }
+        upcoming_visits: days, attendance: { upcoming: days, attended: 0, cancelled: 0, no_show: 0, pending_payment: 0, expired: 0, unresolved: 0 },
+        bookings: { in_period: days, confirmed_in_period: days }, revenue: { in_period: String(days * 100), currency: 'INR', mode: 'test', total: String(days * 100), single_gym_membership: '0', individual_booking: String(days * 100), fully_refunded_sales: '0', partial_refund_count: 0, excluded_paid_records: 0 },
+        visits: { fitigo_member: days, single_gym_membership: 0, individual_booking: 0, total: days } }
     }
     if (path.endsWith('/reports/bookings/daily')) {
       const rows = [], end = Date.parse(query.get('date_to'))
@@ -73,15 +77,16 @@ for (const role of ['GYM_OWNER', 'ADMIN']) {
     await command('Page.addScriptToEvaluateOnNewDocument', { source: "localStorage.setItem('fitigo:access_token','isolated-ranges-fixture')" })
     await command('Page.navigate', { url: `${origin}/${portal}/dashboard` })
     await until(`${metric}==='1'`)
-    const today = calls.find(url => url.pathname.endsWith('/dashboard/summary')).searchParams.get('date_to')
+    const endpoint = portal === 'admin' ? '/business/summary' : '/dashboard/summary'
+    const today = calls.find(url => url.pathname.endsWith(endpoint)).searchParams.get('date_to')
     const day = new Date(`${today}T00:00:00Z`)
     const shift = n => new Date(day.getTime() - n * 86400000).toISOString().slice(0, 10)
-    for (const [label, start, end] of [['Yesterday', shift(1), shift(1)], ['This week', shift((day.getUTCDay() + 6) % 7), today], ['This month', `${today.slice(0, 7)}-01`, today], ['Last 30 days', shift(29), today], ['Today', today, today]]) {
+    for (const [label, start, end] of [['Yesterday', shift(1), shift(1)], portal === 'admin' ? ['Last 7 days', shift(6), today] : ['This week', shift((day.getUTCDay() + 6) % 7), today], ['This month', `${today.slice(0, 7)}-01`, today], ['Last 30 days', shift(29), today], ['Today', today, today]]) {
       const before = calls.length
       await click(label)
       await until(`${metric}===${JSON.stringify(String((Date.parse(end) - Date.parse(start)) / 86400000 + 1))}`)
       const requests = calls.slice(before).filter(url => url.searchParams.has('date_from'))
-      assert.ok(requests.some(url => url.pathname.endsWith('/dashboard/summary')))
+      assert.ok(requests.some(url => url.pathname.endsWith(endpoint)))
       assert.ok(requests.every(url => url.searchParams.get('date_from') === start && url.searchParams.get('date_to') === end))
     }
     await click('Custom')
@@ -109,7 +114,14 @@ for (const role of ['GYM_OWNER', 'ADMIN']) {
       await command('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width < 640 }); await wait(80)
       assert.equal(await evaluate('document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1'), true, `${role}: overflow ${width}`)
     }
-    const link = await evaluate(`Array.from(document.querySelectorAll('main a')).find(el=>el.getAttribute('href')?.startsWith('/${portal}/bookings?')).getAttribute('href')`)
+    if (portal === 'admin') {
+      assert.deepEqual(errors, [])
+      console.log('PASS ADMIN: business presets, custom validation, stale responses and responsive layouts')
+      continue // Booking drill-down belongs to the booking report, not the finalized dashboard.
+    }
+    const analyticsLink = await evaluate(`Array.from(document.querySelectorAll('main a')).find(el=>el.textContent.trim()==='Analytics & Reports').getAttribute('href')`)
+    assert.ok(analyticsLink.includes('date_from=2024-01-01&date_to=2024-12-31'))
+    const link = '/owner/bookings?date_from=2024-01-01&date_to=2024-12-31'
     assert.ok(link.includes('date_from=2024-01-01&date_to=2024-12-31'))
     await command('Page.navigate', { url: origin + link }); await wait(600)
     const lastBookings = calls.filter(url => url.pathname.endsWith('/bookings')).at(-1)

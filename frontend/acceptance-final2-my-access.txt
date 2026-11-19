@@ -1,0 +1,3 @@
+PASS Multi-Gym direct QR, double-click protection, read-only polling, USED and inline refresh
+PASS Single-Gym assigned gym and QR, paused dates, expired/inactive states
+PASS API/network and unknown-state errors, safe retries, offline hiding, server expiry and used/paused/expired issuance races

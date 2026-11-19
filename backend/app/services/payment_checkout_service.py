@@ -18,6 +18,7 @@ from app.models.gym import Gym
 from app.models.membership import UserMembership
 from app.models.platform_membership import PlatformMembershipOrder
 from app.models.payment_checkout import PaymentCheckout, PaymentWebhookReceipt, PaymentAttempt
+from app.services import checkout_funding as funding
 from app.services.wallet_gateway_service import account_for_checkout, credit_wallet, refund_wallet
 from app.models.slot import GymSlot
 from app.services.booking_access_service import BookingAccessService, validate_visitors
@@ -68,6 +69,37 @@ class PaymentCheckoutService:
         if not gym:
             raise HTTPException(409, detail="No eligible gym is available for this membership")
 
+    def safely_closed(self, checkout):
+        record = funding.get(self.db, checkout)
+        return (checkout.status == 'CANCELLED' and bool((checkout.checkout_data or {}).get('replacement_safe'))
+                and (not record or record.state not in {'HELD', 'DEBITED'}))
+
+    def membership_recovery(self, user_id, kind, *, order_id=None, gym_id=None, plan_id=None):
+        """Read-only discovery, not limited to the most recent twenty payments."""
+        self.lock_user(user_id)
+        linked = None
+        if kind == 'MULTI_GYM':
+            order = self.db.scalar(select(PlatformMembershipOrder).where(
+                PlatformMembershipOrder.id == order_id, PlatformMembershipOrder.user_id == user_id))
+            if not order:
+                raise HTTPException(404, 'Membership order not found')
+            plan_id, linked = order.plan_id, order.checkout_id
+        elif gym_id is None or plan_id is None:
+            raise HTTPException(422, 'Gym and plan are required')
+        rows = self.db.scalars(select(PaymentCheckout).where(PaymentCheckout.user_id == user_id,
+            PaymentCheckout.kind.in_(['SINGLE_GYM', 'MULTI_GYM']))
+            .order_by(PaymentCheckout.created_at, PaymentCheckout.id))
+        for row in rows:
+            if self.safely_closed(row):
+                continue
+            if row.status in {'PAID', 'REFUNDED'} and row.id != linked:
+                continue
+            if kind != 'MULTI_GYM' and row.kind != 'MULTI_GYM' and row.snapshot.get('gym_id') != gym_id:
+                continue
+            return {'checkout': self.present(row), 'matches_selection': row.kind == kind
+                    and row.snapshot.get('id') == plan_id and row.snapshot.get('gym_id') == gym_id}
+        return {'checkout': None, 'matches_selection': True}
+
     def create(self, user_id: int, payload, key: str):
         require_gateway()
         customer = self.lock_user(user_id)
@@ -78,21 +110,25 @@ class PaymentCheckoutService:
         if kind == "BOOKING":
             source = f"booking:{payload.booking_id}"
         elif kind == "MULTI_GYM":
-            source = f"multi:{payload.order_id}"
+            # Each explicitly reviewed replacement has its own immutable attempt.
+            # The customer lock and overlap guard still deduplicate different tabs.
+            source = f"multi:{payload.order_id}:{key}"
         elif kind == "CART":
             if payload.cart_item_ids is not None:
-                return self.create_current_cart(user_id, payload.cart_item_ids, key, payload.confirm_razorpay_replacement)
+                return self.create_current_cart(user_id, payload.cart_item_ids, key, payload.confirm_razorpay_replacement, payload)
             from app.services.class_sync_service import lock_cart_class_gyms
             lock_cart_class_gyms(self.db, user_id)
             same_request = self.db.scalar(select(PaymentCheckout).where(PaymentCheckout.user_id == user_id,
                 PaymentCheckout.source_key == f"cart-request:{key}"))
             if same_request:
                 self.db.commit()
+                funding.validate_retry(self.db, same_request, payload)
                 return self.start(same_request.id, user_id)
             pending = self.db.scalar(select(PaymentCheckout).where(PaymentCheckout.user_id == user_id,
                 PaymentCheckout.kind == "CART", PaymentCheckout.status.not_in(["PAID", "REFUNDED", "CANCELLED", "REVIEW_REQUIRED", "SUPERSEDED"])).order_by(PaymentCheckout.created_at.desc()))
             if pending:
                 self.db.commit()
+                funding.validate_retry(self.db, pending, payload)
                 return self.start(pending.id, user_id)
             # Historical local cancellations did not close gateway orders. Never
             # use those records as permission to silently charge a replacement.
@@ -116,7 +152,11 @@ class PaymentCheckoutService:
                 raise HTTPException(409, detail='Idempotency key belongs to another recharge amount')
             if kind == "SINGLE_GYM" and (previous.snapshot.get("gym_id") != payload.gym_id or previous.snapshot.get("id") != payload.plan_id):
                 raise HTTPException(409, detail="Idempotency key belongs to another purchase")
+            if self.safely_closed(previous):
+                self.db.commit()
+                return self.present(previous)
             self.db.commit()
+            funding.validate_retry(self.db, previous, payload)
             return self.start(previous.id, user_id)
         platform_order = None
         booking = None
@@ -135,6 +175,7 @@ class PaymentCheckoutService:
                 if pending.amount != payload.amount:
                     raise HTTPException(409, 'An unpaid recharge already exists. Resume or cancel it from payment history first.')
                 self.db.commit()
+                funding.validate_retry(self.db, pending, payload)
                 return self.start(pending.id, user_id)
         if kind == "SINGLE_GYM":
             terms = single_terms(self.db, payload.gym_id, payload.plan_id, lock=True)
@@ -151,15 +192,30 @@ class PaymentCheckoutService:
                 raise HTTPException(404, detail="Booking not found")
             if booking.checkout_id:
                 self.db.commit()
+                funding.validate_retry(self.db, self.db.get(PaymentCheckout, booking.checkout_id), payload)
                 return self.start(booking.checkout_id, user_id)
             self.valid_booking(booking)
         if kind in {"SINGLE_GYM", "MULTI_GYM"}:
+            predecessors = []
             # A new browser key/order must not charge for an overlapping pending
             # membership. Resume the same plan, block conflicting pending plans.
             for previous in self.db.scalars(select(PaymentCheckout).where(PaymentCheckout.user_id == user_id,
                 PaymentCheckout.kind.in_(["SINGLE_GYM", "MULTI_GYM"]),
-                PaymentCheckout.status.not_in(["PAID", "REFUNDED", "CANCELLED"]))):
+                PaymentCheckout.status.not_in(["PAID", "REFUNDED"]))):
+                if self.safely_closed(previous):
+                    if kind == 'MULTI_GYM' or previous.kind == 'MULTI_GYM' or previous.snapshot.get('gym_id') == terms.get('gym_id'):
+                        self.reconcile(previous.id, user_id, commit=False)
+                        if not self.safely_closed(previous):
+                            self.db.commit()
+                            raise HTTPException(409, 'The previous membership payment has new activity. Review payment history; do not pay again.')
+                        predecessors.append(previous.id)
+                    continue
+                if previous.status == 'CANCELLED':
+                    if kind == 'MULTI_GYM' or previous.kind == 'MULTI_GYM' or previous.snapshot.get('gym_id') == terms.get('gym_id'):
+                        raise HTTPException(409, 'The previous membership payment is unresolved. Check payment status before starting another payment.')
+                    continue
                 if previous.kind == kind and previous.snapshot.get("id") == terms["id"] and previous.snapshot.get("gym_id") == terms.get("gym_id"):
+                    funding.validate_retry(self.db, previous, payload)
                     self.db.commit()
                     return self.start(previous.id, user_id)
                 if kind == "MULTI_GYM" or previous.kind == "MULTI_GYM" or previous.snapshot.get("gym_id") == terms.get("gym_id"):
@@ -167,9 +223,11 @@ class PaymentCheckoutService:
             if payload.accepted_quote != quote_key(terms):
                 raise HTTPException(409, detail={"code": "MEMBERSHIP_PRICE_CHANGED"})
             self.membership_eligible(user_id, terms)
+            self.gateway = get_provider()
+            terms = {**terms, 'membership_predecessors': predecessors}
         checkout = PaymentCheckout(id=str(uuid4()), user_id=user_id, source_key=source, kind=kind,
             provider=self.gateway.name, mode=settings.gateway_mode, key_id=self.gateway.key_id,
-            amount=0, currency="INR", snapshot=terms, status="CREATED", created_at=datetime.utcnow())
+            amount=0, currency="INR", snapshot=terms, status="CREATED", created_at=datetime.utcnow().replace(microsecond=0))
         self.db.add(checkout)
         self.db.flush()
         if kind == "CART":
@@ -192,11 +250,14 @@ class PaymentCheckoutService:
                 platform_order.snapshot = terms
         if checkout.currency != "INR" or minor(checkout.amount) < 0:
             raise HTTPException(409, detail="This checkout supports INR only")
+        funding.reserve(self.db, checkout, payload)
         self.gateway.validate_purchase(checkout, customer)
+        from app.services.source_evidence import checkout_created
+        checkout_created(self.db, checkout)
         self.db.commit()
         return self.start(checkout.id, user_id)
 
-    def create_current_cart(self, user_id, item_ids, key, confirm_razorpay_replacement=False):
+    def create_current_cart(self, user_id, item_ids, key, confirm_razorpay_replacement=False, payload=None):
         """Explicit current-cart checkout. Hold the user lock across recovery.
 
         Never return an unrelated old order as the payment for this cart. No GET
@@ -213,6 +274,7 @@ class PaymentCheckoutService:
             if set(same.snapshot.get('cart_item_ids', [])) != requested:
                 raise HTTPException(409, 'Idempotency key belongs to another cart. Reload the cart.')
             self.db.commit()
+            if payload is not None: funding.validate_retry(self.db, same, payload)
             return self.start(same.id, user_id)
         rows = list(self.db.scalars(select(CartItem).where(CartItem.user_id == user_id,
             CartItem.id.in_(item_ids)).order_by(CartItem.id).with_for_update()))
@@ -224,6 +286,7 @@ class PaymentCheckoutService:
         if len(linked) == 1 and None not in linked:
             same = self.db.get(PaymentCheckout, next(iter(linked)))
             if same and same.user_id == user_id and set(same.snapshot.get('cart_item_ids', [])) == requested:
+                if payload is not None: funding.validate_retry(self.db, same, payload)
                 self.db.commit()
                 return self.start(same.id, user_id)
         active = list(self.db.scalars(select(CartItem).where(CartItem.user_id == user_id,
@@ -258,6 +321,10 @@ class PaymentCheckoutService:
                 self.db.commit()
                 raise HTTPException(409, 'Another checkout is still available for payment. Review it in payment history before starting a different purchase.')
             if old.provider == 'RAZORPAY':
+                old_funding = funding.get(self.db, old)
+                if old_funding and old_funding.state == 'HELD':
+                    self.db.commit()
+                    raise HTTPException(409, 'The previous Razorpay order still protects wallet funds. Resolve it before replacing this purchase; failed attempts do not close the gateway order.')
                 if not (old.checkout_data or {}).get('supersession_eligible'):
                     self.db.commit()
                     raise HTTPException(409, 'The previous payment history is incomplete or unresolved. No new checkout was created. Refresh payment history before paying again.')
@@ -285,10 +352,13 @@ class PaymentCheckoutService:
         self.gateway = get_provider()
         checkout = PaymentCheckout(id=str(uuid4()), user_id=user_id, source_key=f'cart-request:{key}',
             kind='CART', provider=self.gateway.name, mode=settings.gateway_mode, key_id=self.gateway.key_id,
-            amount=0, currency='INR', snapshot={}, status='CREATED', created_at=datetime.utcnow())
+            amount=0, currency='INR', snapshot={}, status='CREATED', created_at=datetime.utcnow().replace(microsecond=0))
         self.db.add(checkout); self.db.flush()
         self.prepare_cart(checkout, active)
+        funding.reserve(self.db, checkout, payload)
         self.gateway.validate_purchase(checkout, customer)
+        from app.services.source_evidence import checkout_created
+        checkout_created(self.db, checkout)
         if superseded or predecessor_ids:
             checkout.snapshot = {**checkout.snapshot, 'replaces_checkout_ids': predecessor_ids + [old.id for old in superseded]}
             for old in superseded:
@@ -302,32 +372,37 @@ class PaymentCheckoutService:
         self.db.commit()
         return self.start(checkout.id, user_id)
 
+    def cart_item_terms(self, item):
+        from app.routers.cart import _operating_hours_for_date
+        gym = self.db.get(Gym, item.gym_id)
+        if not gym or gym.status != "APPROVED" or not gym.is_active:
+            raise HTTPException(409, detail="Gym unavailable")
+        if item.currency != "INR":
+            raise HTTPException(409, detail="Cart currency mismatch")
+        if item.booking_type == "GYM":
+            opening, closing, closed = _operating_hours_for_date(self.db, gym_id=gym.id, dt=item.booking_date)
+            if closed or not opening or not closing or item.preferred_start_time < opening or item.preferred_end_time > closing:
+                raise HTTPException(409, detail="Gym visit is outside operating hours")
+            start, end, name, price, capacity = item.preferred_start_time, item.preferred_end_time, "Gym Access", Decimal(str(gym.gym_price_per_person)), 500
+        else:
+            session = self.db.scalar(select(ClassSession).where(ClassSession.id == item.class_session_id).with_for_update())
+            gclass = self.db.get(GymClass, session.gym_class_id) if session else None
+            if not session or not gclass or not gclass.is_active or gclass.gym_id != gym.id or session.status not in {"AVAILABLE", "FEW_SLOTS_LEFT"}:
+                raise HTTPException(409, detail="Class unavailable")
+            if session.maximum_capacity - session.booked_capacity < item.member_count:
+                raise HTTPException(409, detail="Class capacity unavailable")
+            start, end, name, price, capacity = session.start_time, session.end_time, gclass.class_name, Decimal(str(session.price_per_person)), session.maximum_capacity
+        if Decimal(str(item.price_per_person)) != price:
+            raise HTTPException(409, detail="Booking price changed. Remove the item and add it again to review the new price.")
+        names = validate_visitors(item.visitor_names, item.member_count)
+        return gym, start, end, name, price, capacity, names
+
     def prepare_cart(self, checkout, items):
-        from app.routers.cart import _operating_hours_for_date, _validate_checkout_times
+        from app.routers.cart import _validate_checkout_times
         _validate_checkout_times(self.db, items)
         total = Decimal("0")
         for item in items:
-            gym = self.db.get(Gym, item.gym_id)
-            if not gym or gym.status != "APPROVED" or not gym.is_active:
-                raise HTTPException(409, detail="Gym unavailable")
-            if item.currency != "INR":
-                raise HTTPException(409, detail="Cart currency mismatch")
-            if item.booking_type == "GYM":
-                opening, closing, closed = _operating_hours_for_date(self.db, gym_id=gym.id, dt=item.booking_date)
-                if closed or not opening or not closing or item.preferred_start_time < opening or item.preferred_end_time > closing:
-                    raise HTTPException(409, detail="Gym visit is outside operating hours")
-                start, end, name, price, capacity = item.preferred_start_time, item.preferred_end_time, "Gym Access", Decimal(str(gym.gym_price_per_person)), 500
-            else:
-                session = self.db.scalar(select(ClassSession).where(ClassSession.id == item.class_session_id).with_for_update())
-                gclass = self.db.get(GymClass, session.gym_class_id) if session else None
-                if not session or not gclass or not gclass.is_active or gclass.gym_id != gym.id or session.status not in {"AVAILABLE", "FEW_SLOTS_LEFT"}:
-                    raise HTTPException(409, detail="Class unavailable")
-                if session.maximum_capacity - session.booked_capacity < item.member_count:
-                    raise HTTPException(409, detail="Class capacity unavailable")
-                start, end, name, price, capacity = session.start_time, session.end_time, gclass.class_name, Decimal(str(session.price_per_person)), session.maximum_capacity
-            if Decimal(str(item.price_per_person)) != price:
-                raise HTTPException(409, detail="Booking price changed. Remove the item and add it again to review the new price.")
-            names = validate_visitors(item.visitor_names, item.member_count)
+            gym, start, end, name, price, capacity, names = self.cart_item_terms(item)
             slot = self.db.scalar(select(GymSlot).where(GymSlot.gym_id == gym.id, GymSlot.start_time == start, GymSlot.end_time == end, GymSlot.name == name, GymSlot.is_active == 1))
             if not slot:
                 slot = GymSlot(gym_id=gym.id, name=name, start_time=start, end_time=end, capacity=capacity, price=price, is_active=1)
@@ -370,9 +445,55 @@ class PaymentCheckoutService:
         check_order(checkout, order)
         checkout.checkout_data = {**order.checkout_data, "payable": order.payable}
 
+    def can_resume_reserved_membership(self, checkout):
+        hold = funding.get(self.db, checkout)
+        data = checkout.checkout_data or {}
+        return bool(checkout.provider == 'RAZORPAY' and checkout.kind in {'SINGLE_GYM', 'MULTI_GYM'}
+            and checkout.status in {'PENDING', 'FAILED'} and checkout.gateway_order_id
+            and hold and hold.state == 'HELD' and hold.wallet_amount > 0
+            and hold.expires_at <= datetime.utcnow() and not checkout.snapshot.get('cancellation_requested')
+            and data.get('payable') and data.get('supersession_eligible')
+            and not data.get('payment_processing') and not data.get('replacement_safe'))
+
+    def resume_membership(self, checkout_id, user_id):
+        # Reconcile under the customer/checkout lock; never create or replace an
+        # order. A late success returns its result instead of reopening payment.
+        checkout = self.owned(checkout_id, user_id)
+        if checkout.kind not in {'SINGLE_GYM', 'MULTI_GYM'}:
+            raise HTTPException(409, 'This action is only for the original membership payment.')
+        self.reconcile(checkout_id, user_id, commit=False)
+        self.db.flush()
+        checkout = self.owned(checkout_id, user_id)
+        if self.can_resume_reserved_membership(checkout):
+            self.membership_eligible(user_id, checkout.snapshot)
+            account, state = funding.wallet_state(self.db, user_id, checkout.mode, lock=True)
+            hold = funding.get(self.db, checkout)
+            if (not account or account.currency != checkout.currency or account.payment_mode != checkout.mode
+                    or Decimal(str(account.balance)) < Decimal(state['reserved_balance'])
+                    or (state['wallet_unavailable_reason'] and 'reconciliation' in state['wallet_unavailable_reason'])):
+                raise HTTPException(409, 'The original wallet reservation needs review. No payment was reopened.')
+            # Extend only the same still-held reservation after explicit consent.
+            # Amounts, provider order, selected plan and ledger remain unchanged.
+            hold.expires_at = datetime.utcnow() + timedelta(minutes=15)
+            if checkout.failure_code == 'WALLET_HOLD_REQUIRES_PROVIDER_CLOSURE':
+                checkout.failure_code = None
+        self.db.commit()
+        return self.present(checkout)
+
     def start(self, checkout_id, user_id):
         checkout = self.owned(checkout_id, user_id)
+        if checkout.snapshot.get('cancellation_requested'):
+            return self.reconcile(checkout_id, user_id)
+        hold = funding.get(self.db, checkout)
+        if hold and hold.state == 'HELD' and hold.expires_at <= datetime.utcnow() and checkout.status in {'CREATED', 'CREATING', 'PENDING', 'FAILED'}:
+            from app.services.wallet_hold_recovery import resolve
+            return resolve(self, checkout_id, user_id)
         if checkout.status in {'CREATED', 'CREATING', 'PENDING', 'FAILED'}:
+            for old_id in checkout.snapshot.get('membership_predecessors', []):
+                self.reconcile(old_id, user_id, commit=False)
+                if not self.safely_closed(self.db.get(PaymentCheckout, old_id)):
+                    self.db.commit()
+                    raise HTTPException(409, 'An earlier membership payment has new activity. Review payment history; do not pay again.')
             for old_id in checkout.snapshot.get('replaces_checkout_ids', []):
                 previous = self.reconcile(old_id, user_id, commit=False)
                 old = self.db.get(PaymentCheckout, old_id)
@@ -402,6 +523,14 @@ class PaymentCheckoutService:
 
     def reconcile(self, checkout_id, user_id, payment_id=None, signature=None, order_id=None, commit=True):
         checkout = self.owned(checkout_id, user_id)
+        if checkout.amount == 0 and funding.get(self.db, checkout):
+            if checkout.status == 'CREATED':
+                if funding.get(self.db, checkout).expires_at <= datetime.utcnow():
+                    self.close_unpaid(checkout)
+                else:
+                    self.fulfill(checkout, None)
+                if commit: self.db.commit()
+            return self.present(checkout)
         self.gateway.verify_confirmation(checkout, payment_id, signature, order_id)
         if checkout.status == "CREATING" and not checkout.gateway_order_id:
             order = self.gateway.find_order(checkout.id)
@@ -440,6 +569,8 @@ class PaymentCheckoutService:
                     # Do not erase verified success/refund with an older failure.
                     if Decimal(payment.refunded) / 100 >= attempt.refunded_amount:
                         attempt.status, attempt.refunded_amount = state, Decimal(payment.refunded) / 100
+                from app.services.payment_evidence import observe
+                observe(self.db, checkout, attempt, payment, provider_event_id=getattr(self, '_evidence_event_id', None))
             # A temporarily incomplete provider response must not erase earlier
             # evidence of processing/paid funds and authorize another purchase.
             self.db.flush()
@@ -467,9 +598,12 @@ class PaymentCheckoutService:
             elif refunded:
                 checkout.gateway_payment_id = refunded.id
                 if checkout.kind == 'WALLET_TOPUP':
-                    refund_wallet(self.db, checkout, refunded.refunded)
-                self.revoke(checkout, full=refunded.refunded == minor(checkout.amount))
-            elif captured and checkout.status not in {"PAID", "REVIEW_REQUIRED", "REFUNDED"}:
+                    reversed_credit = refund_wallet(self.db, checkout, refunded.refunded)
+                    if reversed_credit: self.revoke(checkout, full=refunded.refunded == minor(checkout.amount))
+                else:
+                    self.revoke(checkout, full=refunded.refunded == minor(checkout.amount))
+            elif captured and (checkout.status not in {"PAID", "REVIEW_REQUIRED", "REFUNDED"} or
+                    (funding.has_wallet_contribution(self.db, checkout) and checkout.failure_code == 'FULFILLMENT_UNAVAILABLE')):
                 if not order.paid:
                     raise HTTPException(409, detail="Order is not fully paid")
                 checkout.gateway_payment_id = captured.id
@@ -480,7 +614,7 @@ class PaymentCheckoutService:
                         self.fulfill(checkout, captured.id)
                 except HTTPException:
                     checkout.status, checkout.failure_code = "REVIEW_REQUIRED", "FULFILLMENT_UNAVAILABLE"
-                    self.record_paid(checkout, captured.id)
+                    if not funding.has_wallet_contribution(self.db, checkout): self.record_paid(checkout, captured.id)
             elif order.paid and not captured:
                 # Order is paid but payments may be temporarily incomplete. Do
                 # not let the browser cancel/recharge an already paid order.
@@ -491,19 +625,25 @@ class PaymentCheckoutService:
                     .where(Booking.checkout_id == checkout.id, Booking.status == "PENDING_PAYMENT")):
                     if payment.status != "PAID":
                         payment.status = "FAILED" if checkout.status == "FAILED" else "INITIATED"
+        record = funding.get(self.db, checkout)
+        if ((record and record.state == 'HELD') or checkout.snapshot.get('cancellation_requested')) and (checkout.checkout_data or {}).get('replacement_safe') and checkout.status not in {'PAID', 'REVIEW_REQUIRED', 'REFUNDED'}:
+            self.close_unpaid(checkout)
         if commit:
             self.db.commit()
         return self.present(checkout)
 
     def record_paid(self, checkout, payment_id):
         for payment in self.db.scalars(select(Payment).join(Booking, Booking.id == Payment.booking_id).where(Booking.checkout_id == checkout.id)):
-            payment.status, payment.provider, payment.external_ref = "PAID", checkout.provider if payment_id else "FREE", payment_id
+            record = funding.get(self.db, checkout)
+            payment.status, payment.provider, payment.external_ref = "PAID", checkout.provider if payment_id else "WALLET" if record and record.wallet_transaction_id else "FREE", payment_id if payment_id else f"WALLET_TXN:{record.wallet_transaction_id}" if record and record.wallet_transaction_id else None
 
     def fulfill(self, checkout, payment_id):
         if checkout.status == "PAID":
             return
+        total = funding.purchase_total(self.db, checkout)
         if checkout.status in {"CANCELLED", "SUPERSEDED"}:
             raise HTTPException(409, detail="Checkout was cancelled")
+        debit = funding.debit(self.db, checkout)
         if checkout.kind == 'WALLET_TOPUP':
             if not payment_id:
                 raise HTTPException(409, 'Wallet recharge requires verified payment')
@@ -519,15 +659,18 @@ class PaymentCheckoutService:
                 plan_id=None if multi else terms["id"], platform_plan_id=terms["id"] if multi else None,
                 membership_type=terms["membership_type"], checkout_key=f"{checkout.provider.lower()}:{checkout.id}", gateway_checkout_id=checkout.id,
                 terms_snapshot=terms, status="ACTIVE", start_at=now, end_at=end, original_end_at=end,
-                paid_amount=checkout.amount, currency=checkout.currency, payment_provider=checkout.provider if payment_id else "FREE",
+                paid_amount=total, currency=checkout.currency, payment_provider=checkout.provider if payment_id else "WALLET" if debit else "FREE",
+                wallet_transaction_id=debit.id if debit else None,
                 payment_status="PAID", external_ref=payment_id)
             self.db.add(membership); self.db.flush()
+            from app.services.source_evidence import membership_event
+            membership_event(self.db, membership, 'MEMBERSHIP_ACTIVATED', membership.id, membership.start_at, fresh_activation=True)
             if checkout.kind == "MULTI_GYM":
                 order = self.db.scalar(select(PlatformMembershipOrder).where(PlatformMembershipOrder.checkout_id == checkout.id).with_for_update())
                 order.membership_id, order.status = membership.id, "PAID"
         else:
             bookings = self.db.scalars(select(Booking).where(Booking.checkout_id == checkout.id).order_by(Booking.id).with_for_update().execution_options(populate_existing=True)).all()
-            if not bookings or sum(Decimal(str(b.total_price)) for b in bookings) != checkout.amount:
+            if not bookings or sum(Decimal(str(b.total_price)) for b in bookings) != total:
                 raise HTTPException(409, detail="Booking totals changed")
             for booking in bookings:
                 self.valid_booking(booking, checkout_started_at=checkout.created_at)
@@ -554,6 +697,32 @@ class PaymentCheckoutService:
         checkout.status, checkout.failure_code = "PAID", None
 
     def revoke(self, checkout, full=True):
+        funded = funding.get(self.db, checkout)
+        if funded and funded.wallet_amount:
+            # A provider refund covers only its contribution, not the entire
+            # split purchase. Preserve the debit; do not label the total refunded.
+            # A refund is not proof that the order cannot accept another payment.
+            # Retain any unresolved hold; an already debited wallet is unchanged.
+            checkout.status, checkout.failure_code = 'REVIEW_REQUIRED', 'SPLIT_PROVIDER_REFUND'
+            for booking in self.db.scalars(select(Booking).where(Booking.checkout_id == checkout.id).with_for_update()):
+                booking.status = 'CANCELLED'
+                BookingAccessService(self.db).revoke(booking)
+                payment = self.db.scalar(select(Payment).where(Payment.booking_id == booking.id))
+                if payment: payment.status = 'PARTIALLY_REFUNDED'
+            for membership in self.db.scalars(select(UserMembership).where(UserMembership.gateway_checkout_id == checkout.id).with_for_update()):
+                membership.status, membership.payment_status = 'CANCELLED', 'PARTIALLY_REFUNDED'
+            return
+        from app.models.customer_policy import BookingCancellation
+        from app.services.policy_schema import available
+        credited = self.db.scalar(select(BookingCancellation.id).join(Booking, Booking.id == BookingCancellation.booking_id)
+            .where(Booking.checkout_id == checkout.id, BookingCancellation.amount > 0).limit(1)) if available(self.db) else None
+        # A separately initiated provider refund after a wallet credit is not a second
+        # authorized benefit. Preserve both evidence streams and require reconciliation.
+        if credited:
+            checkout.status, checkout.failure_code = 'REVIEW_REQUIRED', 'WALLET_CREDIT_EXTERNAL_REFUND'
+            for payment in self.db.scalars(select(Payment).join(Booking, Booking.id == Payment.booking_id).where(Booking.checkout_id == checkout.id)):
+                payment.status = 'REFUNDED' if full else 'PARTIALLY_REFUNDED'
+            return
         checkout.status = "REFUNDED" if full else "REVIEW_REQUIRED"
         checkout.failure_code = None if full else "PARTIAL_REFUND"
         for booking in self.db.scalars(select(Booking).where(Booking.checkout_id == checkout.id).with_for_update()):
@@ -583,6 +752,14 @@ class PaymentCheckoutService:
             reason = "GATEWAY_UNAVAILABLE"
         elif checkout.provider == "CASHFREE" and not data.get("payment_session_id"):
             reason = "SESSION_UNAVAILABLE"
+        record = funding.get(self.db, checkout)
+        terminal = checkout.status in {'PAID', 'REFUNDED', 'REVIEW_REQUIRED'}
+        if not terminal and record and record.wallet_amount and record.state not in {'HELD', 'DEBITED'}:
+            reason = 'WALLET_RESERVATION_RELEASED'
+        if not terminal and record and record.state == 'HELD' and record.expires_at <= datetime.utcnow() and not data.get('payment_processing'):
+            reason = 'WALLET_HOLD_RECONCILING'
+        if checkout.snapshot.get('cancellation_requested') and checkout.status not in {'PAID', 'REFUNDED', 'REVIEW_REQUIRED', 'CANCELLED'}:
+            reason = 'PAYMENT_PROCESSING' if data.get('payment_processing') else 'CANCELLATION_PENDING'
         if reason is None:
             for booking in bookings:
                 try:
@@ -592,6 +769,23 @@ class PaymentCheckoutService:
                     break
         can_cancel = checkout.status in {"CREATED", "CREATING", "PENDING", "FAILED"} and (
             (checkout.status == "CREATED" and not checkout.gateway_order_id) or bool(data.get("replacement_safe")))
+        can_request_cancel = can_cancel or (checkout.provider == 'CASHFREE'
+            and checkout.status in {'CREATING', 'PENDING', 'FAILED', 'CANCELLED'}
+            and not self.safely_closed(checkout) and not data.get('payment_processing'))
+        recovery_status = ('PAID' if checkout.status == 'PAID' else
+            'REVIEW_REQUIRED' if checkout.status == 'REVIEW_REQUIRED' else
+            'REFUNDED' if checkout.status == 'REFUNDED' else
+            'SAFELY_CLOSED' if self.safely_closed(checkout) else
+            'PROCESSING' if data.get('payment_processing') else
+            'CANCELLATION_PENDING' if checkout.snapshot.get('cancellation_requested') else
+            'RESUMABLE' if reason is None else 'RESOLUTION_REQUIRED')
+        order_reference = self.db.scalar(select(PlatformMembershipOrder.id).where(
+            PlatformMembershipOrder.checkout_id == checkout.id)) if checkout.kind == 'MULTI_GYM' else None
+        # The immutable source key also identifies older attempts after replacement.
+        if checkout.kind == 'MULTI_GYM' and checkout.source_key.startswith('multi:'):
+            order_reference = checkout.source_key.split(':')[1]
+        latest_attempt = self.db.scalar(select(PaymentAttempt.external_id).where(
+            PaymentAttempt.checkout_id == checkout.id).order_by(PaymentAttempt.first_seen_at.desc(), PaymentAttempt.id.desc()).limit(1))
         items = []
         for booking in bookings:
             slot, gym = self.db.get(GymSlot, booking.gym_slot_id), self.db.get(Gym, booking.gym_id)
@@ -599,23 +793,53 @@ class PaymentCheckoutService:
                 "booking_date": str(booking.slot_date), "start_time": str(slot.start_time) if slot else None,
                 "quantity": booking.quantity, "amount": str(booking.total_price), "currency": booking.currency})
         deadline = min((b.expires_at for b in bookings), default=None)
-        return {"id": checkout.id, "kind": checkout.kind, "status": checkout.status, "mode": checkout.mode, "amount": str(checkout.amount),
+        return {**funding.breakdown(self.db, checkout), "id": checkout.id, "kind": checkout.kind, "status": checkout.status, "mode": checkout.mode, "amount": str(checkout.amount),
             "amount_minor": minor(checkout.amount), "currency": checkout.currency, "provider": checkout.provider,
             "environment": "sandbox" if checkout.mode == "test" else "production",
             "gateway_order_id": checkout.gateway_order_id, "booking_ids": [b.id for b in bookings], "membership_id": membership,
             **get_provider(checkout.provider).checkout_info(checkout),
             "can_pay": reason is None, "failure_code": checkout.failure_code, "payment_blocked_reason": reason,
             "payment_expires_at": deadline.isoformat() + "Z" if deadline else None,
-            "can_cancel": can_cancel, "replacement_safe": bool(data.get("replacement_safe")),
+            "can_cancel": can_cancel, "can_request_cancel": can_request_cancel,
+            "can_resume_reserved_membership": self.can_resume_reserved_membership(checkout),
+            "recovery_status": recovery_status, "can_contact_support": recovery_status not in {'PAID', 'SAFELY_CLOSED', 'REFUNDED'},
+            "order_reference": order_reference, "payment_reference": checkout.gateway_payment_id or latest_attempt,
+            "cancellation_requested": bool(checkout.snapshot.get('cancellation_requested')),
+            "replacement_safe": bool(data.get("replacement_safe")),
+            "plan_name": checkout.snapshot.get('name') if checkout.kind in {'SINGLE_GYM', 'MULTI_GYM'} else None,
             "cart_item_ids": checkout.snapshot.get("cart_item_ids", []), "items": items}
 
     def cancel(self, checkout_id, user_id):
+        checkout = self.owned(checkout_id, user_id)
+        if checkout.status in {'PAID', 'REVIEW_REQUIRED', 'REFUNDED'} or self.safely_closed(checkout):
+            return self.present(checkout)
+        if checkout.status == 'CREATED' and not checkout.gateway_order_id:
+            self.close_unpaid(checkout)
+            self.db.commit()
+            return self.present(checkout)
+        if checkout.provider == 'CASHFREE':
+            # Persist intent before network I/O. A timeout cannot reopen payment
+            # or permit replacement; refresh recovers the original order instead.
+            checkout.snapshot = {**checkout.snapshot, 'cancellation_requested': True}
+            self.db.commit()
         self.reconcile(checkout_id, user_id)
         checkout = self.owned(checkout_id, user_id)
-        if checkout.status in {"PAID", "REVIEW_REQUIRED", "REFUNDED"}:
+        if checkout.status in {"PAID", "REVIEW_REQUIRED", "REFUNDED"} or self.safely_closed(checkout):
             return self.present(checkout)
-        if checkout.status == "CANCELLED":
-            return self.present(checkout)
+        if checkout.provider == 'CASHFREE':
+            data = checkout.checkout_data or {}
+            if data.get('payment_processing') or checkout.status == 'CREATING':
+                return self.present(checkout)
+            if checkout.gateway_order_id and not data.get('replacement_safe'):
+                order = self.gateway.terminate_order(checkout.gateway_order_id)
+                self.check_order(checkout, order)
+                self.reconcile(checkout_id, user_id)
+                checkout = self.owned(checkout_id, user_id)
+            if checkout.status in {'PAID', 'REVIEW_REQUIRED', 'REFUNDED'} or self.safely_closed(checkout):
+                return self.present(checkout)
+            if not (checkout.checkout_data or {}).get('replacement_safe'):
+                self.db.commit()
+                return self.present(checkout)
         if not self.present(checkout)["can_cancel"]:
             raise HTTPException(409, detail="The original gateway order is still active, processing or unverified. Refresh payment status or contact support. Do not start another payment.")
         self.close_unpaid(checkout)
@@ -624,8 +848,16 @@ class PaymentCheckoutService:
 
     def close_unpaid(self, checkout):
         """Local close only after the caller verifies closure; no commit/unlock."""
+        record = funding.get(self.db, checkout)
+        if checkout.status in {'PAID', 'REFUNDED', 'REVIEW_REQUIRED'} or (record and record.state == 'DEBITED'):
+            raise HTTPException(409, 'Payment evidence requires reconciliation, not unpaid closure.')
+        if record and record.state == 'HELD' and record.wallet_amount:
+            local_unstarted = checkout.status == 'CREATED' and not checkout.gateway_order_id
+            if not local_unstarted and not (checkout.checkout_data or {}).get('replacement_safe'):
+                raise HTTPException(409, 'The original payment has not been safely closed. Wallet funds remain reserved.')
         checkout.checkout_data = {**(checkout.checkout_data or {}), "replacement_safe": True}
         checkout.status = "CANCELLED"
+        funding.release(self.db, checkout)
         for booking in self.db.scalars(select(Booking).where(Booking.checkout_id == checkout.id).with_for_update()):
             if booking.status == "PENDING_PAYMENT":
                 # Cart checkout does not reserve slot capacity before capture.
@@ -646,6 +878,7 @@ class PaymentCheckoutService:
         require_gateway(provider)
         self.gateway = get_provider(provider)
         event = self.gateway.webhook(raw, signature, timestamp)
+        self._evidence_event_id = event_id or None
         if event is None:
             return {"status": "ignored"}
         checkout = self.db.scalar(select(PaymentCheckout).where(
@@ -665,7 +898,7 @@ class PaymentCheckoutService:
         if previous:
             if previous.body_hash != digest:
                 raise HTTPException(409, detail="Webhook event ID conflict")
-            if checkout.status in {"CREATING", "PENDING", "FAILED", "SUPERSEDED"}:
+            if checkout.status in {"CREATING", "PENDING", "FAILED", "SUPERSEDED"} or (funding.has_wallet_contribution(self.db, checkout) and checkout.failure_code == 'FULFILLMENT_UNAVAILABLE'):
                 self.reconcile(checkout.id, checkout.user_id)
             return {"status": "duplicate"}
         if not checkout.gateway_order_id:

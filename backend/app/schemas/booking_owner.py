@@ -6,6 +6,7 @@ from app.schemas.time import ISTResponse
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Literal
 from app.schemas.booking import CANCELLATION_MESSAGE
+from app.schemas.customer_policy import CancellationPolicy
 
 
 class OwnerBookingActionRequest(BaseModel):
@@ -39,6 +40,8 @@ class OwnerBookingPayment(BaseModel):
 
 
 class OwnerBookingResponse(ISTResponse):
+    funding: dict | None = None
+    cancellation: CancellationPolicy | None = None
     allowed_actions: list[Literal['CANCEL', 'MARK_ATTENDED', 'MARK_NO_SHOW']] = Field(default_factory=list)
     action_unavailable_reasons: dict[str, str] = Field(default_factory=dict)
     cancellation_policy: str = CANCELLATION_MESSAGE

@@ -1,5 +1,6 @@
 """Provider-neutral contracts. No booking/membership rules belong in adapters."""
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Protocol
 
@@ -28,6 +29,28 @@ class ProviderOrder:
 
 
 @dataclass
+class ProviderRefund:
+    id: str
+    payment_id: str
+    amount: int
+    currency: str
+    status: str
+    occurred_at: datetime | None = None
+    timestamp_source: str = 'UNAVAILABLE'
+
+
+def provider_time(value):
+    """Only timezone-explicit provider timestamps; no guessed local timezone."""
+    try:
+        if isinstance(value, str):
+            at = datetime.fromisoformat(value.replace('Z', '+00:00'))
+            return at.astimezone(timezone.utc) if at.tzinfo else None
+    except (ValueError, OverflowError):
+        pass
+    return None
+
+
+@dataclass
 class ProviderPayment:
     id: str
     order_id: str
@@ -35,6 +58,14 @@ class ProviderPayment:
     currency: str
     status: str  # SUCCESS, PENDING, FAILED
     refunded: int = 0
+    collection_state: str | None = None
+    captured_at: datetime | None = None
+    timestamp_source: str = 'UNAVAILABLE'
+    fee: int | None = None
+    fee_tax: int | None = None
+    fee_basis: str = 'UNAVAILABLE'
+    refunds: list[ProviderRefund] = field(default_factory=list)
+    refund_evidence_status: str = 'UNAVAILABLE'
 
 
 @dataclass

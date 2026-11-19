@@ -83,7 +83,12 @@ def test_booking_capacity_and_cancel_releases_capacity():
         )
         assert r2.status_code == 400
 
-        # Cancel -> releases
+        # Pending purchases cannot use paid-booking cancellation or receive credit.
+        assert client.post(f'/api/v1/bookings/{booking_id}/cancel', json={}, headers={'Authorization': f'Bearer {token}'}).status_code == 409
+        from policy_fixtures import fund_wallet_booking
+        db.rollback()  # End the pre-request MySQL snapshot before reading the committed booking.
+        fund_wallet_booking(db, booking_id); db.commit()
+        # Verified confirmed booking cancellation releases capacity and credits once.
         rc = client.post(
             f"/api/v1/bookings/{booking_id}/cancel",
             json={"reason": "changed mind"},
@@ -91,6 +96,7 @@ def test_booking_capacity_and_cancel_releases_capacity():
         )
         assert rc.status_code == 200
         assert rc.json()["status"] == "CANCELLED"
+        assert rc.json()['cancellation']['wallet_credit_amount'] == '200.00'
 
         # Book again -> ok
         r3 = client.post(

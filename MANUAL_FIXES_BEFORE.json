@@ -1,0 +1,378 @@
+{
+  "observed_at": "2026-11-17T18:09:38.815097+00:00",
+  "read_only": true,
+  "mysql_version": "26.7.0",
+  "revision": "d46e70ba9268",
+  "table_count": 55,
+  "gates": {
+    "source_evidence_enabled": false,
+    "marketplace_allocations_enabled": false,
+    "marketplace_live_allocations_enabled": false,
+    "marketplace_payouts_enabled": false
+  },
+  "fingerprints": {
+    "access_pause_days": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "access_qr_tokens": {
+      "rows": 17,
+      "sha256": "aceda774880733a4b2fb11ffe6d8c2bfd7d28825f17552a2057ae799e227a5c9"
+    },
+    "account_otps": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "alembic_version": {
+      "rows": 1,
+      "sha256": "47a6879f2034b7c942223aa5a25f54d26e14ba46b5671d1c89e637dcaf8f010f"
+    },
+    "auth_rate_limits": {
+      "rows": 5,
+      "sha256": "d08d79b2abc8991a23f0a545796e5580880535d8d7cd9044726be0054804016e"
+    },
+    "booking_cancellations": {
+      "rows": 5,
+      "sha256": "51454cfeb0768086d713b3ff6607cff45012aa87d815b0c869ec34ffa80a8dbd"
+    },
+    "booking_funding": {
+      "rows": 7,
+      "sha256": "f5aea6bf678c1c5de6a8f0d3fa3066ae2d4b22a087574d610621fefa114eddad"
+    },
+    "bookings": {
+      "rows": 14,
+      "sha256": "1e8e14a54462a344e3042883627402d6c249bb4be7150edae63cd5e38163b95a"
+    },
+    "cart_items": {
+      "rows": 14,
+      "sha256": "c67b4e709ff9003936e423ed60c193fe5c44d2475425d28826a85c88ebf8c281"
+    },
+    "checkins": {
+      "rows": 2,
+      "sha256": "1624f540e906abec080b6aac25e5fc81718a33bae8a6ed21da85cf4680d7a4a8"
+    },
+    "checkout_funding": {
+      "rows": 9,
+      "sha256": "4545d5a3eb87d1e86d5d955f2c1e57a94770cf14d1a9a15f67228e3e40d4e1cb"
+    },
+    "class_sessions": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "customer_daily_accesses": {
+      "rows": 2,
+      "sha256": "2eb947e3b5e400cb019b9778d9c6237bda924ba60a192a2ce2579c6aa5c844a9"
+    },
+    "financial_agreement_scopes": {
+      "rows": 2,
+      "sha256": "77dcda1f9868f0d8e17621bc3fd6c34d51fed7cce623060ced3348a027331fa0"
+    },
+    "financial_agreement_versions": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "gym_classes": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "gym_facilities": {
+      "rows": 5,
+      "sha256": "83f132b8d47dda35558c900aa2e6805aebcb5c6574db6614c47fc4f27c25f2ad"
+    },
+    "gym_facility_mapping": {
+      "rows": 32,
+      "sha256": "ca5f41db1170d0d6c8f9a9ba983496b788be681783d5137e57e2ac4f0c0450b1"
+    },
+    "gym_images": {
+      "rows": 8,
+      "sha256": "d67a0c47f8f7d14c08d16c329fb7a8107c65ba5870396a93e5cbe08c929042af"
+    },
+    "gym_membership_plans": {
+      "rows": 12,
+      "sha256": "6e8cfaf5ac48f45d847311b689d3b2caeb476b81f87a0a09da08ac089aa2fe88"
+    },
+    "gym_operating_hours": {
+      "rows": 63,
+      "sha256": "cb6697eebdfc6b8e63d4c5866c3185a3a327f546c514907a6852e977b5359d6e"
+    },
+    "gym_reviews": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "gym_slots": {
+      "rows": 92,
+      "sha256": "20e695c9d28e0150b82af13fc59c67c269076f3bfd76bebd2675d98a7e0ba352"
+    },
+    "gym_special_hours": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "gym_staff_assignments": {
+      "rows": 5,
+      "sha256": "d6bed4a3d54cbbb84a829cfe2b6cc5454fcb4bbf6d9d340eca66a190a4f0552f"
+    },
+    "gym_status_history": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "gyms": {
+      "rows": 39,
+      "sha256": "2da0701a97c03da49c23b0e88124b1db13607fb3d8df8da0bb825a376ab2bc8d"
+    },
+    "membership_daily_accesses": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "membership_pauses": {
+      "rows": 1,
+      "sha256": "7f690ab0a3594d4d708ddee3ab74bef2be4188eb5529827cb3569a2198774d79"
+    },
+    "membership_transfers": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "notification_deliveries": {
+      "rows": 7,
+      "sha256": "e88ac7d86b778ef1b57d966915fd5e84c35847631769eb685cdff58e0f612c71"
+    },
+    "notification_events": {
+      "rows": 7,
+      "sha256": "31617ed52568aff3a76e94707f40787b6cc4bddd4a4b3f81ed28b9cecd23fb34"
+    },
+    "notification_preferences": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "operation_audits": {
+      "rows": 9,
+      "sha256": "975d4cb30a13ca025fb9a1f74ad0b50a2a44dab6e52173040ec342b07257c258"
+    },
+    "password_reset_tokens": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "payment_attempts": {
+      "rows": 19,
+      "sha256": "058183458428f08fbf7f08cdaeae3952e8cf6e8e24c56cad316b21f7c4bce4fb"
+    },
+    "payment_checkouts": {
+      "rows": 18,
+      "sha256": "1768c985ad7fe9d04b57f8382c02183e5cc564b2adf9c51c95addedf4f9d69a1"
+    },
+    "payment_webhook_receipts": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "payments": {
+      "rows": 14,
+      "sha256": "2fea2a5485c1d58329d1b6a383b8c5601db99e15c4cfb3e8e984b86be6c29c2b"
+    },
+    "photo_deletions": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "platform_membership_audit": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "platform_membership_offers": {
+      "rows": 3,
+      "sha256": "6cc72705cb81a0311e25e7a274db383161f283190d38bff89fa91cdd96025d36"
+    },
+    "platform_membership_orders": {
+      "rows": 2,
+      "sha256": "4f12e0d48044dc6499fceffbff9a549940b07566cae301d6c3f116ff179d70f9"
+    },
+    "platform_membership_plans": {
+      "rows": 4,
+      "sha256": "872272b263da00cc5b52a3f077b85311a1366943c37f0718318e33f66711e03c"
+    },
+    "refresh_tokens": {
+      "rows": 40,
+      "sha256": "60e9d6e01873637e619c234735280a48ed4d57dffca684e6e81250e03604b263"
+    },
+    "roles": {
+      "rows": 5,
+      "sha256": "f2da6384ec12f2e03fae27b75b3ca67fc786a3c14eefaef27d5da2e8d9c4592e"
+    },
+    "slot_availability": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "staff_invitations": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "support_messages": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "support_tickets": {
+      "rows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "user_memberships": {
+      "rows": 3,
+      "sha256": "1cc1e64049b7fd7ffa2d064a998d5629fed42c6acb3776eedd44fb9399d65336"
+    },
+    "user_roles": {
+      "rows": 6,
+      "sha256": "45cc2867b102041f14e1a51c2764b2667c17f41637f5837202b909a40fd0b5db"
+    },
+    "users": {
+      "rows": 6,
+      "sha256": "da944f87ad99d1c1ea465018ed3a092a8091c5553946775134d494a3df22927c"
+    },
+    "wallet_accounts": {
+      "rows": 4,
+      "sha256": "d0e631af1355494703e6c797cbb80e18aa78f5db377a7966c6062669c3341be1"
+    },
+    "wallet_transactions": {
+      "rows": 10,
+      "sha256": "83e550aa0cbf977d2a1675476828a6f7f0a0564e6d462857953bff635a8fef66"
+    }
+  },
+  "gyms_by_status": [
+    {
+      "status": "APPROVED",
+      "count": 37
+    },
+    {
+      "status": "DRAFT",
+      "count": 2
+    }
+  ],
+  "gym_owners": 1,
+  "gyms_missing_owner": 0,
+  "gyms_inactive_owner": 0,
+  "purchases": [
+    {
+      "mode": "test",
+      "kind": "CART",
+      "status": "PAID",
+      "count": 13
+    },
+    {
+      "mode": "test",
+      "kind": "CART",
+      "status": "SUPERSEDED",
+      "count": 1
+    },
+    {
+      "mode": "test",
+      "kind": "MULTI_GYM",
+      "status": "PAID",
+      "count": 2
+    },
+    {
+      "mode": "test",
+      "kind": "SINGLE_GYM",
+      "status": "PAID",
+      "count": 1
+    },
+    {
+      "mode": "test",
+      "kind": "WALLET_TOPUP",
+      "status": "PAID",
+      "count": 1
+    }
+  ],
+  "booking_status": [
+    {
+      "status": "CANCELLED",
+      "attendance_status": null,
+      "count": 7
+    },
+    {
+      "status": "CONFIRMED",
+      "attendance_status": null,
+      "count": 6
+    },
+    {
+      "status": "CONFIRMED",
+      "attendance_status": "ATTENDED",
+      "count": 1
+    }
+  ],
+  "admissions": [
+    {
+      "status": "SUCCESS",
+      "access_source": "BOOKING_ACCESS",
+      "count": 1
+    },
+    {
+      "status": "SUCCESS",
+      "access_source": "MEMBERSHIP_ACCESS",
+      "count": 1
+    }
+  ],
+  "memberships": [
+    {
+      "membership_type": "MULTI_GYM",
+      "status": "ACTIVE",
+      "payment_status": "PAID",
+      "count": 2
+    },
+    {
+      "membership_type": "SINGLE_GYM",
+      "status": "ACTIVE",
+      "payment_status": "PAID",
+      "count": 1
+    }
+  ],
+  "configurations": {
+    "test": {
+      "gyms_without_any_version": 39,
+      "gyms_without_effective_own_version": 39
+    },
+    "live": {
+      "gyms_without_any_version": 39,
+      "gyms_without_effective_own_version": 39
+    }
+  },
+  "configuration_conflicts": {
+    "duplicate_starts": 0,
+    "invalid_intervals": 0,
+    "version_time_order_conflicts": 0
+  },
+  "funding": {
+    "purchases_without_funding": 8,
+    "cart_bookings_without_line_funding": 7,
+    "component_mismatches": 0,
+    "booking_without_checkout": 0,
+    "membership_without_checkout": 0
+  },
+  "evidence": {
+    "schema_available": false,
+    "purchases_without_purchase_evidence": null,
+    "purchase_tax_unknown": null,
+    "reason": "SCHEMA_ABSENT_ALL_EXISTING_PURCHASES_LACK_IMMUTABLE_SOURCE_TAX_EVIDENCE"
+  },
+  "admission_readiness": {
+    "successful_missing_qr_window": 1,
+    "duplicate_success_daily_access": 0,
+    "multi_memberships_visiting_multiple_gyms": 0,
+    "multi_memberships_visiting_multiple_ist_months": 0,
+    "membership_terms_spanning_months": 3
+  },
+  "cancelled_paid_without_credit_record": 1,
+  "financial_tables": {
+    "financial_agreement_versions": 0,
+    "financial_agreement_pins": null,
+    "financial_source_evidence": null,
+    "marketplace_allocations": null,
+    "gym_visit_payouts": null,
+    "gym_monthly_calculations": null,
+    "membership_visit_fees": null,
+    "owner_payouts": null,
+    "financial_review_events": null
+  },
+  "monitoring": {
+    "outbox_by_mode_status": null,
+    "expired_processing_leases": null,
+    "oldest_pending_created_at": null,
+    "payouts_by_mode_status": null,
+    "alert_delivery_configured_by_this_tool": false
+  },
+  "historical_policy": "PRESERVE_AND_QUARANTINE; no invented tax/fees/owner timestamps, backfill, allocations or balance repair."
+}

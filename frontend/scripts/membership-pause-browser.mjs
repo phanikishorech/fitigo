@@ -35,6 +35,9 @@ async function checkPauseCard(){
 }
 function fixture(request){
  const path=new URL(request.url).pathname
+ if(path.endsWith('/notifications/inbox'))return {items:[],total:0,unread_count:0}
+ if(path.endsWith('/cart/summary'))return {count:0,total:'0.00',currency:'INR'}
+ if(path.endsWith('/admin/memberships/transfers'))return {items:[],total:0}
  if(path==='/api/v1/auth/session')return {user,roles:[role]}
  if(path==='/api/v1/users/me')return user
  if(path==='/api/v1/users/me/roles')return [role]

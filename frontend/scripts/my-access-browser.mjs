@@ -24,6 +24,8 @@ async function width(w) { await command('Emulation.setDeviceMetricsOverride', { 
 async function shot(name) { const image = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true }); await writeFile(join(tmpdir(), name), Buffer.from(image.data, 'base64')) }
 async function personalOnly() { assert.equal(await evaluate(`/Book for Others|Add to Cart|Guest Booking|Friend|Family|Paid Visit Booking/i.test(document.querySelector('main').innerText)`), false) }
 function fixture(path) {
+  if (path.endsWith('/notifications/inbox')) return { items: [], total: 0, unread_count: 0 }
+  if (path.endsWith('/cart/summary')) return { count: 0, total: '0.00', currency: 'INR' }
   if (path === '/api/v1/auth/session') return { user, roles: ['CUSTOMER'] }
   if (path === '/api/v1/users/me') return user
   if (path === '/api/v1/customer/access-calendar') {

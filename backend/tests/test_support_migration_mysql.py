@@ -1,5 +1,6 @@
 import pytest
 from alembic import command
+from alembic.script import ScriptDirectory
 from sqlalchemy import text, inspect
 from test_phase4_migrations_mysql import schema
 
@@ -9,7 +10,7 @@ def test_support_migration_roundtrip_preserves_users_and_refuses_history_loss(sc
     command.upgrade(config, 'ef192bd45713')
     with engine.begin() as c:
         c.execute(text("INSERT INTO users(id,email,password_hash,status,is_email_verified,is_phone_verified,token_version,created_at,updated_at) VALUES(1,'fixture@example.com','unchanged','ACTIVE',0,0,0,NOW(),NOW())"))
-    command.upgrade(config, 'head'); command.downgrade(config, 'ef192bd45713'); command.upgrade(config, 'head')
+    command.upgrade(config, 'f02a3ce56824'); command.downgrade(config, 'ef192bd45713'); command.upgrade(config, 'f02a3ce56824')
     with engine.begin() as c:
         assert c.scalar(text('SELECT password_hash FROM users')) == 'unchanged'
         c.execute(text("INSERT INTO support_tickets(id,user_id,request_key,category,subject,status,version,created_at,updated_at) VALUES(1,1,'fixture-key','OTHER','Fixture','OPEN',1,NOW(),NOW())"))
@@ -35,5 +36,5 @@ def test_support_ddl_resume_before_revision_advance(schema):
         module.upgrade(); module.upgrade()
     command.upgrade(config, 'head')
     with engine.connect() as connection:
-        assert connection.scalar(text('SELECT version_num FROM alembic_version')) == 'f02a3ce56824'
+        assert connection.scalar(text('SELECT version_num FROM alembic_version')) == ScriptDirectory.from_config(config).get_current_head()
         assert len(inspect(connection).get_unique_constraints('support_messages')) == 1

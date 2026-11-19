@@ -3,13 +3,14 @@ import { useMutation, useResource } from '../../hooks/useResource'
 import { request } from '../../services/client'
 import { istDateTime } from '../../utils/membership'
 import { Alert, Button, ErrorState, Skeleton } from './UI'
+import { notifyActivity } from '../../services/customerActivity'
 
 type Preferences = { enabled: boolean; operational_email: boolean; email_available: boolean; message: string }
 type Item = { id: number; title: string; body: string; category: string; created_at: string; read_at: string | null; email_status: string; error_code: string | null }
 type Inbox = { enabled: boolean; items: Item[]; total: number; unread_count: number }
-export default function NotificationCenter({ inbox = true }: { inbox?: boolean }) {
+export default function NotificationCenter({ inbox = true, preferences = true }: { inbox?: boolean; preferences?: boolean }) {
   const [legacy, setLegacy] = useState(false)
-  return <section className="fg-panel fg-stack"><h2>Notifications</h2><PreferencesForm />{inbox && <><InboxList /><Button variant="secondary" onClick={() => setLegacy(value => !value)}>{legacy ? 'Hide' : 'View'} recorded event history</Button>{legacy && <LegacyHistory />}</>}</section>
+  return <section className="fg-panel fg-stack"><h2>{inbox ? 'Notifications' : 'Notification preferences'}</h2>{preferences && <PreferencesForm />}{inbox && <><InboxList /><Button variant="secondary" onClick={() => setLegacy(value => !value)}>{legacy ? 'Hide' : 'View'} recorded event history</Button>{legacy && <LegacyHistory />}</>}</section>
 }
 function LegacyHistory() {
   const [page,setPage]=useState(0)
@@ -36,7 +37,7 @@ function InboxList() {
     {resource.loading ? <Skeleton cards={1} /> : resource.error ? <ErrorState message={resource.error} retry={resource.retry} /> : resource.data?.enabled ? <>
       <p>{resource.data.unread_count} unread. Read status is separate from email status. Accepted means accepted by the email provider, not delivered to an inbox.</p>
       {!resource.data.items.length && <p>No notifications on this page.</p>}
-      {resource.data.items.map(item => <article className="fg-panel fg-stack" key={item.id}><h3>{item.title}</h3><p>{item.body}</p><small>{istDateTime(item.created_at)} · {item.category}</small><p>{item.read_at ? 'Read' : 'Unread'} · Email: {item.email_status.replaceAll('_', ' ')}</p>{item.error_code && <p>{item.error_code.replaceAll('_', ' ')}. Uncertain sends are not automatically resent.</p>}{!item.read_at && <Button variant="secondary" loading={mutation.pending} onClick={() => void mutation.run(async () => { await request(`/notifications/inbox/${item.id}/read`, { method: 'POST' }); resource.retry() })}>Mark read</Button>}</article>)}
+      {resource.data.items.map(item => <article className="fg-panel fg-stack" key={item.id}><h3>{item.title}</h3><p>{item.body}</p><small>{istDateTime(item.created_at)} · {item.category}</small><p>{item.read_at ? 'Read' : 'Unread'} · Email: {item.email_status.replaceAll('_', ' ')}</p>{item.error_code && <p>{item.error_code.replaceAll('_', ' ')}. Uncertain sends are not automatically resent.</p>}{!item.read_at && <Button variant="secondary" loading={mutation.pending} onClick={() => void mutation.run(async () => { await request(`/notifications/inbox/${item.id}/read`, { method: 'POST' }); notifyActivity('notifications'); resource.retry() })}>Mark read</Button>}</article>)}
       <div className="fg-actions"><Button variant="secondary" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Previous</Button><span>Page {page + 1}</span><Button variant="secondary" disabled={(page + 1) * 20 >= resource.data.total} onClick={() => setPage(p => p + 1)}>Next</Button></div>
     </> : <p>Inbox is disabled until the notification migration is deployed.</p>}{mutation.error && <Alert>{mutation.error}</Alert>}
   </div>

@@ -1,0 +1,1 @@
+PASS: Home bell/unread badge, mark read, settings preferences only, cart badge add/remove, prefilled edit/save/cancel/error, no duplicate purchase, checkout protection, anonymous privacy, 360–1440px header layouts.

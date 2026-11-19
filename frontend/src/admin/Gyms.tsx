@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import GymMembershipParticipation from './GymMembershipParticipation'
 import GymSubmission from './GymSubmission'
+import GymBusinessActions from './GymBusinessActions'
 import { adminApproveGym, adminRejectGym, fetchAdminGyms, fetchAdminUser, type AdminGymListItem } from '../screens/Admin/api'
 import { dateLabel } from '../services/client'
 import { gymService } from './services'
@@ -9,7 +10,7 @@ import { Alert, Button, ConfirmationModal, DataCard, DataTable, Details, FilterP
 
 const statuses = [{ value: '', label: 'All gyms' }, { value: 'PENDING_APPROVAL', label: 'Pending approval' }, { value: 'APPROVED', label: 'Approved' }, { value: 'REJECTED', label: 'Rejected' }, { value: 'DRAFT', label: 'Draft' }, { value: 'SUSPENDED', label: 'Suspended' }]
 export function GymCard({ gym }: { gym: AdminGymListItem }) { return <><div className="ad-record-top"><Identity name={gym.name} caption={gym.city || 'Location not provided'} icon="gym" /><StatusBadge status={gym.status} /></div><p>Owner #{gym.owner_user_id}</p><small>Created {dateLabel(gym.created_at)}</small><Link className="fg-button fg-button--secondary" to={`/admin/gyms/${gym.id}`}>View gym</Link></> }
-export default function Gyms({ id, review }: { id?: number; review?: boolean }) { return id ? <><GymDetails id={id} review={review} /><GymMembershipParticipation id={id} /></> : <GymList /> }
+export default function Gyms({ id, review }: { id?: number; review?: boolean }) { const [revision, setRevision] = useState(0); return id ? <div key={`${id}:${revision}`}><GymBusinessActions id={id} onChanged={() => setRevision(value => value + 1)} /><GymDetails id={id} review={review} /><GymMembershipParticipation id={id} /></div> : <GymList /> }
 function GymList() {
   const list = useListQuery(); const status = list.query.get('status') || ''; const owner = list.query.get('owner_user_id') || ''
   const resource = useAdminResource(() => fetchAdminGyms({ q: list.query.get('q') || undefined, status: status || undefined, owner_user_id: owner ? Number(owner) : undefined, limit: 21, offset: list.offset }), `gyms:${list.query}`)

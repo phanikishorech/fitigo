@@ -1,0 +1,46 @@
+{
+  "PAYMENT_INFRA_GATEWAY_TESTS.json": {
+    "counts_by_file": {
+      "tests.test_cashfree_payments": 31,
+      "tests.test_razorpay_payments": 28,
+      "tests.test_razorpay_mysql": 6,
+      "tests.test_razorpay_cart_replacement": 10,
+      "tests.test_gateway_payment_recovery": 5,
+      "tests.test_payment_configuration": 15,
+      "tests.test_security_payment_boundaries": 3,
+      "tests.test_split_payment": 46,
+      "tests.test_split_payment_mysql": 2
+    },
+    "failures": 0,
+    "errors": 0,
+    "skips": 0,
+    "summary": {
+      "pytest_exit": 0,
+      "elapsed_seconds": 478.39099999994505,
+      "run_id": "13f8614194da1c0b",
+      "database": "fitigo_test_13f8614194da1c0b_main",
+      "mysql_version": "26.7.0"
+    }
+  },
+  "PAYMENT_INFRA_ACCESS_RESTORE_TESTS.json": {
+    "counts_by_file": {
+      "tests.test_booking_access_mysql": 2,
+      "tests.test_booking_access_qr": 17,
+      "tests.test_access_service_regressions": 14,
+      "tests.test_membership_daily_access_qr": 1,
+      "tests.test_customer_access_qr_system": 5,
+      "tests.test_increment4_operations": 11,
+      "tests.test_increment4_migrations": 3
+    },
+    "failures": 0,
+    "errors": 0,
+    "skips": 0,
+    "summary": {
+      "pytest_exit": 0,
+      "elapsed_seconds": 109.20299999997951,
+      "run_id": "3e77076f99fc1269",
+      "database": "fitigo_test_3e77076f99fc1269_main",
+      "mysql_version": "26.7.0"
+    }
+  }
+}

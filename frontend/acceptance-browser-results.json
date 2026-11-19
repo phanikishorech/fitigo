@@ -1,0 +1,122 @@
+[
+  {
+    "suite": "auth-account",
+    "exit": 1,
+    "seconds": 18.3,
+    "log": "C:\\Users\\ckishor\\.cline\\data\\workspaces\\chat\\fitigo\\frontend\\acceptance-browser-auth-account.txt"
+  },
+  {
+    "suite": "role-session",
+    "exit": 1,
+    "seconds": 23.8,
+    "log": "C:\\Users\\ckishor\\.cline\\data\\workspaces\\chat\\fitigo\\frontend\\acceptance-browser-role-session.txt"
+  },
+  {
+    "suite": "discovery-alignment",
+    "exit": 0,
+    "seconds": 0.8,
+    "log": "C:\\Users\\ckishor\\.cline\\data\\workspaces\\chat\\fitigo\\frontend\\acceptance-browser-discovery-alignment.txt"
+  },
+  {
+    "suite": "booking-qr",
+    "exit": 1,
+    "seconds": 23.6,
+    "log": "C:\\Users\\ckishor\\.cline\\data\\workspaces\\chat\\fitigo\\frontend\\acceptance-browser-booking-qr.txt"
+  },
+  {
+    "suite": "booking-time",
+    "exit": 1,
+    "seconds": 1.8,
+    "log": "C:\\Users\\ckishor\\.cline\\data\\workspaces\\chat\\fitigo\\frontend\\acceptance-browser-booking-time.txt"
+  },
+  {
+    "suite": "split-payment",
+    "exit": 0,
+    "seconds": 5.7,
+    "log": "C:\\Users\\ckishor\\.cline\\data\\workspaces\\chat\\fitigo\\frontend\\acceptance-browser-split-payment.txt"
+  },
+  {
+    "suite": "razorpay",
+    "exit": 0,
+    "seconds": 2.9,
+    "log": "C:\\Users\\ckishor\\.cline\\data\\workspaces\\chat\\fitigo\\frontend\\acceptance-browser-razorpay.txt"
+  },
+  {
+    "suite": "checkout-recovery",
+    "exit": 0,
+    "seconds": 3.8,
+    "log": "C:\\Users\\ckishor\\.cline\\data\\workspaces\\chat\\fitigo\\frontend\\acceptance-browser-checkout-recovery.txt"
+  },
+  {
+    "suite": "membership-pause",
+    "exit": 1,
+    "seconds": 8.3,
+    "log": "C:\\Users\\ckishor\\.cline\\data\\workspaces\\chat\\fitigo\\frontend\\acceptance-browser-membership-pause.txt"
+  },
+  {
+    "suite": "my-access",
+    "exit": 1,
+    "seconds": 24.3,
+    "log": "C:\\Users\\ckishor\\.cline\\data\\workspaces\\chat\\fitigo\\frontend\\acceptance-browser-my-access.txt"
+  },
+  {
+    "suite": "customer-policy",
+    "exit": 0,
+    "seconds": 3.9,
+    "log": "C:\\Users\\ckishor\\.cline\\data\\workspaces\\chat\\fitigo\\frontend\\acceptance-browser-customer-policy.txt"
+  },
+  {
+    "suite": "owner-dashboard",
+    "exit": 0,
+    "seconds": 3.3,
+    "log": "C:\\Users\\ckishor\\.cline\\data\\workspaces\\chat\\fitigo\\frontend\\acceptance-browser-owner-dashboard.txt"
+  },
+  {
+    "suite": "owner-analytics",
+    "exit": 0,
+    "seconds": 3.9,
+    "log": "C:\\Users\\ckishor\\.cline\\data\\workspaces\\chat\\fitigo\\frontend\\acceptance-browser-owner-analytics.txt"
+  },
+  {
+    "suite": "owner-staff",
+    "exit": 0,
+    "seconds": 2.4,
+    "log": "C:\\Users\\ckishor\\.cline\\data\\workspaces\\chat\\fitigo\\frontend\\acceptance-browser-owner-staff.txt"
+  },
+  {
+    "suite": "owner-scanner",
+    "exit": 0,
+    "seconds": 79.5,
+    "log": "C:\\Users\\ckishor\\.cline\\data\\workspaces\\chat\\fitigo\\frontend\\acceptance-browser-owner-scanner.txt"
+  },
+  {
+    "suite": "admin-cleanup",
+    "exit": 0,
+    "seconds": 3.3,
+    "log": "C:\\Users\\ckishor\\.cline\\data\\workspaces\\chat\\fitigo\\frontend\\acceptance-browser-admin-cleanup.txt"
+  },
+  {
+    "suite": "financial-settings",
+    "exit": 0,
+    "seconds": 3.0,
+    "log": "C:\\Users\\ckishor\\.cline\\data\\workspaces\\chat\\fitigo\\frontend\\acceptance-browser-financial-settings.txt"
+  },
+  {
+    "suite": "dashboard-ranges",
+    "exit": 1,
+    "seconds": 8.6,
+    "log": "C:\\Users\\ckishor\\.cline\\data\\workspaces\\chat\\fitigo\\frontend\\acceptance-browser-dashboard-ranges.txt"
+  },
+  {
+    "suite": "customer-activity",
+    "exit": 0,
+    "seconds": 3.8,
+    "log": "C:\\Users\\ckishor\\.cline\\data\\workspaces\\chat\\fitigo\\frontend\\acceptance-browser-customer-activity.txt"
+  },
+  {
+    "suite": "payment-history",
+    "exit": 1,
+    "seconds": 5.3,
+    "log": "C:\\Users\\ckishor\\.cline\\data\\workspaces\\chat\\fitigo\\frontend\\acceptance-browser-payment-history.txt"
+  }
+]

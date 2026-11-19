@@ -1,0 +1,1 @@
+﻿PASS Financial Settings defaults/edit/review/retry/history/gym and environment isolation/missing-schema guard; 360/768/1440 layouts. All API writes mocked.

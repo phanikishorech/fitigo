@@ -11,12 +11,15 @@ const wait = ms => new Promise(resolve => setTimeout(resolve, ms))
 function command(method, params = {}) { return new Promise((resolve, reject) => { const id = ++sequence, timer = setTimeout(() => reject(Error(method)), 15000); pending.set(id, { resolve, reject, timer }); ws.send(JSON.stringify({ id, method, params })) }) }
 async function evaluate(expression) { const result = await command('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }); if (result.exceptionDetails) throw Error(result.exceptionDetails.text); return result.result.value }
 async function until(expression) { for (let i = 0; i < 100; i++) { if (await evaluate(expression)) return; await wait(70) } throw Error(`${expression}; ${await evaluate('document.body.innerText')}; ${errors}`) }
-async function click(text) { await evaluate(`Array.from(document.querySelectorAll('main button')).find(el=>el.textContent.trim()===${JSON.stringify(text)}).click()`); await wait(100) }
+async function click(text) { await until(`Array.from(document.querySelectorAll('main button')).some(el=>el.textContent.trim()===${JSON.stringify(text)} && !el.disabled)`); await evaluate(`Array.from(document.querySelectorAll('main button')).find(el=>el.textContent.trim()===${JSON.stringify(text)}).click()`); await wait(100) }
 const user = { id: 1, first_name: 'Payment', last_name: 'Tester', email: 'payment@example.test' }
 function fixture(path, method, body) {
   if (path.endsWith('/auth/session')) return { user, roles: ['CUSTOMER'] }
   if (path.endsWith('/users/me')) return user
+  if (path.endsWith('/notifications/inbox')) return { items: [], total: 0, unread_count: 0 }
+  if (path.endsWith('/cart/summary')) return { count: 0, total: '0.00', currency: 'INR' }
   if (path.endsWith('/payments/config')) return { enabled: true, gateway_required: true, mode: 'test', provider }
+  if (path.endsWith('/payments/quote')) return { total_amount: '500.00', wallet_amount: '0.00', gateway_amount: '500.00', wallet_balance: '0.00', available_wallet_balance: '0.00', reserved_balance: '0.00', wallet_unavailable_reason: 'No available wallet balance.', currency: 'INR', provider, mode: 'test' }
   if (path.endsWith('/cart/items')) return []
   if (path.endsWith('/payments/checkouts') && method === 'GET') return record ? [record] : []
   if (path.endsWith('/payments/checkouts') && method === 'POST') {

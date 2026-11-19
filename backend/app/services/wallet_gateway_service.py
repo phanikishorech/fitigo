@@ -35,18 +35,25 @@ def credit_wallet(db, checkout):
 def refund_wallet(db, checkout, refunded_minor):
     credit = db.scalar(select(WalletTransaction).where(WalletTransaction.checkout_id == checkout.id))
     if not credit:
-        return  # Refund before fulfillment: no balance was granted.
+        return True  # Refund before fulfillment: no balance was granted.
     previous = int(checkout.snapshot.get('wallet_refunded_minor', 0))
     if refunded_minor <= previous:
-        return
+        return True
     if refunded_minor > int(checkout.amount * 100):
         raise HTTPException(409, 'Refund exceeds wallet recharge amount')
     account = account_for_checkout(db, checkout)
     delta = Decimal(refunded_minor - previous) / 100
-    # A spent top-up can be refunded at the gateway. Preserve the debt, not free
-    # credits: existing balance checks prevent spending a negative balance.
+    from app.services.checkout_funding import wallet_state
+    _, funds = wallet_state(db, checkout.user_id, checkout.mode, lock=True)
+    if Decimal(account.balance) - Decimal(funds['reserved_balance']) < delta:
+        # Keep actual external refund evidence without overdrawing this balance or
+        # consuming another checkout's held funds. Spending is blocked until resolved.
+        checkout.snapshot = {**checkout.snapshot, 'wallet_refund_pending_minor': refunded_minor}
+        checkout.status, checkout.failure_code = 'REVIEW_REQUIRED', 'WALLET_REFUND_RECONCILIATION'
+        return False
     account.balance = Decimal(account.balance) - delta
     db.add(WalletTransaction(account_id=account.id, user_id=checkout.user_id, direction='OUT', txn_type='REFUND_REVERSAL',
         amount=delta, currency=checkout.currency, reference=f'refund:{checkout.id}:{refunded_minor}',
         description='Gateway recharge refund reversal'))
-    checkout.snapshot = {**checkout.snapshot, 'wallet_refunded_minor': refunded_minor}
+    checkout.snapshot = {**checkout.snapshot, 'wallet_refunded_minor': refunded_minor, 'wallet_refund_pending_minor': 0}
+    return True

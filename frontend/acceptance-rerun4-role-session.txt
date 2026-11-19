@@ -1,0 +1,46 @@
+﻿PASS all six backend roles: login response routing, existing homes, login aliases, cross-role guards and refresh
+PASS wrong-portal login uses actual role; incorrect credentials remain inline; anonymous protected routes go to /login
+PASS network/server/expired/forbidden/invalid-role/loading states, retries and cross-tab logout
+PASS all active logout UIs clear credentials and redirect /login even if server revocation fails
+PASS customer membership/booking, owner report, staff settings, admin settings restore exact query/hash after login reload
+PASS public gym continuation, BOOK_VISIT resumes once, refresh cannot replay, no-membership resumes normal booking
+PASS generic ADD_TO_CART handler reuses existing validated draft and service exactly once, no pricing/payment data persisted
+node : node:internal/modules/run_main:107
+At line:1 char:78
++ ... \fitigo\frontend'; node scripts/role-session-browser.mjs 2>&1 | Out-F 
+...
++                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (node:internal/modules/run_main 
+   :107:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+
++ [
++   'Unexpected API /api/v1/gym-owner/analytics/transactions',
++   'Unexpected API /api/v1/gym-owner/analytics',
++   'Unexpected API /api/v1/gym-owner/analytics/transactions',
++   'Unexpected API /api/v1/gym-owner/analytics'
++ ]
+- []
+
+    at file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/Fitigo/fronten
+d/scripts/role-session-browser.mjs:211:9 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: [
+    'Unexpected API /api/v1/gym-owner/analytics/transactions',
+    'Unexpected API /api/v1/gym-owner/analytics',
+    'Unexpected API /api/v1/gym-owner/analytics/transactions',
+    'Unexpected API /api/v1/gym-owner/analytics'
+  ],
+  expected: [],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.16.0

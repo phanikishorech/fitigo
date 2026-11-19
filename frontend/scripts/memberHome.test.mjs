@@ -57,3 +57,10 @@ test('nonmember banner opens real plan catalog without prices or automatic purch
   assert.match(card, /canOfferHomeMembership\(summary, memberships\)/)
   assert.doesNotMatch(card, /createOrder|payWallet|paymentService.create|₹/)
 })
+test('known membership ownership avoids an initial duplicate fetch but changes still refresh', () => {
+  const source = read('../src/components/membership/TodayMembershipAccess.tsx')
+  assert.match(source, /useRef\(ownership\)/)
+  assert.match(source, /ownership !== previousOwnership.current\) refresh\(\)/)
+  assert.match(source, /previousOwnership.current = ownership/)
+  assert.match(source, /visibilitychange/)
+})

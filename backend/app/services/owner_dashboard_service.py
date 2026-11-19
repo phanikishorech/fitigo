@@ -67,7 +67,7 @@ class OwnerDashboardService:
         fallback: reconciliation can update it repeatedly. No refund amount is
         stored, so partially refunded purchases are excluded and disclosed.
         """
-        sales = sales_query(scope, first, last).c
+        sales = sales_query(scope, first, last, self.db).c
         row = self.db.execute(select(
             func.coalesce(func.sum(case((sales.category == 'single_gym_membership', sales.recognized_amount), else_=0)), 0).label('single'),
             func.coalesce(func.sum(case((sales.category == 'individual_booking', sales.recognized_amount), else_=0)), 0).label('individual'),

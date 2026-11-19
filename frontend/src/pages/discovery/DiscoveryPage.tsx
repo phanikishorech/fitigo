@@ -1,13 +1,15 @@
-import { useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { useResource } from '../../hooks/useResource'
 import { gymService } from '../../services/gymService'
-import { getStoredLocation } from '../../screens/NearbyGyms/LocationStore'
+import { useLocation } from '../../maps/useLocation'
+import '../../maps/maps.css'
 import { useDebouncedValue } from '../../screens/NearbyGyms/useDebouncedValue'
 import GymCard from '../../components/gym/GymCard'
 import Icon from '../../components/common/Icon'
 import { Button, EmptyState, ErrorState, Heading, Link, Modal, Skeleton } from '../../components/common/UI'
 import { navigate } from '../../router'
 import HomeMembershipCard from '../../components/membership/HomeMembershipCard'
+const DiscoveryMap = lazy(() => import('../../maps/DiscoveryMap'))
 
 export default function DiscoveryPage({ home = false }: { home?: boolean }) {
   const [search, setSearch] = useState(() => new URLSearchParams(window.location.search).get('q') ?? '')
@@ -16,16 +18,19 @@ export default function DiscoveryPage({ home = false }: { home?: boolean }) {
   const [open, setOpen] = useState(false)
   const [rating, setRating] = useState('')
   const [openNow, setOpenNow] = useState(false)
-  const [radius, setRadius] = useState('')
+  const [radius, setRadius] = useState('10')
+  const [view, setView] = useState<'map' | 'list'>('map')
   const [facilities, setFacilities] = useState<number[]>([])
   const [page, setPage] = useState(1)
-  const location = getStoredLocation()
+  const geo = useLocation(home)
+  const location = geo.location
+  useEffect(() => setPage(1), [location])
   const query = useDebouncedValue(search, 300)
   const params = { search: query, gym_type: category, sort_by: sort, page, page_size: home ? 8 : 12, latitude: location?.latitude, longitude: location?.longitude, radius_km: radius ? Number(radius) : undefined, min_rating: rating ? Number(rating) : undefined, open_now: openNow || undefined, facilities }
   const result = useResource(() => gymService.discover(params), JSON.stringify(params))
   const types = useResource(gymService.types, 'gym-types')
   const amenities = useResource(gymService.facilities, 'facilities')
-  const reset = () => { setSearch(''); setCategory(''); setRating(''); setOpenNow(false); setRadius(''); setFacilities([]); setPage(1) }
+  const reset = () => { setSearch(''); setCategory(''); setRating(''); setOpenNow(false); setRadius('10'); setFacilities([]); setPage(1) }
   const count = Number(!!rating) + Number(openNow) + Number(!!radius) + facilities.length
   return <>
     {home && <HomeMembershipCard />}
@@ -35,9 +40,12 @@ export default function DiscoveryPage({ home = false }: { home?: boolean }) {
       {!home && <label className="fg-search"><Icon name="search" /><input placeholder="Search gyms or classes" aria-label="Search gyms or classes" value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} /></label>}
       <div className="fg-filter-toolbar"><div className="fg-category-scroll"><button className={`fg-chip ${!category ? 'is-active' : ''}`} onClick={() => { setCategory(''); setPage(1) }}><Icon name="gym" size={17} />All workouts</button>{(types.data ?? []).filter(t => t !== 'All Gym Types').slice(0, 7).map(type => <button className={`fg-chip ${category === type ? 'is-active' : ''}`} key={type} onClick={() => { setCategory(type); setPage(1) }}>{type}</button>)}</div><Button variant="secondary" onClick={() => setOpen(true)}><Icon name="filter" size={17} />Filters{count ? ` (${count})` : ''}</Button></div>
       <div className="fg-results-meta"><span>{query ? `Results for “${query}”` : 'A good workout starts with the right place.'}</span><label>Sort by <select aria-label="Sort gyms" value={sort} onChange={e => { setSort(e.target.value); setPage(1) }}><option value="recommended">Recommended</option><option value="rating">Top rated</option><option value="distance" disabled={!location}>Nearest first</option></select></label></div>
-      {result.loading ? <Skeleton cards={home ? 4 : 6} /> : result.error ? <ErrorState message={result.error} retry={result.retry} /> : !result.data?.gyms.length ? <EmptyState title="No gyms found" description="Try changing your location or filters." action={<Button variant="secondary" onClick={reset}>Clear filters</Button>} /> : <div className="fg-gym-grid">{result.data.gyms.map(gym => <GymCard gym={gym} key={gym.gym_id} />)}</div>}
-      {!home && result.data && <div className="fg-pagination"><Button variant="secondary" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Previous</Button><span>Page {page}</span><Button variant="secondary" disabled={!result.data.has_more} onClick={() => setPage(p => p + 1)}>Next</Button></div>}
+      <div className="fg-map-controls"><div className="fg-map-toolbar" role="group" aria-label="Gym display"><Button variant={view === 'map' ? 'primary' : 'secondary'} aria-pressed={view === 'map'} onClick={() => setView('map')}>Map View</Button><Button variant={view === 'list' ? 'primary' : 'secondary'} aria-pressed={view === 'list'} onClick={() => setView('list')}>List View</Button></div><label className="fg-field">Search radius<select aria-label="Search radius" disabled={!location} value={radius} onChange={event => { setRadius(event.target.value); setPage(1) }}>{[5, 10, 20, 50].map(value => <option key={value} value={value}>{value} km</option>)}</select></label><Link to="/location" className="fg-button fg-button--secondary">Change location</Link><Button variant="secondary" loading={geo.busy} onClick={() => void geo.useCurrent()}>Use current location</Button></div>
+      {geo.error && <p role="status">{geo.error}</p>}
+      {view === 'map' && !location && <p className="fg-map-status">Choose an area or use your current location to see nearby gyms on the map. You can still browse the list below.</p>}
+      {result.loading ? <Skeleton cards={home ? 4 : 6} /> : result.error ? <ErrorState message={result.error} retry={result.retry} /> : view === 'map' && location ? <Suspense fallback={<p role="status">Loading map…</p>}><DiscoveryMap gyms={result.data?.gyms ?? []} center={{ lat: location.latitude, lng: location.longitude }} user={geo.position} radius={Number(radius)} /></Suspense> : !result.data?.gyms.length ? <EmptyState title="No gyms found" description="Try changing your location or filters." action={<Button variant="secondary" onClick={reset}>Clear filters</Button>} /> : <div className="fg-gym-grid">{result.data.gyms.map(gym => <GymCard gym={gym} key={gym.gym_id} />)}</div>}
+      {result.data && (result.data.has_more || page > 1) && <div className="fg-pagination"><Button variant="secondary" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Previous</Button><span>Page {page}</span><Button variant="secondary" disabled={!result.data.has_more} onClick={() => setPage(p => p + 1)}>Next</Button></div>}
     </section>
-    {open && <Modal title="Make it your workout" onClose={() => setOpen(false)}><div className="fg-stack"><label className="fg-field">Distance<select disabled={!location} value={radius} onChange={e => { setRadius(e.target.value); setPage(1) }}><option value="">Any distance</option>{[2, 5, 10, 25].map(n => <option key={n} value={n}>Within {n} km</option>)}</select>{!location && <small>Choose a location to filter by distance.</small>}</label><label className="fg-field">Minimum rating<select value={rating} onChange={e => { setRating(e.target.value); setPage(1) }}><option value="">Any rating</option><option value="4">4 stars and up</option><option value="4.5">4.5 stars and up</option></select></label><label className="fg-checkbox"><input type="checkbox" checked={openNow} onChange={e => { setOpenNow(e.target.checked); setPage(1) }} />Open now</label><fieldset><legend>Facilities</legend>{amenities.error ? <ErrorState message={amenities.error} retry={amenities.retry} /> : amenities.loading ? <p>Loading facilities…</p> : <div className="fg-facility-options">{amenities.data?.map(f => <label key={f.id} className="fg-checkbox"><input type="checkbox" checked={facilities.includes(f.id)} onChange={e => { setFacilities(prev => e.target.checked ? [...prev, f.id] : prev.filter(id => id !== f.id)); setPage(1) }} />{f.name}</label>)}</div>}</fieldset><Button onClick={() => setOpen(false)}>Show gyms</Button><Button variant="text" onClick={reset}>Reset filters</Button></div></Modal>}
+    {open && <Modal title="Make it your workout" onClose={() => setOpen(false)}><div className="fg-stack"><label className="fg-field">Distance<select disabled={!location} value={radius} onChange={e => { setRadius(e.target.value); setPage(1) }}>{[5, 10, 20, 50].map(n => <option key={n} value={n}>Within {n} km</option>)}</select>{!location && <small>Choose a location to filter by distance.</small>}</label><label className="fg-field">Minimum rating<select value={rating} onChange={e => { setRating(e.target.value); setPage(1) }}><option value="">Any rating</option><option value="4">4 stars and up</option><option value="4.5">4.5 stars and up</option></select></label><label className="fg-checkbox"><input type="checkbox" checked={openNow} onChange={e => { setOpenNow(e.target.checked); setPage(1) }} />Open now</label><fieldset><legend>Facilities</legend>{amenities.error ? <ErrorState message={amenities.error} retry={amenities.retry} /> : amenities.loading ? <p>Loading facilities…</p> : <div className="fg-facility-options">{amenities.data?.map(f => <label key={f.id} className="fg-checkbox"><input type="checkbox" checked={facilities.includes(f.id)} onChange={e => { setFacilities(prev => e.target.checked ? [...prev, f.id] : prev.filter(id => id !== f.id)); setPage(1) }} />{f.name}</label>)}</div>}</fieldset><Button onClick={() => setOpen(false)}>Show gyms</Button><Button variant="text" onClick={reset}>Reset filters</Button></div></Modal>}
   </>
 }

@@ -8,8 +8,9 @@ export function dateRangeLabel(range: DateRange) {
   return `${dateLabel(range.date_from)}${range.date_from === range.date_to ? '' : ` – ${dateLabel(range.date_to)}`} · IST`
 }
 
-export default function DateRangePicker({ value, onChange }: { value: DateRange; onChange: (range: DateRange) => void }) {
-  const [preset, setPreset] = useState<DatePreset>(() => datePresets.find(option => {
+export default function DateRangePicker({ value, onChange, presets }: { value: DateRange; onChange: (range: DateRange) => void; presets?: 'business' }) {
+  const options = presets === 'business' ? datePresets.map(item => item.value === 'week' ? { value: 'last7' as DatePreset, label: 'Last 7 days' } : item) : datePresets
+  const [preset, setPreset] = useState<DatePreset>(() => options.find(option => {
     if (option.value === 'custom') return false
     const candidate = presetRange(option.value, localDate())
     return candidate.date_from === value.date_from && candidate.date_to === value.date_to
@@ -18,7 +19,7 @@ export default function DateRangePicker({ value, onChange }: { value: DateRange;
   const id = useId()
   const error = rangeError(draft)
   return <section className="fg-date-range" aria-label="Dashboard date range">
-    <div className="fg-date-presets" role="group" aria-label="Date range presets">{datePresets.map(option => <button
+    <div className="fg-date-presets" role="group" aria-label="Date range presets">{options.map(option => <button
       key={option.value} type="button" aria-pressed={preset === option.value}
       onClick={() => {
         setPreset(option.value)

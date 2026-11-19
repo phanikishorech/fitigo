@@ -21,8 +21,14 @@ class GymService:
         if "gym_price_per_person" in data and data["gym_price_per_person"] is not None:
             data["gym_price_per_person"] = Decimal(str(data["gym_price_per_person"]))
         gym = Gym(owner_user_id=owner_user_id, **data)
-        self.repo.create_gym(gym)
-        self.db.commit()
+        from app.services.gym_financial_settings import initialize_new_gym
+        try:
+            self.repo.create_gym(gym)
+            initialize_new_gym(self.db, gym, owner_user_id)
+            self.db.commit()
+        except Exception:
+            self.db.rollback()
+            raise
         self.db.refresh(gym)
         return gym
 
@@ -32,7 +38,7 @@ class GymService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gym not found")
 
         for k, v in data.items():
-            if v is not None:
+            if v is not None or k in {'latitude', 'longitude'}:
                 if k == "gym_price_per_person":
                     v = Decimal(str(v))
                 setattr(gym, k, v)

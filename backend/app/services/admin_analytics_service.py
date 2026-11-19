@@ -11,7 +11,7 @@ from app.core.time import ist_today, utcnow
 from app.models.booking import Booking, Payment
 from app.models.gym import Gym
 from app.models.payment_checkout import PaymentCheckout
-from app.services.admin_revenue import eligible_admin_payment, admin_revenue_scope
+from app.services.admin_revenue import gateway_booking_amount, eligible_admin_payment, admin_revenue_scope
 
 
 COUNTS = ('bookings', 'places', 'confirmed', 'pending', 'cancelled', 'expired',
@@ -61,7 +61,7 @@ class AdminAnalyticsService:
         # Single payment row per booking at this boundary; aggregate defensively
         # before joining so payment/check-in multiplicity cannot inflate bookings.
         payments = select(Payment.booking_id,
-            func.max(case((eligible_admin_payment(), Payment.amount), else_=0)).label('paid_amount'),
+            func.max(case((eligible_admin_payment(), gateway_booking_amount(self.db)), else_=0)).label('paid_amount'),
             func.max(case((eligible_admin_payment(), 1), else_=0)).label('paid'),
             func.max(case((Payment.status == 'FAILED', 1), else_=0)).label('failed'),
             func.max(case((Payment.status.in_(['REFUNDED', 'PARTIALLY_REFUNDED']), 1), else_=0)).label('refunded')

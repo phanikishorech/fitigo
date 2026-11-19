@@ -1,0 +1,14 @@
+.ag-form { display: grid; gap: 20px; margin: 16px 0; }
+.ag-form fieldset { border: 1px solid var(--fg-border); border-radius: 8px; padding: 16px; min-width: 0; display: grid; gap: 14px; }
+.ag-form legend { font-weight: 600; padding: 0 6px; }
+.ag-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
+.ag-share { display: grid; grid-template-columns: minmax(0, 1.5fr) repeat(2, minmax(0, 1fr)); align-items: center; gap: 12px; }
+.ag-share p { grid-column: 1 / -1; }
+.ag-form input[type=number], .ag-form input[type=datetime-local], .ag-form input, .ag-form select { width: 100%; min-width: 0; }
+.ag-check { display: flex; align-items: flex-start; gap: 10px; }
+.ag-form .ag-check input { width: 18px; min-height: 18px; flex-shrink: 0; margin-top: 3px; }
+.ag-version, .ag-proposal { border-top: 1px solid var(--fg-border); padding: 12px 0; }
+.ag-version summary, .ag-proposal summary { cursor: pointer; font-weight: 600; overflow-wrap: anywhere; }
+.ag-version p { overflow-wrap: anywhere; }
+.ag-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
+@media(max-width: 767px) { .ag-grid, .ag-share { grid-template-columns: minmax(0, 1fr); } }

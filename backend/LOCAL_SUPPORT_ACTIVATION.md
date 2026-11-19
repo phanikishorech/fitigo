@@ -19,12 +19,12 @@ payments or refunds were executed.
 - `SUPPORT_WORKFLOWS_ENABLED=true` was the only application configuration change.
   Operational audit/in-app notifications stay enabled; notification email stays off.
   No signing/provider credentials were changed or printed.
-- FitiGo backend restarted on 8001; frontend remains on 5173. Unrelated port-8000
+- FitiGo backend restarted on 8000; frontend remains on 5173. Unrelated port-8000
   application and existing MySQL service were not stopped.
 
 The owned FitiGo process-tree termination initially reported access denied for
 the top-level launcher after its children exited. Before proceeding, process
-enumeration confirmed all four owned PIDs absent and no port-8001 listener. No
+enumeration confirmed all four owned PIDs absent and no port-8000 listener. No
 other process was killed to work around that result.
 
 ## Backup and restore rehearsal

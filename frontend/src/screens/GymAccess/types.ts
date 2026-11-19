@@ -77,6 +77,9 @@ export type CartItemCreateClassRequest = {
 }
 
 export type CartItemResponse = {
+  visitor_names?: string[] | null
+  updated_at: string
+  can_edit: boolean
   id: number
   booking_type: string
   gym_id: number

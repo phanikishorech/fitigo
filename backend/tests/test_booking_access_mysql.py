@@ -43,7 +43,8 @@ def mysql_access(monkeypatch):
         config = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
         config.set_main_option("script_location", str(Path(__file__).resolve().parents[1] / "alembic"))
         monkeypatch.setattr(settings, "database_url", engine.url.render_as_string(hide_password=False))
-        command.upgrade(config, "head")
+        # Round-trip the QR revision before upgrading to forward-only finance.
+        command.upgrade(config, "7fc25a6b8d04")
         command.downgrade(config, "6eb14f5a7c93")
         # Reproduce partial MySQL DDL committed before a failed constraint add.
         with engine.begin() as connection:

@@ -1,0 +1,279 @@
+{
+  "full_suite_passed": true,
+  "collected": 1273,
+  "executed_junit_cases": 1273,
+  "issues": [],
+  "remaining": [],
+  "runs": [
+    {
+      "index": 0,
+      "directory": "C:\\Users\\ckishor\\AppData\\Local\\Temp\\fitigo-isolated-88a69767aa9ef1cd-0qxttyy1",
+      "assigned": 312,
+      "completed": 312,
+      "junit_cases": 312,
+      "failures_or_errors": 0,
+      "skipped": 0,
+      "pytest_exit": 0,
+      "elapsed_seconds": 1019.1720000000205,
+      "run_id": "88a69767aa9ef1cd",
+      "database": "fitigo_test_88a69767aa9ef1cd_main",
+      "mysql_version": "26.7.0",
+      "last_phase": "tests/test_wallet_gateway_history.py::test_incremental_partial_refunds_reverse_only_the_new_amount[cashfree]:teardown",
+      "stack_dumps": 0
+    },
+    {
+      "index": 1,
+      "directory": "C:\\Users\\ckishor\\AppData\\Local\\Temp\\fitigo-isolated-cee4f831d9d399d7-7k7yrkj0",
+      "assigned": 406,
+      "completed": 406,
+      "junit_cases": 406,
+      "failures_or_errors": 0,
+      "skipped": 0,
+      "pytest_exit": 0,
+      "elapsed_seconds": 1682.5,
+      "run_id": "cee4f831d9d399d7",
+      "database": "fitigo_test_cee4f831d9d399d7_main",
+      "mysql_version": "26.7.0",
+      "last_phase": "tests/test_wallet_history_migration.py::test_wallet_migration_preserves_balances_and_blocks_history_loss[True]:teardown",
+      "stack_dumps": 0
+    },
+    {
+      "index": 2,
+      "directory": "C:\\Users\\ckishor\\AppData\\Local\\Temp\\fitigo-isolated-0e47399630a8f54a-8zaye744",
+      "assigned": 297,
+      "completed": 297,
+      "junit_cases": 297,
+      "failures_or_errors": 0,
+      "skipped": 0,
+      "pytest_exit": 0,
+      "elapsed_seconds": 661.4529999999795,
+      "run_id": "0e47399630a8f54a",
+      "database": "fitigo_test_0e47399630a8f54a_main",
+      "mysql_version": "26.7.0",
+      "last_phase": "tests/test_support_workflows.py::test_revoked_session_and_admin_role_are_rechecked_before_write:teardown",
+      "stack_dumps": 0
+    },
+    {
+      "index": 3,
+      "directory": "C:\\Users\\ckishor\\AppData\\Local\\Temp\\fitigo-isolated-e68de47027aeab22-pxdlnfp8",
+      "assigned": 258,
+      "completed": 258,
+      "junit_cases": 258,
+      "failures_or_errors": 0,
+      "skipped": 0,
+      "pytest_exit": 0,
+      "elapsed_seconds": 779.1879999999655,
+      "run_id": "e68de47027aeab22",
+      "database": "fitigo_test_e68de47027aeab22_main",
+      "mysql_version": "26.7.0",
+      "last_phase": "tests/test_users_me_roles.py::test_users_me_roles_returns_role_names:teardown",
+      "stack_dumps": 0
+    }
+  ],
+  "phase_seconds": {
+    "setup": 2949.711453396827,
+    "call": 483.73526509979274,
+    "teardown": 678.7941830988275
+  },
+  "sql_seconds_cumulative": {
+    "PRAGMA": 1.153438096633181,
+    "CREATE": 2608.041137275868,
+    "INSERT": 17.228833797737025,
+    "SELECT": 36.36998382303864,
+    "UPDATE": 5.671926898183301,
+    "ALTER": 199.1279874005122,
+    "SHOW": 0.4145651998696849,
+    "DESCRIBE": 9.447502296883613,
+    "DROP": 679.6728943996131,
+    "DELETE": 0.0036598005099222064,
+    "SAVEPOINT": 0.19310880219563842,
+    "RELEASE": 0.19315800024196506,
+    "ROLLBACK": 0.009979100315831602,
+    "SET": 0.0038681000005453825,
+    "START": 0.0010922999354079366,
+    "EXPLAIN": 0.0004896000027656555
+  },
+  "slowest_phases": [
+    {
+      "nodeid": "tests/test_increment4_migrations.py::test_disposable_dump_restore_preserves_data_schema_and_triggers",
+      "phase": "call",
+      "seconds": 41.33978539996315,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_booking_access_mysql.py::test_concurrent_scans_consume_each_visitor_once[False]",
+      "phase": "setup",
+      "seconds": 33.481773099978454,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_increment4_migrations.py::test_linear_chain_and_fresh_install",
+      "phase": "call",
+      "seconds": 33.21629040001426,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_booking_access_mysql.py::test_concurrent_scans_consume_each_visitor_once[True]",
+      "phase": "setup",
+      "seconds": 30.40209549991414,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_increment4_migrations.py::test_upgrade_from_working_revision_preserves_every_existing_row",
+      "phase": "call",
+      "seconds": 30.11835320002865,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_phase4_migrations_mysql.py::test_wallet_mysql_roundtrip_preserves_legacy_rows_and_logging",
+      "phase": "call",
+      "seconds": 25.228514999966137,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_support_migration_mysql.py::test_support_migration_roundtrip_preserves_users_and_refuses_history_loss",
+      "phase": "call",
+      "seconds": 24.16810940008145,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_support_migration_mysql.py::test_support_ddl_resume_before_revision_advance",
+      "phase": "call",
+      "seconds": 22.792144100065343,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_notification_migration_mysql.py::test_notification_migration_roundtrip_and_archival_guards",
+      "phase": "call",
+      "seconds": 21.80474769999273,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_phase4_migrations_mysql.py::test_class_mysql_roundtrip_no_guessed_links_and_no_history_loss",
+      "phase": "call",
+      "seconds": 21.042296800063923,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_increment4_execution.py::test_execution_stale_impact_and_missing_authorization_block",
+      "phase": "setup",
+      "seconds": 16.104609100031666,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_marketplace_booking_mysql.py::test_allocation_vs_cancellation_serializes_on_same_booking",
+      "phase": "setup",
+      "seconds": 15.786935899988748,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_class_synchronization_mysql.py::test_edit_and_pending_payment_serialize_without_silent_move",
+      "phase": "setup",
+      "seconds": 15.355647500022314,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_razorpay_mysql.py::test_concurrent_wallet_recharge_is_credited_exactly_once[cashfree]",
+      "phase": "setup",
+      "seconds": 15.264034099993296,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_phase6_migration_mysql.py::test_partial_operational_ddl_can_resume",
+      "phase": "call",
+      "seconds": 15.206403600051999,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_increment4_execution.py::test_explicit_execution_appends_revision_and_audit_atomically",
+      "phase": "setup",
+      "seconds": 15.081695399945602,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_phase6_migration_mysql.py::test_operations_upgrade_roundtrip_and_archive_guards",
+      "phase": "call",
+      "seconds": 14.952223400003277,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_marketplace_allocation_mysql.py::test_database_rejects_unbalanced_or_invalid_records[bad1]",
+      "phase": "setup",
+      "seconds": 14.763991699903272,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_split_payment.py::test_authoritative_amounts_wallet_only_and_split[razorpay-40-True-20.00-20]",
+      "phase": "setup",
+      "seconds": 14.674077700008638,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_increment2_purchase_evidence.py::test_gateway_only_cart_funding_created_without_wallet_mutation[cashfree]",
+      "phase": "setup",
+      "seconds": 14.660890099941753,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_owner_payout_workflow_mysql.py::test_failed_payout_retains_reservation_and_retry",
+      "phase": "setup",
+      "seconds": 14.452634199988097,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_increment2_mysql.py::test_monthly_volume_end_to_end_without_caps[160-4800]",
+      "phase": "call",
+      "seconds": 14.438758899923414,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_increment2_purchase_evidence.py::test_gateway_only_cart_funding_created_without_wallet_mutation[razorpay]",
+      "phase": "setup",
+      "seconds": 14.172042699996382,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_marketplace_allocation_mysql.py::test_database_rejects_unbalanced_or_invalid_records[bad4]",
+      "phase": "setup",
+      "seconds": 14.070182000054047,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_increment2_mysql.py::test_multi_gym_months_are_isolated_by_gym_and_report_unknown_net",
+      "phase": "setup",
+      "seconds": 13.627163999946788,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_marketplace_allocation_mysql.py::test_database_rejects_unbalanced_or_invalid_records[bad5]",
+      "phase": "setup",
+      "seconds": 13.566084000049159,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_admin_financial_gateway_reconciliation.py::test_cancelled_paid_split_booking_is_liability_not_revenue[razorpay]",
+      "phase": "setup",
+      "seconds": 13.49791570007801,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_increment4_execution.py::test_different_execution_retry_payload_rejected",
+      "phase": "setup",
+      "seconds": 13.246379500022158,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_owner_payout_workflow_mysql.py::test_concurrent_reservations_cannot_exceed_entitlement",
+      "phase": "setup",
+      "seconds": 13.220974399941042,
+      "outcome": "passed"
+    },
+    {
+      "nodeid": "tests/test_marketplace_membership_mysql.py::test_single_missing_fee_no_invented_paid_balance",
+      "phase": "setup",
+      "seconds": 13.138330499990843,
+      "outcome": "passed"
+    }
+  ],
+  "source_changes": []
+}

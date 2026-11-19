@@ -1,0 +1,13 @@
+import { request } from '../services/client'
+export type ReconciliationView = 'individual' | 'single_gym' | 'no_show' | 'multi_gym' | 'fees' | 'sources' | 'collections' | 'balances' | 'corrections'
+export type Review = { id: string; case_id: string; revision: number; mode: 'test' | 'live'; gym_id: number; source_evidence_id: string; kind: string; status: string; actor_id: number; reason: string; snapshot: Record<string, unknown>; snapshot_hash: string; created_at: string }
+export type ReviewDetail = { case: Review; history: Review[]; impact: Record<string, unknown>; impact_hash: string; execution_enabled: false }
+export type Reconciliation = { monthly_history?: Record<string, unknown>[]; monthly_history_total?: number; available: boolean; mode: string; view: ReconciliationView; read_only: true; notice: string; totals_scope: 'CURRENT_PAGE_ONLY'; page_totals: Record<string, string | null>; items: Record<string, unknown>[]; total: number; controls: { gates: Record<string, boolean>; missing_tables: string[]; schema_ready: boolean; activation_authorized: false; can_activate_from_ui: false; notice: string; checks: string[] } }
+export const reconciliationService = {
+  record: (mode: 'test' | 'live', kind: string, id: string) => request<{ id: string; kind: string; snapshot: Record<string, unknown>; snapshot_hash: string; integrity_valid: boolean }>(`/admin/financial-reconciliation/records/${encodeURIComponent(kind)}/${encodeURIComponent(id)}?mode=${mode}`, { cache: 'no-store' }),
+  report: (mode: 'test' | 'live', view: ReconciliationView, gymId: number | null, page = 0) => request<Reconciliation>(`/admin/financial-reconciliation?${new URLSearchParams({ mode, view, ...(gymId ? { gym_id: String(gymId) } : {}), limit: '20', offset: String(page * 20) })}`, { cache: 'no-store' }),
+  reviews: (mode: 'test' | 'live', gymId: number | null, page = 0) => request<{ items: Review[]; total: number }>(`/admin/financial-reconciliation/reviews?${new URLSearchParams({ mode, ...(gymId ? { gym_id: String(gymId) } : {}), limit: '20', offset: String(page * 20) })}`, { cache: 'no-store' }),
+  detail: (mode: 'test' | 'live', id: string) => request<ReviewDetail>(`/admin/financial-reconciliation/reviews/${encodeURIComponent(id)}?mode=${mode}`, { cache: 'no-store' }),
+  create: (body: Record<string, unknown>, key: string) => request<Review>('/admin/financial-reconciliation/reviews', { method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify(body), cache: 'no-store' }),
+  decide: (id: string, body: Record<string, unknown>, key: string) => request<Review>(`/admin/financial-reconciliation/reviews/${encodeURIComponent(id)}/decisions`, { method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify(body), cache: 'no-store' })
+}

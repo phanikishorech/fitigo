@@ -1,0 +1,4 @@
+PASS sign-in and signup scroll with wheel; bottom links reachable on mobile, short desktop and keyboard-height viewport
+PASS registration mismatch/duplicate/success, duplicate-submit prevention, existing login callback, responsive form
+PASS forgot request, unconfigured email, invalid link, expired link, reset success, secret removed from URL
+PASS owner and staff change password, incorrect-current-password error, logout and new sign-in prompt

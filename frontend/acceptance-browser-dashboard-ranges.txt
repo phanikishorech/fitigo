@@ -1,0 +1,13 @@
+file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/Fitigo/frontend/scripts/dashboard-ranges-browser.mjs:26
+    throw Error(`${role}: ${expression}; ${await evaluate('document.body.innerText')}; ${errors}`)
+          ^
+
+Error: GYM_OWNER: document.querySelector('.ow-metric strong')?.textContent==='1'; Something went wrong
+
+We couldn’t display this page. Please reload and try again.
+
+Reload page; Uncaught,Uncaught,Uncaught,Uncaught
+    at until (file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/Fitigo/frontend/scripts/dashboard-ranges-browser.mjs:26:11)
+    at async file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/Fitigo/frontend/scripts/dashboard-ranges-browser.mjs:75:5
+
+Node.js v24.16.0

@@ -23,6 +23,8 @@ def api(booking_api, monkeypatch):
     for router in [gym_owner.router, admin.router, workflow_capabilities.router, users.router]:
         booking_api[0].app.include_router(router, prefix='/api/v1')
     monkeypatch.setattr(owner_booking_policy, 'utcnow', lambda: NOW)
+    from app.services import booking_cancellation
+    monkeypatch.setattr(booking_cancellation, 'utcnow', lambda: NOW)
     with Session(booking_api[2]) as db:
         role=Role(name='ADMIN');db.add(role);db.flush();db.add(UserRole(user_id=4,role_id=role.id));db.commit()
     return booking_api
@@ -31,6 +33,9 @@ def api(booking_api, monkeypatch):
 def test_actions_match_authorized_mutation_and_repeated_cancel_preserves_payment(api):
     booking=create(api,day=NOW.date()+timedelta(days=2))
     client,headers,engine=api;path=f"/api/v1/gym-owner/bookings/{booking['id']}"
+    from policy_fixtures import fund_wallet_booking
+    with Session(engine) as db:
+        fund_wallet_booking(db, booking['id']); db.commit()
     data=client.get(path,headers=headers[2]).json()
     assert data['allowed_actions']==['CANCEL']
     assert 'QR' in data['action_unavailable_reasons']['MARK_ATTENDED']
@@ -42,7 +47,8 @@ def test_actions_match_authorized_mutation_and_repeated_cancel_preserves_payment
     with Session(engine) as db:
         notes=db.get(Booking,booking['id']).notes
         assert db.scalar(select(Payment.status).where(Payment.booking_id==booking['id']))=='PAID'
-    assert client.post(path+'/cancel',headers=headers[2],json={'reason':'retry'}).status_code==200
+    assert response.json()['cancellation']['wallet_transaction_id'] is not None
+    assert client.post(path+'/cancel',headers=headers[2],json={'reason':'retry'}).status_code==409
     with Session(engine) as db:assert db.get(Booking,booking['id']).notes==notes
 
 

@@ -13,6 +13,12 @@ export default function TodayMembershipAccess({ known }: { known?: { memberships
   const initial = useRef(known)
   const resource = useMembershipResource(() => myAccessService.current(initial.current), 'today-membership-access')
   const refresh = useCallback(() => { initial.current = undefined; resource.retry() }, [resource.retry])
+  const ownership = known?.memberships.map(item => `${item.id}:${item.status}:${item.transfer?.history?.reference || ''}`).join('|')
+  const previousOwnership = useRef(ownership)
+  useEffect(() => {
+    if (ownership !== undefined && ownership !== previousOwnership.current) refresh()
+    previousOwnership.current = ownership
+  }, [ownership, refresh])
   const lock = useRef(false)
   const [generating, setGenerating] = useState(false)
   useEffect(() => {

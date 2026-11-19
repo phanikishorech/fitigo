@@ -12,7 +12,7 @@ from app.repositories.user_repository import UserRepository
 from app.core.roles import ROLE_CUSTOMER, ROLE_GYM_OWNER
 from app.core.time import ist_day_bounds, ist_today
 from app.core.reporting_range import reporting_range
-from app.services.admin_revenue import eligible_admin_payment, admin_revenue_scope
+from app.services.admin_revenue import gateway_booking_amount, eligible_admin_payment, admin_revenue_scope
 
 
 class AdminDashboardService:
@@ -67,17 +67,14 @@ class AdminDashboardService:
             )
         ).scalar_one()
 
-        # Revenue last 30 days
+        # Attended gross service value, not gateway cash or platform net revenue.
         start_day = today - timedelta(days=29)
-        revenue_30d = self.db.execute(
-            select(func.coalesce(func.sum(Payment.amount), 0))
-            .select_from(Payment)
-            .join(Booking, Booking.id == Payment.booking_id)
-            .where(
-                eligible_admin_payment(),
-                Booking.slot_date.between(start_day, today),
-            )
-        ).scalar_one()
+        from app.core.config import settings
+        from app.services.admin_financial_queries import attended_values
+        values = attended_values(self.db, settings.gateway_mode)
+        revenue_30d = self.db.scalar(select(func.coalesce(func.sum(values.c.total), 0)).where(
+            values.c.event_at >= ist_day_bounds(start_day)[0].replace(tzinfo=None),
+            values.c.event_at < ist_day_bounds(today)[1].replace(tzinfo=None)))
 
         users_in_period = self.db.scalar(select(func.count()).select_from(User)
             .where(User.created_at >= start, User.created_at < end))
@@ -87,9 +84,8 @@ class AdminDashboardService:
         bookings_in_period = self.db.scalar(select(func.count()).select_from(Booking).where(period_filter))
         confirmed_in_period = self.db.scalar(select(func.count()).select_from(Booking)
             .where(period_filter, Booking.status == BookingStatus.CONFIRMED.value))
-        revenue_in_period = self.db.scalar(select(func.coalesce(func.sum(Payment.amount), 0))
-            .select_from(Payment).join(Booking, Booking.id == Payment.booking_id)
-            .where(period_filter, eligible_admin_payment()))
+        revenue_in_period = self.db.scalar(select(func.coalesce(func.sum(values.c.total), 0)).where(
+            values.c.event_at >= start.replace(tzinfo=None), values.c.event_at < end.replace(tzinfo=None)))
         return {
             "date_from": first.isoformat(),
             "date_to": last.isoformat(),
@@ -112,6 +108,9 @@ class AdminDashboardService:
             },
             "revenue": {
                 **admin_revenue_scope(),
+                'date_basis': 'FIRST_VALID_CHECKIN',
+                'basis': 'Verified attended gross booking value once at first valid QR check-in. Confirmed-only, cancelled and no-show bookings excluded. Not FitiGo net recognized revenue.',
+                'recognized_total': None,
                 "in_period": str(revenue_in_period),
                 "last_30d": str(revenue_30d),
                 "currency": "INR",

@@ -1,0 +1,97 @@
+﻿node : file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/Fitigo/fronten
+d/scripts/dashboard-ranges-browser.mjs:27
+At line:1 char:78
++ ... igo\frontend'; node scripts/dashboard-ranges-browser.mjs 2>&1 | Out-F 
+...
++                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (file:///C:/User...-browser.mjs 
+   :27:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    throw Error(`${role}: ${expression}; ${await 
+evaluate('document.body.innerText')}; ${errors}`)
+          ^
+
+Error: GYM_OWNER: document.querySelector('.ow-metric 
+strong')?.textContent==='1'; Skip to content
+Fiti
+Go
+Owner
+YOUR WORKSPACE
+Gym 1
+Gym 2
++ Add new gym
+R
+YOUR DAILY OVERVIEW
+Welcome, Range
+
+Your business at a glance. Explore the details when you need them.
+
+Scan member QR
+Today
+Yesterday
+This week
+This month
+Last 30 days
+Custom
+
+Showing 17 Nov 2026 ┬╖ IST. Week starts Monday. Custom ranges: up to 366 
+days.
+
+Overall Metrics
+
+All gyms owned by your account ┬╖ 17 Nov 2026 ┬╖ IST
+
+View more metrics
+Visits completed
+3
+
+Successful check-ins in this period
+
+Upcoming visits
+1
+
+Paid future visitor places; not yet checked in
+
+Total revenue
+Γé╣100.00
+
+Paid memberships + checked-in bookings ┬╖ test ┬╖ No real money
+
+Selected Gym
+
+Gym 1 ┬╖ 17 Nov 2026 ┬╖ IST
+
+View more metrics
+Visits completed
+3
+
+Successful check-ins in this period
+
+Upcoming visits
+1
+
+Paid future visitor places; not yet checked in
+
+Total revenue
+Γé╣100.00
+
+Paid memberships + checked-in bookings ┬╖ test ┬╖ No real money
+
+Visits: check-in date. Upcoming: scheduled date. Revenue: purchase date. 
+IST ┬╖ refreshes every 30 seconds while visible.
+
+Analytics & Reports
+FitiGo Owner
+Help & support
+Home
+Gyms
+Bookings
+Check-in
+More; 
+    at until (file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/Fitigo/
+frontend/scripts/dashboard-ranges-browser.mjs:27:11)
+    at async file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/Fitigo/f
+rontend/scripts/dashboard-ranges-browser.mjs:79:5
+
+Node.js v24.16.0

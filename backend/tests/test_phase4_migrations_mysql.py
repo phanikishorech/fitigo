@@ -67,7 +67,7 @@ def test_class_mysql_roundtrip_no_guessed_links_and_no_history_loss(schema):
         c.execute(text("INSERT INTO users (id,email,password_hash,status,is_email_verified,is_phone_verified,token_version,created_at,updated_at) VALUES (1,'fixture@example.com','unchanged','ACTIVE',0,0,0,NOW(),NOW())"))
         c.execute(text("INSERT INTO gyms (id,owner_user_id,name,status,is_active,created_at,updated_at) VALUES (1,1,'Legacy gym','APPROVED',1,NOW(),NOW())"))
         c.execute(text("INSERT INTO gym_slots (id,gym_id,name,start_time,end_time,capacity,price,is_active,created_at,updated_at) VALUES (1,1,'Legacy','10:00','11:00',10,100,1,NOW(),NOW())"))
-    command.upgrade(config, 'head')
+    command.upgrade(config, 'cef70fb23591')
     with engine.connect() as c:
         assert c.scalar(text('SELECT sync_kind FROM gym_slots')) == 'LEGACY'
         assert 'source_slot_id' in {col['name'] for col in inspect(c).get_columns('class_sessions')}
@@ -75,7 +75,7 @@ def test_class_mysql_roundtrip_no_guessed_links_and_no_history_loss(schema):
     with engine.connect() as c:
         assert c.scalar(text('SELECT name FROM gym_slots')) == 'Legacy'
         assert 'sync_kind' not in {col['name'] for col in inspect(c).get_columns('gym_slots')}
-    command.upgrade(config, 'head')
+    command.upgrade(config, 'cef70fb23591')
     with engine.begin() as c: c.execute(text("UPDATE gym_slots SET sync_kind='CLASS'"))
     with pytest.raises(RuntimeError, match='slot provenance'): command.downgrade(config, 'bdf69ea12480')
     with engine.connect() as c: assert c.scalar(text('SELECT sync_kind FROM gym_slots')) == 'CLASS'

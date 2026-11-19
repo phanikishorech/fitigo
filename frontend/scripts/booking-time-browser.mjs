@@ -15,6 +15,8 @@ async function input(selector, value) { await evaluate(`(()=>{const input=docume
 async function select(selector, value) { await evaluate(`(()=>{const input=document.querySelector(${JSON.stringify(selector)});Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(input,${JSON.stringify(value)});input.dispatchEvent(new Event('change',{bubbles:true}))})()`); await wait(120) }
 const add = `Array.from(document.querySelectorAll('button')).find(b=>b.textContent.includes('Check availability & add to cart'))`
 function fixture(path, request) {
+  if (path.endsWith('/notifications/inbox')) return { items: [], total: 0, unread_count: 0 }
+  if (path.endsWith('/cart/summary')) return { count: 0, total: '0.00', currency: 'INR' }
   if (path.endsWith('/auth/session')) return { user, roles: ['CUSTOMER'] }
   if (path.endsWith('/users/me')) return user
   if (path.endsWith('/gyms/19/booking-options')) return { gym_id: 19, gym_name: 'Time Fixture Gym', gym_price_per_person: '100', has_classes: false, server_now: '2026-10-08T12:00:30+05:30', booking_timezone: 'Asia/Kolkata', membership_status: {}, available_access_types: [], workout_areas: [] }

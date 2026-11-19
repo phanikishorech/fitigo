@@ -176,6 +176,9 @@ def test_booking_and_profile_audits_preserve_actor_and_omit_sensitive_values(api
     from test_booking_access_qr import create,NOW
     from datetime import timedelta
     booking=create(api,day=NOW.date()+timedelta(days=2))
+    from policy_fixtures import fund_wallet_booking
+    with Session(api[2]) as db:
+        fund_wallet_booking(db, booking['id']); db.commit()
     result=api[0].post(f"/api/v1/gym-owner/bookings/{booking['id']}/cancel",headers=api[1][2],json={'reason':'token=do-not-copy'})
     assert result.status_code==200
     with Session(api[2]) as db:

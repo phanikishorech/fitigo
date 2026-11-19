@@ -1,0 +1,12 @@
+[
+  {
+    "provider": "razorpay",
+    "operation": "READ_ONLY_TEST_CREDENTIAL_PROBE",
+    "http_status": 200
+  },
+  {
+    "provider": "cashfree",
+    "operation": "READ_ONLY_TEST_CREDENTIAL_PROBE",
+    "http_status": 404
+  }
+]

@@ -1,0 +1,17 @@
+.af-page { display: grid; gap: 20px; min-width: 0; }
+.af-page .ad-metrics { margin-bottom: 0; }
+.af-page .ad-metric > strong { overflow-wrap: anywhere; }
+.af-page .ad-card-body { min-width: 0; }
+.af-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 16px; }
+.af-filters > .ad-field { flex: 1 1 180px; }
+.af-table { overflow-x: auto; max-width: 100%; }
+.af-table small { display: block; overflow-wrap: anywhere; max-width: 260px; }
+.af-expand { margin-top: 16px; }
+.af-page summary { cursor: pointer; padding: 10px 0; font-weight: 600; }
+.af-trend { color: var(--fg-green); height: 170px; padding: 12px; }
+.af-trend svg { width: 100%; height: 100%; }
+.af-bars { display: grid; gap: 14px; }
+.af-bars > div { display: grid; grid-template-columns: minmax(130px, 1fr) 2fr 40px; gap: 12px; align-items: center; }
+.af-bars meter { width: 100%; accent-color: var(--fg-green); }
+.af-page .ad-card .ad-card { box-shadow: none; }
+@media (max-width: 640px) { .af-filters { align-items: stretch; } .af-filters > .ad-field { min-width: 0; flex-basis: 100%; } .af-bars > div { grid-template-columns: minmax(100px, 1fr) 1fr 28px; } }

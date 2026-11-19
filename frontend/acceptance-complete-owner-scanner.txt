@@ -1,0 +1,4 @@
+PASS auto-start, real decoder, persistent video/stream, two consecutive members, stationary suppression, deliberate QR reuse rejection
+PASS business rejections, network/server/malformed/timeout handling, automatic recovery without restarting camera
+PASS responsive scanner, camera loss/retry, permission prompt/denial/revocation/grant, missing/busy camera
+PASS manual token, duplicate submit protection, pending API/unmount cleanup and late camera initialization cleanup

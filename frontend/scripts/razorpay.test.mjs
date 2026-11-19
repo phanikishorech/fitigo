@@ -8,7 +8,7 @@ async function load(path, transform = s => s) {
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText
   return import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`)
 }
-const { paymentService } = await load('../src/services/paymentService.ts', s => s.replace(/import .* from '.\/client'/, `const request=(...args)=>globalThis.__paymentRequest(...args);const post=(path,body)=>request(path,{method:'POST',body:JSON.stringify(body)})`))
+const { paymentService } = await load('../src/services/paymentService.ts', s => s.replace(/import \{ cartMutation \}[^\r\n]+/, 'const cartMutation = promise => promise').replace(/import .* from '.\/client'/, `const request=(...args)=>globalThis.__paymentRequest(...args);const post=(path,body)=>request(path,{method:'POST',body:JSON.stringify(body)})`))
 const { openRazorpay } = await load('../src/utils/razorpay.ts')
 const checkout = { id: 'local', can_pay: true, key_id: 'rzp_test_fixture', mode: 'test', razorpay_order_id: 'order_fixture', amount_minor: 12345, currency: 'INR' }
 

@@ -1,9 +1,10 @@
 import { dateLabel, money } from '../../services/client'
 import Icon from '../common/Icon'
+import { Link } from '../common/UI'
 
 export type CheckoutVisit = { id: number; name: string; date: string; start?: string | null; end?: string | null; quantity: number; amount: string; currency: string; label?: string }
 
-export default function CheckoutVisitCard({ visit, index }: { visit: CheckoutVisit; index: number }) {
+export default function CheckoutVisitCard({ visit, index, editTo }: { visit: CheckoutVisit; index: number; editTo?: string }) {
   return <article className="fc-visit">
     <div className="fc-visit-icon"><Icon name="gym" size={25} /></div>
     <div className="fc-visit-body"><span className="fc-caption">VISIT {String(index + 1).padStart(2, '0')} · {visit.label || 'GYM ACCESS'}</span>
@@ -12,6 +13,7 @@ export default function CheckoutVisitCard({ visit, index }: { visit: CheckoutVis
         {visit.start && <span><Icon name="clock" size={16} />{visit.start.slice(0, 5)}{visit.end ? ` – ${visit.end.slice(0, 5)}` : ''} IST</span>}
         <span><Icon name="user" size={16} />{visit.quantity} {visit.quantity === 1 ? 'visitor' : 'visitors'}</span>
       </div>
+      {editTo && <Link to={editTo} className="fg-inline-link" label={`Edit visit ${index + 1} at ${visit.name}`}>Edit Visit</Link>}
     </div>
   </article>
 }

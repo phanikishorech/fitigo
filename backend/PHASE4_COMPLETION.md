@@ -150,7 +150,7 @@ Next step is a separately approved backup and forward-migration/deployment plan 
 
 Legacy class linkage remains deliberately blocked after migration until individually reviewed. Wallet spending, gateway-funded offers, automatic refunds and orphan cleanup remain outside this completed phase. Do not start another phase or modify working data without explicit authorization.
 
-Current `C:/Users/ckishor/.cline/data/workspaces/chat/fitigo/frontend/vite.config.ts` has BOTH proxies targeting port 8000, contrary to the earlier handoff. Verify which application owns that port and deliberately align FitiGo's backend and both proxies (8001 was previously recommended). The startup script was not run; do not use it blindly to stop existing port-8000 applications.
+Current `C:/Users/ckishor/.cline/data/workspaces/chat/fitigo/frontend/vite.config.ts` has BOTH proxies targeting port 8000, contrary to the earlier handoff. Verify which application owns that port and deliberately align FitiGo's backend and both proxies (8000 was previously recommended). The startup script was not run; do not use it blindly to stop existing port-8000 applications.
 
 Final process verification found that Windows MySQL child processes survived launcher termination. The runner was corrected to verify datadir ownership and issue authenticated SHUTDOWN, with an owned process-tree fallback. Earlier isolated child processes were individually matched to the six exact run directories before stopping them; working-server processes were excluded. No datadir was deleted.
 

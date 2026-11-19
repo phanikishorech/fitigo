@@ -9,6 +9,7 @@ from app.core.config import settings
 from app.database.session import get_db
 from app.models.gym import Gym
 from app.schemas.meta import LocationSuggestion
+from app.services.gym_geo import coordinates
 
 
 router = APIRouter(prefix="/meta")
@@ -111,7 +112,7 @@ def list_locations(
             lon = None
 
         # If gym row has no coords, it can't be used for discovery.
-        if lat is None or lon is None:
+        if coordinates(lat, lon) is None:
             continue
 
         key = (loc_name, city, state, country)

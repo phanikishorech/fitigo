@@ -1,0 +1,40 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+
++ [
++   'Unexpected API /api/v1/notifications/inbox',
++   'Unexpected API /api/v1/notifications/inbox',
++   'Unexpected API /api/v1/cart/summary',
++   'Unexpected API /api/v1/cart/summary',
++   'Unexpected API /api/v1/notifications/inbox',
++   'Unexpected API /api/v1/notifications/inbox',
++   'Unexpected API /api/v1/cart/summary',
++   'Unexpected API /api/v1/cart/summary',
++   'Unexpected API /api/v1/cart/summary'
++ ]
+- []
+
+    at file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/Fitigo/frontend/scripts/booking-time-browser.mjs:69:10 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: [
+    'Unexpected API /api/v1/notifications/inbox',
+    'Unexpected API /api/v1/notifications/inbox',
+    'Unexpected API /api/v1/cart/summary',
+    'Unexpected API /api/v1/cart/summary',
+    'Unexpected API /api/v1/notifications/inbox',
+    'Unexpected API /api/v1/notifications/inbox',
+    'Unexpected API /api/v1/cart/summary',
+    'Unexpected API /api/v1/cart/summary',
+    'Unexpected API /api/v1/cart/summary'
+  ],
+  expected: [],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.16.0

@@ -45,6 +45,15 @@ def create_checkout(payload: CheckoutCreate,
     return PaymentCheckoutService(db).create(user.id, payload, idempotency_key)
 
 
+@router.post('/quote')
+def funding_quote(payload: CheckoutCreate, db: Session = Depends(get_db), user: User = Depends(customer)):
+    from app.services.payment_quote import quote
+    try:
+        return quote(PaymentCheckoutService(db), user.id, payload)
+    finally:
+        db.rollback()
+
+
 @router.get("/checkouts")
 def recent_checkouts(db: Session = Depends(get_db), user: User = Depends(customer)):
     service = PaymentCheckoutService(db)
@@ -59,6 +68,17 @@ def checkout_status(checkout_id: UUID, db: Session = Depends(get_db), user: User
     return service.present(service.owned(str(checkout_id), user.id))
 
 
+@router.get('/membership-checkout')
+def recover_membership_checkout(kind: Literal['SINGLE_GYM', 'MULTI_GYM'],
+        order_id: UUID | None = None, gym_id: int | None = Query(None, gt=0),
+        plan_id: int | None = Query(None, gt=0), db: Session = Depends(get_db), user: User = Depends(customer)):
+    try:
+        return PaymentCheckoutService(db).membership_recovery(user.id, kind,
+            order_id=str(order_id) if order_id else None, gym_id=gym_id, plan_id=plan_id)
+    finally:
+        db.rollback()
+
+
 @router.post("/checkouts/{checkout_id}/verify")
 def verify_checkout(checkout_id: UUID, payload: CheckoutVerify, db: Session = Depends(get_db), user: User = Depends(customer)):
     return PaymentCheckoutService(db).reconcile(str(checkout_id), user.id, payload.razorpay_payment_id,
@@ -67,12 +87,24 @@ def verify_checkout(checkout_id: UUID, payload: CheckoutVerify, db: Session = De
 
 @router.post("/checkouts/{checkout_id}/refresh")
 def refresh_checkout(checkout_id: UUID, db: Session = Depends(get_db), user: User = Depends(customer)):
-    return PaymentCheckoutService(db).start(str(checkout_id), user.id)
+    from app.services import checkout_funding as funding
+    from app.services.wallet_hold_recovery import resolve
+    service = PaymentCheckoutService(db)
+    checkout = service.owned(str(checkout_id), user.id)
+    record = funding.get(db, checkout)
+    if record and record.state == 'HELD' and checkout.status != 'CREATED':
+        return resolve(service, checkout.id, user.id)
+    return service.start(str(checkout_id), user.id)
 
 
 @router.post("/checkouts/{checkout_id}/cancel")
 def cancel_checkout(checkout_id: UUID, db: Session = Depends(get_db), user: User = Depends(customer)):
     return PaymentCheckoutService(db).cancel(str(checkout_id), user.id)
+
+
+@router.post('/checkouts/{checkout_id}/resume-membership')
+def resume_membership(checkout_id: UUID, db: Session = Depends(get_db), user: User = Depends(customer)):
+    return PaymentCheckoutService(db).resume_membership(str(checkout_id), user.id)
 
 
 @router.post("/webhooks/razorpay")

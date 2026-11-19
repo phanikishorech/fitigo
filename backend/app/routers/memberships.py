@@ -21,9 +21,35 @@ from app.services.membership_pause_service import MembershipPauseService, member
 from app.schemas.membership_pause import PauseRequest, PauseConfirm, PauseEligibility, PausePreview
 from app.services.payment_providers import configured
 from app.core.config import settings
+from app.schemas.customer_policy import TransferPreviewRequest, TransferConfirmRequest
+from app.services import membership_transfer
 
 
 router = APIRouter(prefix="/memberships")
+
+
+@router.get('/me/{membership_id}/transfer')
+def transfer_eligibility(membership_id: int, response: Response, db: Session = Depends(get_db),
+                         current_user: User = Depends(require_role({ROLE_CUSTOMER}))):
+    response.headers['Cache-Control'] = 'no-store'
+    return membership_transfer.eligibility(db, membership_transfer.visible(db, membership_id, current_user.id), current_user.id)
+
+
+@router.post('/me/{membership_id}/transfer/preview')
+def transfer_preview(membership_id: int, payload: TransferPreviewRequest, response: Response,
+                     db: Session = Depends(get_db), current_user: User = Depends(require_role({ROLE_CUSTOMER}))):
+    response.headers['Cache-Control'] = 'no-store'
+    from app.services.password_service import PasswordService
+    PasswordService(db).throttle(f'membership-transfer-lookup:{current_user.id}', 10, 900)
+    return membership_transfer.preview(db, membership_id, current_user.id, payload.recipient_email)
+
+
+@router.post('/me/{membership_id}/transfer')
+def transfer_membership(membership_id: int, payload: TransferConfirmRequest, response: Response,
+        idempotency_key: str = Header(..., alias='Idempotency-Key', min_length=8, max_length=64, pattern=r'^[A-Za-z0-9_-]+$'),
+        db: Session = Depends(get_db), current_user: User = Depends(require_role({ROLE_CUSTOMER}))):
+    response.headers['Cache-Control'] = 'no-store'
+    return membership_transfer.confirm(db, membership_id, current_user.id, payload.confirmation_token, idempotency_key)
 
 
 @router.get("/me/{membership_id}/pause", response_model=PauseEligibility)
@@ -141,18 +167,27 @@ def purchase_membership(
 
 @router.get("/me", response_model=list[UserMembershipResponse])
 def list_my_memberships(
+    response: Response,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role({ROLE_CUSTOMER})),
 ):
-    svc = MembershipService(db)
-    items = svc.list_my_memberships(user_id=current_user.id)
+    response.headers['Cache-Control'] = 'no-store'
+    from sqlalchemy import or_
+    from app.models.membership import UserMembership
+    from app.models.customer_policy import MembershipTransfer
+    from app.services.policy_schema import available
+    ownership = UserMembership.user_id == current_user.id
+    if available(db): ownership = or_(ownership, UserMembership.id.in_(select(MembershipTransfer.membership_id).where(MembershipTransfer.original_user_id == current_user.id)))
+    items = db.scalars(select(UserMembership).where(ownership)
+        .order_by(UserMembership.id.desc())).all()
     return [
         UserMembershipResponse(
             id=m.id,
             user_id=m.user_id,
             gym_id=m.gym_id,
             plan_id=m.plan_id,
-            status=membership_status(db, m),
+            status=membership_transfer.eligibility(db, m, current_user.id)['status'],
+            transfer=membership_transfer.eligibility(db, m, current_user.id),
             original_end_at=m.original_end_at or m.end_at,
             start_at=m.start_at,
             end_at=m.end_at,

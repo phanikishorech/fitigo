@@ -166,6 +166,8 @@ class PlatformMembershipService:
             current = None
         snapshot = PlatformPlanResponse.model_validate(order.snapshot)
         membership = self.db.get(UserMembership, order.membership_id) if order.membership_id else None
+        from app.models.payment_checkout import PaymentCheckout
+        checkout = self.db.get(PaymentCheckout, order.checkout_id) if order.checkout_id else None
         # A completed order is a receipt. Later catalog changes cannot rewrite it.
         if membership:
             current = snapshot
@@ -174,7 +176,7 @@ class PlatformMembershipService:
             id=order.id, plan=snapshot, created_at=aware(order.created_at), current_plan=current,
             requires_review=not membership and (current is None or current.model_dump(mode="json") != snapshot.model_dump(mode="json")),
             status="PAID" if membership else "AWAITING_PAYMENT" if configured() else "AWAITING_WALLET" if wallet_enabled() else "PAYMENT_DISABLED",
-            payment_status="PAID" if membership else "NOT_STARTED", eligibility_status="VALIDATED" if membership else "NOT_EVALUATED",
+            payment_status="PAID" if membership else checkout.status if checkout else "NOT_STARTED", eligibility_status="VALIDATED" if membership else "NOT_EVALUATED",
             payment_available=(wallet_enabled() or configured()) and current is not None and membership is None,
             membership_id=membership.id if membership else None,
             quote_token=quote_key(current.model_dump(mode="json")) if current else None,

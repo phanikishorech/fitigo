@@ -69,7 +69,11 @@ def activate(db: Session, *, user_id: int, terms: dict, checkout_key: str) -> Us
         fail("INSUFFICIENT_WALLET_BALANCE")
     if account.currency != terms["currency"]:
         fail("WALLET_CURRENCY_MISMATCH")
-    if Decimal(account.balance) < amount:
+    from app.services.checkout_funding import wallet_state
+    _, spending = wallet_state(db, user_id)
+    if spending['wallet_unavailable_reason'] and 'refund requires reconciliation' in spending['wallet_unavailable_reason']:
+        fail('WALLET_REFUND_RECONCILIATION')
+    if Decimal(account.balance) - Decimal(spending['reserved_balance']) < amount:
         fail("INSUFFICIENT_WALLET_BALANCE")
     account.balance = Decimal(account.balance) - amount
     transaction = WalletTransaction(
@@ -88,6 +92,8 @@ def activate(db: Session, *, user_id: int, terms: dict, checkout_key: str) -> Us
     )
     db.add(membership)
     db.flush()
+    from app.services.source_evidence import membership_event
+    membership_event(db, membership, 'MEMBERSHIP_ACTIVATED', membership.id, membership.start_at, fresh_activation=True)
     return membership
 
 

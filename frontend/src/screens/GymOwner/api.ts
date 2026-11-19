@@ -1,3 +1,4 @@
+import type { CancellationPolicy } from '../../components/booking/BookingCancellation'
 import { request } from '../../services/client'
 import type { DateRange } from '../../utils/dateRange'
 
@@ -117,6 +118,8 @@ export type OwnerMembershipPlan = {
 }
 
 export type OwnerBooking = {
+  funding?: { purchase_amount: string; wallet_amount: string; gateway_amount: string } | null
+  cancellation?: CancellationPolicy | null
   allowed_actions?: ('MARK_ATTENDED' | 'MARK_NO_SHOW' | 'CANCEL')[]
   action_unavailable_reasons?: Record<string, string>
   cancellation_policy?: string

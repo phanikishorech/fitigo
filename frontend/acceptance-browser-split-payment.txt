@@ -1,0 +1,1 @@
+Split-payment browser PASS: both provider remainders, custom amount, zero balance, wallet-only, responsive widths; all APIs/SDKs mocked.

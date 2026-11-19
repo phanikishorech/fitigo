@@ -1,0 +1,3 @@
+Isolated MySQL 26.7.0 test schema fitigo_test_cee4f831d9d399d7_main artifacts C:\Users\ckishor\AppData\Local\Temp\fitigo-isolated-cee4f831d9d399d7-7k7yrkj0
+Pytest exit: 0 private log: C:\Users\ckishor\AppData\Local\Temp\fitigo-isolated-cee4f831d9d399d7-7k7yrkj0\pytest.log
+Owned isolated server stopped; private directory retained: C:\Users\ckishor\AppData\Local\Temp\fitigo-isolated-cee4f831d9d399d7-7k7yrkj0

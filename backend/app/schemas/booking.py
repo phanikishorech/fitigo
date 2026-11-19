@@ -7,10 +7,10 @@ from typing import Literal
 from pydantic import BaseModel, Field
 from app.schemas.visitors import VisitorName
 from app.models.access import AccessSource
+from app.schemas.customer_policy import CancellationPolicy
 
-CANCELLATION_MESSAGE = ('Cancellation does not initiate a gateway refund or wallet credit. '
-    'Recorded payment/refund history is preserved. Contact support for a separate refund review; '
-    'a refund is confirmed only when recorded through the payment reconciliation workflow.')
+CANCELLATION_MESSAGE = ('Eligible confirmed individual bookings can be cancelled at least 3 hours before their scheduled start. '
+    'Eligible paid amounts are credited to FitiGo Wallet, never refunded to the original payment method.')
 
 
 class BookingAccessPassStatus(ISTResponse):
@@ -64,6 +64,7 @@ class PaymentResponse(ISTResponse):
 
 
 class BookingResponse(ISTResponse):
+    cancellation: CancellationPolicy | None = None
     refund_initiated: Literal[False] = False
     cancellation_message: str = CANCELLATION_MESSAGE
     visitor_names: list[str] | None = None

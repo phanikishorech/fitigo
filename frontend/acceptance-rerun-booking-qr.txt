@@ -1,0 +1,1 @@
+PASS centered booking QR; verified individual/group scans show approval; remaining guest QR stays active; cancellation/expiry/unverified use never approve

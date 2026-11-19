@@ -8,6 +8,7 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     ForeignKey,
+    Float,
     Index,
     Integer,
     Numeric,
@@ -37,6 +38,7 @@ class Gym(Base):
         Index("ix_gyms_city", "city"),
         Index("ix_gyms_status", "status"),
         Index("ix_gyms_is_active", "is_active"),
+        Index("ix_gyms_discovery_geo", "status", "is_active", "geo_latitude", "geo_longitude"),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
@@ -55,6 +57,9 @@ class Gym(Base):
     postal_code: Mapped[str | None] = mapped_column(String(20), nullable=True)
     latitude: Mapped[str | None] = mapped_column(String(50), nullable=True)
     longitude: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    # Numeric search projection; original owner coordinates remain unchanged.
+    geo_latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    geo_longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     status: Mapped[str] = mapped_column(String(50), nullable=False, default=GymStatus.DRAFT.value)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
@@ -78,6 +83,17 @@ class Gym(Base):
     operating_hours: Mapped[list["GymOperatingHours"]] = relationship(
         "GymOperatingHours", back_populates="gym", cascade="all, delete-orphan"
     )
+
+
+from sqlalchemy import event
+from app.services.gym_geo import coordinates
+
+
+@event.listens_for(Gym, 'before_insert')
+@event.listens_for(Gym, 'before_update')
+def sync_gym_coordinates(mapper, connection, target):
+    point = coordinates(target.latitude, target.longitude)
+    target.geo_latitude, target.geo_longitude = point if point else (None, None)
 
 
 class GymImage(Base):

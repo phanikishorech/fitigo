@@ -1,0 +1,94 @@
+[
+  {
+    "suite": "auth-account",
+    "exit": 0
+  },
+  {
+    "suite": "role-session",
+    "exit": 0
+  },
+  {
+    "suite": "discovery-alignment",
+    "exit": 0
+  },
+  {
+    "suite": "booking-qr",
+    "exit": 0
+  },
+  {
+    "suite": "booking-time",
+    "exit": 0
+  },
+  {
+    "suite": "split-payment",
+    "exit": 1
+  },
+  {
+    "suite": "razorpay",
+    "exit": 0
+  },
+  {
+    "suite": "checkout-recovery",
+    "exit": 0
+  },
+  {
+    "suite": "membership-pause",
+    "exit": 0
+  },
+  {
+    "suite": "my-access",
+    "exit": 0
+  },
+  {
+    "suite": "customer-policy",
+    "exit": 0
+  },
+  {
+    "suite": "owner-dashboard",
+    "exit": 0
+  },
+  {
+    "suite": "owner-analytics",
+    "exit": 0
+  },
+  {
+    "suite": "owner-staff",
+    "exit": 0
+  },
+  {
+    "suite": "owner-scanner",
+    "exit": 0
+  },
+  {
+    "suite": "admin-cleanup",
+    "exit": 0
+  },
+  {
+    "suite": "financial-settings",
+    "exit": 0
+  },
+  {
+    "suite": "dashboard-ranges",
+    "exit": 0
+  },
+  {
+    "suite": "customer-activity",
+    "exit": 0
+  },
+  {
+    "suite": "payment-history",
+    "exit": 0
+  },
+  {
+    "suite": "class-sync",
+    "exit": 0
+  },
+  {
+    "suite": "member-entry",
+    "exit": 0
+  },
+  {
+    "suite": "maps",
+    "exit": 0
+  }
+]

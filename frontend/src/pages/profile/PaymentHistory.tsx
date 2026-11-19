@@ -10,6 +10,7 @@ import { historyAction, historyStatus, historyStatuses, paymentHistoryNotice, pu
 import './paymentHistory.css'
 
 type PaymentRow = {
+  total_amount?: string; wallet_amount?: string; gateway_amount?: string
   id: string; source: string; kind: string; status: string; amount: string; currency: string
   provider: string; mode: string | null; created_at: string; updated_at?: string
   checkout_id: string | null; provider_order_id: string | null; transaction_id: string | null
@@ -40,6 +41,7 @@ function PaymentCard({ row, pending, onManage }: { row: PaymentRow; pending: boo
     </div>
     <div className="ph-meta"><span><Icon name="calendar" size={14} /><span>Created {istDateTime(row.created_at)}</span></span><span className="ph-provider">{row.provider === 'RAZORPAY' ? 'Razorpay' : row.provider === 'CASHFREE' ? 'Cashfree' : row.provider}</span><span className={`ph-mode ${row.mode === 'test' ? 'ph-mode--test' : ''}`}>{row.mode === 'test' ? 'Test · no real money' : row.mode === 'live' ? 'Live payment' : 'Mode not recorded'}</span></div>
     {notice && <div className="ph-notice"><Icon name="help" size={18} /><p>{notice}</p></div>}
+    {row.total_amount && <p className="ph-fine-print">Purchase value: {money(row.total_amount, row.currency)} · Wallet: {money(row.wallet_amount || '0', row.currency)} · Gateway: {money(row.gateway_amount || row.amount, row.currency)}</p>}
     <details className="ph-details"><summary><span><Icon name="ticket" size={16} />Transaction and order details</span><Icon name="down" size={16} /></summary>
       <div className="ph-detail-content">
         <section aria-label="Payment references"><h4>Payment references</h4><dl className="ph-reference-grid">

@@ -55,12 +55,12 @@ alembic upgrade head
 
 ```powershell
 cd backend
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8001
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 Open:
-- Swagger: http://127.0.0.1:8001/docs
-- Health: http://127.0.0.1:8001/api/v1/health
+- Swagger: http://127.0.0.1:8000/docs
+- Health: http://127.0.0.1:8000/api/v1/health
 
 ## Frontend (customer UI)
 
@@ -76,10 +76,10 @@ From the repo root (backend only):
 powershell -ExecutionPolicy Bypass -File .\scripts\start-dev.ps1
 ```
 
-The startup script starts only the backend on port 8001 and refuses occupied
+The startup script starts only the backend on port 8000 and refuses occupied
 ports; it never kills another application. Use `-CheckOnly` for a non-starting
 port/configuration check. Start the frontend separately. Both Vite proxies
-(`/api` and `/uploads`) target `127.0.0.1:8001`.
+(`/api` and `/uploads`) target `127.0.0.1:8000`.
 
 To stop:
 

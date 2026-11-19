@@ -45,9 +45,10 @@ def test_admin_dashboard_daily_and_selected_gyms_share_verified_mode_scope(api, 
     params = {'date_from': str(DAY), 'date_to': str(DAY)}
     summary = get(api, 'admin/dashboard/summary', params, actor=6)
     all_rows = get(api, 'admin/reports/bookings/daily', params, actor=6)
-    assert Decimal(summary['revenue']['in_period']) == 300
+    # Confirmed payment evidence without a valid QR check-in is not earned value.
+    assert Decimal(summary['revenue']['in_period']) == 0
     assert summary['revenue']['mode'] == mode
-    assert summary['revenue']['date_basis'] == 'SCHEDULED_BOOKING_DATE'
+    assert summary['revenue']['date_basis'] == 'FIRST_VALID_CHECKIN'
     assert Decimal(all_rows[0]['paid_amount_total']) == 300 and all_rows[0]['mode'] == mode
     assert all_rows[0]['total_bookings'] == summary['bookings']['in_period'] == 18
     amounts = [Decimal(get(api, 'admin/reports/bookings/daily', {**params, 'gym_id': gym}, actor=6)[0]['paid_amount_total']) for gym in [1, 2]]
@@ -65,8 +66,8 @@ def test_shared_cart_allocations_count_once_and_keep_documented_cancellation_bas
         db.commit()
     params = {'date_from': str(DAY), 'date_to': str(DAY)}
     summary = get(api, 'admin/dashboard/summary', params, actor=6)
-    assert Decimal(summary['revenue']['in_period']) == 500
-    assert 'remain included while paid' in summary['revenue']['basis']
+    assert Decimal(summary['revenue']['in_period']) == 0
+    assert 'cancelled and no-show bookings excluded' in summary['revenue']['basis']
     assert Decimal(get(api, 'admin/reports/bookings/daily', params, actor=6)[0]['paid_amount_total']) == 500
 
 
@@ -75,12 +76,12 @@ def test_last_30_days_excludes_future_and_thirtieth_previous_day(api):
         for offset, amount in [(-30, 900), (-29, 100), (0, 200), (1, 800)]:
             paid_booking(db, booking(db, 1, day=DAY+timedelta(days=offset)), amount)
         db.commit()
-    assert Decimal(get(api, 'admin/dashboard/summary', {}, actor=6)['revenue']['last_30d']) == 300
+    assert Decimal(get(api, 'admin/dashboard/summary', {}, actor=6)['revenue']['last_30d']) == 0
 
 
 @pytest.mark.parametrize('actor', ['customer', 'owner', 'admin'])
 @pytest.mark.parametrize('provider', ['WALLET', 'DUMMY', 'RAZORPAY', 'CASHFREE'])
-def test_cancellation_preserves_paid_state_and_never_credits_wallet(api, actor, provider):
+def test_unverified_funding_cannot_credit_wallet_and_admin_override_preserves_paid_history(api, actor, provider):
     from app.routers.bookings import router
     api[0].app.include_router(router, prefix='/api/v1')
     with Session(api[2]) as db:
@@ -91,17 +92,16 @@ def test_cancellation_preserves_paid_state_and_never_credits_wallet(api, actor, 
         db.commit()
         if actor == 'customer':
             response = api[0].post(f'/api/v1/bookings/{bid}/cancel', headers=api[1][3], json={})
-            assert response.status_code == 200 and response.json()['refund_initiated'] is False
-            assert 'does not initiate' in response.json()['cancellation_message']
-            BookingService(db).cancel_booking(user_id=3, booking_id=bid)
+            assert response.status_code == 409
+            assert api[0].post(f'/api/v1/bookings/{bid}/cancel', headers=api[1][3], json={}).status_code == 409
         elif actor == 'owner':
             response = api[0].post(f'/api/v1/gym-owner/bookings/{bid}/cancel', headers=api[1][1], json={})
-            assert response.status_code == 200 and response.json()['refund_initiated'] is False
+            assert response.status_code == 409
         else:
             response = api[0].post(f'/api/v1/admin/bookings/{bid}/cancel', headers=api[1][6], json={})
             assert response.status_code == 200 and response.json()['refund_initiated'] is False
         db.expire_all()
-        assert db.get(Booking, bid).status == 'CANCELLED'
+        assert db.get(Booking, bid).status == ('CANCELLED' if actor == 'admin' else 'CONFIRMED')
         assert db.scalar(select(Payment.status).where(Payment.booking_id == bid)) == 'PAID'
         assert db.scalar(select(WalletAccount.balance).where(WalletAccount.user_id == 3)) == 321
         assert db.scalar(select(func.count(WalletTransaction.id))) == 0

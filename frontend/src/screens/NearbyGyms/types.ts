@@ -5,6 +5,8 @@ export type LocationContext = {
   city?: string
   state?: string
   country?: string
+  source?: 'manual' | 'current'
+  accuracy?: number
 }
 
 export type GymFacility = {
@@ -17,6 +19,8 @@ export type GymFacility = {
 export type GymDiscoverItem = {
   gym_id: number
   gym_name: string
+  starting_price?: string | null
+  is_active?: boolean
   primary_image?: string | null
   images?: string[]
   latitude?: string | null

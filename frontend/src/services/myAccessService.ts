@@ -27,7 +27,7 @@ export const myAccessService = {
       gymId ? gymService.accessDetails(gymId) : null,
       dayPresentation(day) === 'PAUSED' && summary.membership_id ? membershipPauseService.eligibility(summary.membership_id) : null,
     ])
-    return { calendar, summary, customer, type, gym, pause }
+    return { calendar, summary, customer, type, gym, pause, transfers: memberships.filter(item => item.transfer?.history).map(item => ({ id: item.id, transfer: item.transfer! })) }
   },
 }
 export type MyAccessData = Awaited<ReturnType<typeof myAccessService.current>>

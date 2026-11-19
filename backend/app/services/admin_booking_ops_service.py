@@ -19,9 +19,27 @@ class AdminBookingOpsService:
         self.db = db
 
     def cancel_booking(self, *, booking_id: int, reason: str | None = None, actor_id: int | None = None) -> Booking:
+        from app.services.booking_cancellation import summary, cancel
+        candidate = self.db.get(Booking, booking_id)
+        if actor_id is not None and candidate and summary(self.db, candidate)['eligible']:
+            # Re-enter the centralized policy before acquiring operational override locks.
+            self.db.rollback()
+            return cancel(self.db, booking_id=booking_id, actor_id=actor_id, reason=reason)
+        # Evidence adds a gym-owner locking read. Preserve the scanner's lock
+        # order rather than acquiring gym after booking in the override path.
+        from app.services.source_evidence import enabled
+        if candidate and enabled(self.db):
+            from app.models.auth import User
+            from app.models.gym import Gym
+            self.db.scalar(select(User).where(User.id == candidate.user_id).with_for_update())
+            self.db.scalar(select(Gym).where(Gym.id == candidate.gym_id).with_for_update())
         booking = self.db.execute(select(Booking).where(Booking.id == booking_id).with_for_update().execution_options(populate_existing=True)).scalars().first()
         if not booking:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
+
+        from app.models.access import Checkin
+        if booking.attendance_status or self.db.scalar(select(Checkin.id).where(Checkin.booking_id == booking.id, Checkin.status == 'SUCCESS').limit(1)):
+            raise HTTPException(409, 'A used booking cannot be cancelled, including through administrator overrides.')
 
         if booking.status in {BookingStatus.CANCELLED.value, BookingStatus.EXPIRED.value}:
             return booking
@@ -63,6 +81,8 @@ class AdminBookingOpsService:
             BookingAccessService(self.db).revoke(booking)
             record(self.db, 'BOOKING_CANCELLED', booking.id, actor_id, reason_code='ADMIN_REQUEST', gym_id=booking.gym_id)
             publish(self.db, booking.user_id, 'BOOKING_CANCELLED', booking.id)
+            from app.services.source_evidence import operational_cancellation
+            operational_cancellation(self.db, booking, actor_id)
             self.db.commit()
         except Exception:
             self.db.rollback()

@@ -47,6 +47,7 @@ class PurchaseMembershipRequest(BaseModel):
 
 
 class UserMembershipResponse(ISTResponse):
+    transfer: dict | None = None
     original_end_at: datetime | None = None
     id: int
     user_id: int

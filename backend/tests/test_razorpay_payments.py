@@ -217,7 +217,12 @@ def test_bad_signatures_ownership_and_browser_amount_rejected(api):
 
 def test_cancelled_booking_cannot_be_reactivated_by_late_capture(api):
     record = checkout(api); booking_id = record['booking_ids'][0]
-    assert api[0].post(f'/api/v1/bookings/{booking_id}/cancel', headers=api[1][1], json={'reason': 'Changed mind'}).status_code == 200
+    assert api[0].post(f'/api/v1/bookings/{booking_id}/cancel', headers=api[1][1], json={'reason': 'Changed mind'}).status_code == 409
+    # Only the pre-existing administrator operational override can close this
+    # unpaid booking; late capture must still never reactivate its entitlement.
+    from app.services.admin_booking_ops_service import AdminBookingOpsService
+    with Session(api[2]) as db:
+        AdminBookingOpsService(db).cancel_booking(booking_id=booking_id, reason='Operational closure', actor_id=2)
     entity = api[3].pay(record)
     assert verify(api, record, entity).json()['status'] == 'REVIEW_REQUIRED'
     assert api[0].post(f'/api/v1/bookings/{booking_id}/qr', headers=api[1][1]).status_code == 400
@@ -319,15 +324,19 @@ def test_refund_reconciliation_revokes_access_without_duplicate_fulfillment(api)
     assert api[0].post(f"/api/v1/bookings/{record['booking_ids'][0]}/qr", headers=api[1][1]).status_code == 400
 
 
-def test_paid_booking_cancel_does_not_claim_gateway_refund(api):
+def test_paid_booking_cancel_does_not_claim_gateway_refund(api, monkeypatch):
     record = checkout(api); entity = api[3].pay(record)
     assert verify(api, record, entity).json()['status'] == 'PAID'
     booking_id = record['booking_ids'][0]
+    from app.services import booking_cancellation
+    monkeypatch.setattr(booking_cancellation, 'utcnow', lambda: NOW.replace(hour=7))
     response = api[0].post(f'/api/v1/bookings/{booking_id}/cancel', headers=api[1][1], json={'reason': 'cancel'})
     assert response.status_code == 200, response.text
     assert response.json()['payment']['status'] == 'PAID'
     assert response.json()['refund_initiated'] is False
-    assert 'does not initiate' in response.json()['cancellation_message']
+    assert 'never refunded to the original payment method' in response.json()['cancellation_message']
+    assert response.json()['cancellation']['wallet_credit_amount'] == record['amount']
+    assert response.json()['cancellation']['wallet_transaction_id'] is not None
     assert webhook(api, entity).status_code == 200
     assert api[0].post(f'/api/v1/bookings/{booking_id}/qr', headers=api[1][1]).status_code == 400
 

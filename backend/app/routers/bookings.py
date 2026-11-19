@@ -22,7 +22,11 @@ from app.schemas.visitors import BookingVisitorsRequest
 from sqlalchemy import select
 
 
-router = APIRouter(prefix="/bookings")
+def no_store(response: Response):
+    response.headers['Cache-Control'] = 'no-store'
+
+
+router = APIRouter(prefix="/bookings", dependencies=[Depends(no_store)])
 
 
 def _to_payment_response(p: Payment | None) -> PaymentResponse | None:
@@ -41,7 +45,9 @@ def _to_payment_response(p: Payment | None) -> PaymentResponse | None:
 
 
 def _to_booking_response(b: Booking) -> BookingResponse:
+    from app.services.booking_cancellation import summary
     return BookingResponse(
+        cancellation=summary(object_session(b), b),
         visitor_names=b.visitor_names,
         access=BookingAccessService(object_session(b)).summary(b),
         id=b.id,

@@ -63,7 +63,7 @@ for capture across start, expired deadlines, ended visits and cancellations.
 ## Deployment and checks
 
 No schema migration or environment change is required. Deploy frontend/backend
-together, restart the FitiGo backend on its configured port (locally 8001), and
+together, restart the FitiGo backend on its configured port (locally 8000), and
 reload the frontend. Do not restart the unrelated application on port 8000.
 Installing this change does not resolve or cancel existing customer orders.
 Submitting a fresh current-cart purchase can close verified unpaid old orders.

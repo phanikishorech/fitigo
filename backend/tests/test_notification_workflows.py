@@ -173,8 +173,11 @@ def test_post_send_commit_failure_becomes_unknown_without_replay(api):
 def test_booking_cancellation_generates_one_notification_on_retry(api):
     from test_booking_access_qr import create,NOW
     booking=create(api[:3],day=NOW.date()+timedelta(days=2))
-    for _ in range(2):
-        assert api[0].post(f"/api/v1/gym-owner/bookings/{booking['id']}/cancel",headers=api[1][2],json={}).status_code==200
+    from policy_fixtures import fund_wallet_booking
+    with Session(api[2]) as db:
+        fund_wallet_booking(db, booking['id']); db.commit()
+    for expected in (200, 409):
+        assert api[0].post(f"/api/v1/gym-owner/bookings/{booking['id']}/cancel",headers=api[1][2],json={}).status_code==expected
     with Session(api[2]) as db:
         items=db.scalars(select(NotificationDelivery)).all()
         assert len(items)==1 and items[0].user_id==1 and items[0].kind=='BOOKING_CANCELLED'

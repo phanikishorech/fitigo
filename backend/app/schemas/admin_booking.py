@@ -4,6 +4,7 @@ from app.schemas.time import ISTResponse
 from datetime import date, datetime, time
 
 from pydantic import BaseModel
+from app.schemas.customer_policy import CancellationPolicy
 
 
 class AdminBookingCustomer(BaseModel):
@@ -40,6 +41,8 @@ class AdminBookingPayment(BaseModel):
 
 
 class AdminBookingResponse(ISTResponse):
+    funding: dict | None = None
+    cancellation: CancellationPolicy | None = None
     id: int
     user_id: int
     gym_id: int

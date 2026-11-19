@@ -1,0 +1,90 @@
+PASS sign-in and signup scroll with wheel; bottom links reachable on mobile, short desktop and keyboard-height viewport
+PASS registration mismatch/duplicate/success, duplicate-submit prevention, existing login callback, responsive form
+PASS forgot request, unconfigured email, invalid link, expired link, reset success, secret removed from URL
+file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/Fitigo/frontend/scripts/auth-account-browser.mjs:13
+async function until(expression){for(let i=0;i<100;i++){if(await evaluate(expression))return;await wait(90)}throw Error(`Not ready: ${expression}; ${await evaluate('document.body.innerText')}`)}
+                                                                                                                  ^
+
+Error: Not ready: document.body.innerText.includes('current password is incorrect'); Skip to content
+Fiti
+Go
+OWNER
+WORKSPACE
+Dashboard
+My gyms
+Bookings
+Members
+Classes & slots
+Membership plans
+Staff
+Check-in
+Revenue
+Analytics & Reports
+Settings
+Help & support
+A
+Account Fixture
+Gym owner
+YOUR WORKSPACE
+Select a gym
++ Add new gym
+A
+Settings
+
+Your profile and workspace preferences.
+
+Owner profile
+A
+Account Fixture
+
+new@example.com
+
+Mobile
+Not provided
+Account roles
+GYM OWNER
+Selected gym
+No gym selected
+First name
+Last name
+Email
+Phone
+Current password (required to change email or phone)
+
+Changing contact details clears their verification and signs you out on all devices. Password and recovery rules are unchanged.
+
+Save profile
+Notification preferences
+Something went wrong
+
+Unable to connect. Check your internet connection and try again.
+
+Try again
+Gym preferences
+
+Update your gym details, photos, pricing and operating hours from its management page.
+
+Manage gym
+Password
+
+Update the password for your account. This signs you out on all devices.
+
+Use at least 8 characters. After changing your password, sign in again on your devices.
+
+Current password
+New password
+Confirm new password
+Show passwords
+Change password
+Account security
+
+Sign out on shared devices when you have finished your work.
+
+Sign out
+FitiGo Owner
+Built for your everyday operations.
+Help & support
+    at until (file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/Fitigo/frontend/scripts/auth-account-browser.mjs:13:115)
+    at async file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/Fitigo/frontend/scripts/auth-account-browser.mjs:103:47
+
+Node.js v24.16.0

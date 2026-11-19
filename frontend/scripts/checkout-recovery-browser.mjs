@@ -20,7 +20,10 @@ const user = { id: 1, first_name: 'Checkout', last_name: 'Fixture', email: 'chec
 function fixture(path, method, body) {
   if (path.endsWith('/auth/session')) return { user, roles: ['CUSTOMER'] }
   if (path.endsWith('/users/me')) return user
+  if (path.endsWith('/notifications/inbox')) return { items: [], total: 0, unread_count: 0 }
+  if (path.endsWith('/cart/summary')) return { count: cartActive ? 2 : 0, total: cartActive ? '300.00' : '0.00', currency: 'INR' }
   if (path.endsWith('/payments/config')) return { enabled: true, gateway_required: true, mode: 'test', provider: 'RAZORPAY' }
+  if (path.endsWith('/payments/quote')) return { total_amount: '300.00', wallet_amount: '0.00', gateway_amount: '300.00', wallet_balance: '0.00', available_wallet_balance: '0.00', reserved_balance: '0.00', wallet_unavailable_reason: 'No available wallet balance.', currency: 'INR', provider: 'RAZORPAY', mode: 'test' }
   if (path.endsWith('/cart/items')) return cartActive ? [62, 63].map(id => ({ id, gym_name: `New cart gym ${id}`, gym_id: 1, booking_date: '2026-11-13', start_time: '18:00:00', member_count: 1, total_price: '150.00', currency: 'INR' })) : []
   if (path.endsWith('/payments/checkouts') && method === 'GET') return recent ? [record] : []
   if (path.endsWith('/payments/checkouts') && method === 'POST') {
@@ -53,7 +56,7 @@ function fixture(path, method, body) {
 function command(method, params = {}) { return new Promise((resolve, reject) => { const id = ++sequence, timer = setTimeout(() => reject(Error(method)), 15000); pending.set(id, { resolve, reject, timer }); ws.send(JSON.stringify({ id, method, params })) }) }
 async function evaluate(expression) { const r = await command('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }); if (r.exceptionDetails) throw Error(r.exceptionDetails.exception?.description || r.exceptionDetails.text); return r.result.value }
 async function until(expression) { for (let i = 0; i < 250; i++) { if (await evaluate(expression)) return; await new Promise(r => setTimeout(r, 80)) } throw Error(`${expression}: ${await evaluate('document.body.innerText')}; ${errors}`) }
-async function click(label, twice = false) { await evaluate(`(()=>{const b=Array.from(document.querySelectorAll('main button')).find(b=>b.textContent.trim()===${JSON.stringify(label)});b.click();${twice ? 'b.click();' : ''}})()`); await new Promise(r => setTimeout(r, 150)) }
+async function click(label, twice = false) { await until(`Array.from(document.querySelectorAll('main button')).some(b=>b.textContent.trim()===${JSON.stringify(label)} && !b.disabled)`); await evaluate(`(()=>{const b=Array.from(document.querySelectorAll('main button')).find(b=>b.textContent.trim()===${JSON.stringify(label)});b.click();${twice ? 'b.click();' : ''}})()`); await new Promise(r => setTimeout(r, 150)) }
 ws.onmessage = async event => {
   const m = JSON.parse(event.data), item = pending.get(m.id)
   if (item) { clearTimeout(item.timer); pending.delete(m.id); m.error ? item.reject(Error(m.error.message)) : item.resolve(m.result) }
@@ -72,7 +75,7 @@ try {
   await command('Page.addScriptToEvaluateOnNewDocument', { source: `localStorage.setItem('fitigo:access_token','isolated-checkout-fixture');window.opens=0;window.Cashfree=()=>({checkout:async()=>{window.opens++;return window.paymentSuccess?{paymentDetails:'untrusted'}:{error:{message:'closed'}}}});const interval=window.setInterval;window.setInterval=(fn,ms,...args)=>interval(fn,ms===15000?500:ms,...args)` })
   if (replacementFlow) await command('Page.addScriptToEvaluateOnNewDocument', { source: `window.Razorpay=class{constructor(options){this.options=options}on(){}close(){}open(){window.opens++;if(window.paymentSuccess)this.options.handler({razorpay_order_id:'order_fixture',razorpay_payment_id:'pay_fixture',razorpay_signature:'a'.repeat(64)});else this.options.modal.ondismiss()}}` })
   await command('Page.navigate', { url: origin + '/checkout' })
-  await until(`document.body.innerText.includes('Pay securely')`)
+  await until(`document.body?.innerText.includes('Pay securely')`)
   await evaluate('document.activeElement?.blur()')
   assert.equal(refreshes, 0, 'collapsed history must not reconcile or launch old orders')
   assert.equal(creates, 0); assert.equal(await evaluate('window.opens'), 0)

@@ -49,10 +49,10 @@ test('all admin API transport reuses shared client, no raw fetch', () => {
   assert.doesNotMatch(source, /\bfetch\(|\bauthFetch\(|\bas any\b/)
 })
 test('dashboard labels do not misrepresent backend metrics', () => {
-  const source = readFileSync(new URL('../src/admin/Dashboard.tsx', import.meta.url), 'utf8')
-  assert.match(source, /Total gyms/); assert.match(source, /Booking revenue/)
-  assert.match(source, /revenue.in_period/); assert.match(source, /not date-filtered/)
-  assert.doesNotMatch(source, /Today's revenue|title="Active gyms"/)
+  const source = readFileSync(new URL('../src/admin/FinancialOverview.tsx', import.meta.url), 'utf8')
+  assert.match(source, /Attended individual booking value/); assert.match(source, /Not configured/)
+  assert.match(source, /attended_booking_value/); assert.match(source, /not date-filtered/)
+  assert.match(source, /Customer wallet liability/); assert.doesNotMatch(source, /title="Booking revenue"/)
 })
 test('admin summary and booking list pass the same inclusive date range', async () => {
   const calls = []; globalThis.__adminRequest = async path => { calls.push(path); return {} }

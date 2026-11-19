@@ -3,7 +3,8 @@ from __future__ import annotations
 from datetime import datetime, time
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+from app.services.gym_geo import coordinates
 
 
 class GymCreateRequest(BaseModel):
@@ -26,6 +27,13 @@ class GymCreateRequest(BaseModel):
     postal_code: str | None = Field(default=None, max_length=20)
     latitude: str | None = Field(default=None, max_length=50)
     longitude: str | None = Field(default=None, max_length=50)
+
+    @model_validator(mode='after')
+    def validate_coordinates(self):
+        if self.latitude is not None or self.longitude is not None:
+            if coordinates(self.latitude, self.longitude) is None:
+                raise ValueError('Provide both valid latitude (-90 to 90) and longitude (-180 to 180).')
+        return self
 
 
 class GymUpdateRequest(GymCreateRequest):
@@ -108,6 +116,8 @@ class GymListItem(BaseModel):
 class GymDiscoverItem(BaseModel):
     gym_id: int
     gym_name: str
+    starting_price: str | None = None
+    is_active: bool = True
     primary_image: str | None = None
     images: list[str] = []
     latitude: str | None = None

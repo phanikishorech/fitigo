@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.services.booking_cancellation import summary as cancellation_summary
 
 from collections import Counter
 from typing import Literal
@@ -140,6 +141,14 @@ def _parse_notes(notes: str | None) -> dict[str, str]:
     return out
 
 
+def _has_membership_history(db, user_id):
+    if db.scalar(select(UserMembership.id).where(UserMembership.user_id == user_id).limit(1)):
+        return True
+    from app.services.policy_schema import available
+    from app.models.customer_policy import MembershipTransfer
+    return available(db) and db.scalar(select(MembershipTransfer.id).where(MembershipTransfer.original_user_id == user_id).limit(1)) is not None
+
+
 def _access_type_label(access_type_id: str | None) -> str:
     if access_type_id == "DAY_PASS":
         return "Day Pass"
@@ -206,7 +215,7 @@ def get_profile(db: Session = Depends(get_db), current_user: User = Depends(get_
         profile_image=None,
         member_since=user.created_at,
         membership_status=membership_status,
-        has_membership_history=db.scalar(select(UserMembership.id).where(UserMembership.user_id == uid).limit(1)) is not None,
+        has_membership_history=_has_membership_history(db, uid),
     )
 
 
@@ -386,6 +395,7 @@ def list_profile_bookings(
         items.append(
             BookingItemResponse(
                 booking_id=int(b.id),
+                cancellation=cancellation_summary(db, b),
                 can_review=bool(eligible and g.status == 'APPROVED' and g.is_active),
                 review_id=reviews[g.id].id if g.id in reviews else None,
                 review_rating=reviews[g.id].rating if g.id in reviews else None,

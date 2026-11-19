@@ -127,7 +127,9 @@ def test_readiness_is_admin_only_safe_and_not_certification(api):
     response = client.get('/api/v1/admin/readiness', headers=headers[4])
     assert response.status_code == 200 and response.headers['cache-control'] == 'no-store'
     data = response.json(); assert not data['production_certified']
-    assert all(value is False for value in data['financial_workflows'].values())
+    assert data['financial_workflows']['gateway_wallet_spending'] is True
+    assert all(value is False for key, value in data['financial_workflows'].items() if key != 'gateway_wallet_spending')
+    assert any(c['code'] == 'WALLET_FUNDING' and c['status'] == 'CONFIGURED_NOT_VERIFIED' for c in data['checks'])
     assert any(c['code'] == 'WORKER_SCHEDULING' and c['status'] == 'MANUAL_CHECK' for c in data['checks'])
     assert 'password' not in response.text.lower() and '127.0.0.1' not in response.text
 

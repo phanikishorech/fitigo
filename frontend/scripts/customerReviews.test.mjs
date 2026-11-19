@@ -9,7 +9,7 @@ async function load(path, transform = s => s) {
 }
 const { canReview } = await load('../src/utils/booking.ts')
 const { reviewService } = await load('../src/services/accountService.ts', s => s.replace(/import \{ post, request \}[^\r\n]+/, 'const request=(...args)=>globalThis.__reviewRequest(...args);const post=(url,body)=>request(url,{method:"POST",body:JSON.stringify(body)});'))
-const { bookingService } = await load('../src/services/bookingService.ts', s => s.replace(/import \{ post, request \}[^\r\n]+/, 'const request=(...args)=>globalThis.__reviewRequest(...args);const post=(url,body)=>request(url,{method:"POST",body:JSON.stringify(body)});'))
+const { bookingService } = await load('../src/services/bookingService.ts', s => s.replace(/import \{ cartMutation \}[^\r\n]+/, 'const cartMutation = promise => promise').replace(/import \{ post, request \}[^\r\n]+/, 'const request=(...args)=>globalThis.__reviewRequest(...args);const post=(url,body)=>request(url,{method:"POST",body:JSON.stringify(body)});'))
 test('review eligibility cannot be inferred from manual attended flags', () => {
   const visit = { booking_id: 1, booking_status: 'COMPLETED', attendance_status: 'ATTENDED' }
   assert.equal(canReview(visit), false)

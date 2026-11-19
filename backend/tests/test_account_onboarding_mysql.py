@@ -37,7 +37,8 @@ def account_db(monkeypatch):
         # Do not let in-process Alembic logging disable application test loggers.
         config.config_file_name = None
         monkeypatch.setattr(settings, 'database_url', engine.url.render_as_string(hide_password=False))
-        command.upgrade(config, 'head')
+        # Round-trip only this historical feature, not later forward-only finance.
+        command.upgrade(config, 'bdf69ea12480')
         command.downgrade(config, 'acf58d9e1037')
         command.upgrade(config, 'head')
         monkeypatch.setattr(settings, 'smtp_host', 'smtp.fixture.test')

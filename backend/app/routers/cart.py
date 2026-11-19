@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from datetime import date as date_t, datetime, timedelta
+from datetime import date as date_t, datetime, timedelta, timezone
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user
@@ -18,6 +18,7 @@ from app.schemas.cart import (
     CartItemCreateClassRequest,
     CartItemCreateGymRequest,
     CartItemResponse,
+    CartItemUpdateRequest,
     CartWalletCheckoutResponse,
 )
 from app.models.wallet import WalletAccount, WalletTransaction, WalletTxnDirection, WalletTxnType
@@ -27,7 +28,11 @@ from app.services.booking_access_service import BookingAccessService, validate_v
 from app.services.booking_time import require_future_start, gym_visit_end
 
 
-router = APIRouter(prefix="/cart", dependencies=[Depends(get_current_user)])
+def no_store(response: Response):
+    response.headers['Cache-Control'] = 'no-store'
+
+
+router = APIRouter(prefix="/cart", dependencies=[Depends(get_current_user), Depends(no_store)])
 
 
 def _operating_hours_for_date(db: Session, *, gym_id: int, dt: date_t):
@@ -67,6 +72,8 @@ def _to_cart_item_response(
     available_capacity: int | None = None,
 ) -> CartItemResponse:
     return CartItemResponse(
+        updated_at=item.updated_at,
+        can_edit=item.status == CartItemStatus.ACTIVE.value and item.checkout_id is None,
         id=int(item.id),
         booking_type=item.booking_type,
         gym_id=int(item.gym_id),
@@ -140,6 +147,93 @@ def list_cart_items(
 
         out.append(_to_cart_item_response(item=it, gym_name=gym_map.get(int(it.gym_id))))
     return out
+
+
+@router.get('/summary')
+def cart_summary(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return {'count': db.scalar(select(func.count(CartItem.id)).where(
+        CartItem.user_id == current_user.id, CartItem.status == CartItemStatus.ACTIVE.value,
+        CartItem.checkout_id.is_(None))) or 0}
+
+
+@router.get('/items/{item_id}', response_model=CartItemResponse)
+def get_cart_item(item_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    item = db.scalar(select(CartItem).where(CartItem.id == item_id, CartItem.user_id == current_user.id))
+    if not item:
+        raise HTTPException(404, 'Cart item not found')
+    gym = db.get(Gym, item.gym_id)
+    session = db.get(ClassSession, item.class_session_id) if item.class_session_id else None
+    group = db.get(GymClass, session.gym_class_id) if session else None
+    return _to_cart_item_response(item=item, gym_name=gym.name if gym else None,
+        class_name=group.class_name if group else None, start_time=str(session.start_time) if session else None,
+        end_time=str(session.end_time) if session else None)
+
+
+@router.put('/items/{item_id}', response_model=CartItemResponse)
+def update_cart_item(item_id: int, payload: CartItemUpdateRequest, db: Session = Depends(get_db),
+                     current_user: User = Depends(get_current_user)):
+    # Discover ownership first; lock in the same gym -> cart -> session order as checkout.
+    gym_id = db.scalar(select(CartItem.gym_id).where(CartItem.id == item_id, CartItem.user_id == current_user.id))
+    if gym_id is None:
+        raise HTTPException(404, 'Cart item not found')
+    gym = db.scalar(select(Gym).where(Gym.id == gym_id).with_for_update().execution_options(populate_existing=True))
+    item = db.scalar(select(CartItem).where(CartItem.id == item_id, CartItem.user_id == current_user.id)
+                     .with_for_update().execution_options(populate_existing=True))
+    if not item:
+        raise HTTPException(404, 'Cart item not found')
+    if item.status != CartItemStatus.ACTIVE.value or item.checkout_id:
+        raise HTTPException(409, 'This visit is no longer an editable draft. Return to your cart and review its payment status.')
+    def utc_naive(value):
+        return value.astimezone(timezone.utc).replace(tzinfo=None) if value.tzinfo else value
+    if utc_naive(item.updated_at) != utc_naive(payload.expected_updated_at):
+        raise HTTPException(409, 'This draft changed in another session. Reload it before saving.')
+    if payload.gym_id != item.gym_id or payload.booking_type != item.booking_type:
+        raise HTTPException(400, 'Editing cannot change the gym or access type. Add a separate visit instead.')
+    if not gym or gym.status != 'APPROVED' or not gym.is_active:
+        raise HTTPException(409, 'This gym is no longer available for booking.')
+    names = validate_visitors(payload.visitor_names, payload.member_count)
+    session = group = None
+    if item.booking_type == BookingType.GYM.value:
+        require_future_start(payload.booking_date, payload.preferred_start_time)
+        end = gym_visit_end(payload.preferred_start_time, payload.preferred_end_time)
+        opened, closed, is_closed = _operating_hours_for_date(db, gym_id=gym.id, dt=payload.booking_date)
+        if is_closed or not opened or not closed or payload.preferred_start_time < opened or end > closed:
+            raise HTTPException(400, 'Choose a one-hour visit within the gym opening hours.')
+        start = payload.preferred_start_time
+        price = Decimal(str(gym.gym_price_per_person or 0))
+        duplicate = [CartItem.preferred_start_time == start, CartItem.preferred_end_time == end,
+                     CartItem.booking_date == payload.booking_date]
+    else:
+        if not gym.has_classes:
+            raise HTTPException(400, 'Classes are not available for this gym.')
+        session = db.scalar(select(ClassSession).where(ClassSession.id == payload.class_session_id)
+                            .with_for_update().execution_options(populate_existing=True))
+        group = db.get(GymClass, session.gym_class_id) if session else None
+        if not session or not group or group.gym_id != gym.id or not group.is_active:
+            raise HTTPException(400, 'Choose an active class at this gym.')
+        if session.session_date != payload.booking_date or session.status not in {'AVAILABLE', 'FEW_SLOTS_LEFT'}:
+            raise HTTPException(400, 'This class session is not available on the selected date.')
+        require_future_start(session.session_date, session.start_time)
+        if session.maximum_capacity - session.booked_capacity < payload.member_count:
+            raise HTTPException(409, 'Not enough places are available in this class.')
+        start = end = None
+        price = Decimal(str(session.price_per_person or 0))
+        duplicate = [CartItem.class_session_id == session.id, CartItem.booking_date == payload.booking_date]
+    if db.scalar(select(CartItem.id).where(CartItem.user_id == current_user.id, CartItem.id != item.id,
+            CartItem.gym_id == gym.id, CartItem.status == 'ACTIVE', CartItem.booking_type == item.booking_type,
+            *duplicate).limit(1)):
+        raise HTTPException(409, 'You already have a draft for this visit. Edit that draft or choose another time.')
+    item.booking_date = payload.booking_date
+    item.preferred_start_time, item.preferred_end_time = start, end
+    item.class_session_id = session.id if session else None
+    item.member_count, item.visitor_names = payload.member_count, names
+    item.price_per_person = price.quantize(Decimal('0.01'))
+    item.total_price = (price * payload.member_count).quantize(Decimal('0.01'))
+    # Existing MySQL timestamps have second precision; advance even for same-second edits.
+    item.updated_at = max(datetime.utcnow().replace(microsecond=0), utc_naive(item.updated_at).replace(microsecond=0) + timedelta(seconds=1))
+    db.commit(); db.refresh(item)
+    return _to_cart_item_response(item=item, gym_name=gym.name, class_name=group.class_name if group else None,
+        start_time=str(session.start_time) if session else None, end_time=str(session.end_time) if session else None)
 
 
 @router.delete("/items/{item_id}", response_model=dict)
@@ -649,11 +743,15 @@ def checkout_cart_with_wallet(
         total = total.quantize(Decimal("0.01"))
 
         _validate_checkout_times(db, items)
-        if wallet_before < total:
+        from app.services.checkout_funding import wallet_state
+        _, funds = wallet_state(db, uid, lock=True)
+        if funds['wallet_unavailable_reason'] and 'refund requires reconciliation' in funds['wallet_unavailable_reason']:
+            raise HTTPException(409, detail=funds['wallet_unavailable_reason'])
+        if wallet_before - Decimal(funds['reserved_balance']) < total:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Insufficient wallet balance")
 
         wallet_after = (wallet_before - total).quantize(Decimal("0.01"))
-        acct.balance = float(wallet_after)
+        acct.balance = wallet_after
 
         tx = WalletTransaction(
             account_id=int(acct.id),
@@ -743,7 +841,7 @@ def checkout_cart_with_wallet(
                 notes="\n".join(notes_parts),
                 expires_at=expires_at,
                 expired_at=None,
-                idempotency_key=None,
+                idempotency_key=f'cart:{it.id}',
             )
             db.add(booking)
             db.flush()

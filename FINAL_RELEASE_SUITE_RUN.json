@@ -1,0 +1,22 @@
+{
+  "shards": [
+    {
+      "shard": 0,
+      "exit": 0
+    },
+    {
+      "shard": 1,
+      "exit": 0
+    },
+    {
+      "shard": 2,
+      "exit": 0
+    },
+    {
+      "shard": 3,
+      "exit": 0
+    }
+  ],
+  "seconds": 2512.5779999999795,
+  "source_changes_during_run": []
+}

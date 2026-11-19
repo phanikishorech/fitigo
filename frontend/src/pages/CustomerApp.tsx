@@ -3,6 +3,8 @@ import CustomerShell from '../components/navigation/CustomerShell'
 import { openAuthModal } from '../authUi'
 import { customerRoute } from '../customerRoutes'
 import { Button, EmptyState, Link, Skeleton } from '../components/common/UI'
+import { paymentReturnReference, storedPaymentReturn } from '../utils/paymentReturn'
+import { useSession } from '../session/SessionGuard'
 
 const DiscoveryPage = lazy(() => import('./discovery/DiscoveryPage'))
 const LocationPage = lazy(() => import('./discovery/LocationPage'))
@@ -10,8 +12,11 @@ const GymPage = lazy(() => import('./discovery/GymPage'))
 const BookingPage = lazy(() => import('./booking/BookingPage'))
 const CompanionBooking = lazy(() => import('./booking/CompanionBooking'))
 const CartPage = lazy(() => import('./booking/CartPage'))
+const EditCartVisitPage = lazy(() => import('./booking/EditCartVisitPage'))
+const NotificationsPage = lazy(() => import('./profile/NotificationsPage'))
 const WalletPage = lazy(() => import('./wallet/WalletPage'))
 const PaymentHistory = lazy(() => import('./profile/PaymentHistory'))
+const PaymentReturnPage = lazy(() => import('./profile/PaymentReturnPage'))
 const BookingsPage = lazy(() => import('./booking/BookingsPage'))
 const BookingDetailPage = lazy(() => import('./booking/BookingDetailPage'))
 const MyMembershipPage = lazy(() => import('./membership/MembershipOverview'))
@@ -40,6 +45,9 @@ function SignIn({ path, authPage = false }: { path: string; authPage?: boolean }
 export default function CustomerApp({ path }: { path: string }) {
   const route = customerRoute(path)
   const query = new URLSearchParams(window.location.search)
+  const paymentReturn = paymentReturnReference(window.location.search)
+  const session = useSession()
+  const legacyReturn = route.page === 'checkout' && !paymentReturn.requested && session.status === 'authenticated' ? storedPaymentReturn(session.identity.user.id) : null
   const companionBooking = ['bookingAccess', 'bookingSchedule'].includes(route.page) && query.get('for') === 'others'
   let page: ReactNode
   switch (route.page) {
@@ -48,7 +56,9 @@ export default function CustomerApp({ path }: { path: string }) {
     case 'location': page = <LocationPage />; break
     case 'gym': page = <GymPage gymId={route.id} />; break
     case 'bookingAccess': case 'bookingSchedule': page = companionBooking ? <CompanionBooking gymId={route.id} /> : <BookingPage gymId={route.id} schedule={route.page === 'bookingSchedule'} />; break
-    case 'cart': case 'checkout': page = <CartPage checkout={route.page === 'checkout'} />; break
+    case 'cart': case 'checkout': page = route.page === 'checkout' && (paymentReturn.requested || legacyReturn) ? <PaymentReturnPage checkoutId={paymentReturn.checkoutId || legacyReturn} /> : <CartPage checkout={route.page === 'checkout'} />; break
+    case 'cartEdit': page = <EditCartVisitPage itemId={route.id} />; break
+    case 'notifications': page = <NotificationsPage />; break
     case 'wallet': case 'recharge': page = <WalletPage recharge={route.page === 'recharge'} />; break
     case 'bookings': case 'reviews': page = <BookingsPage reviews={route.page === 'reviews'} />; break
     case 'visits': case 'history': page = <MembershipVisitHistory />; break

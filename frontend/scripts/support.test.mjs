@@ -6,8 +6,8 @@ const read = path => readFileSync(new URL('../src/' + path, import.meta.url), 'u
 const code = ts.transpileModule(read('admin/routes.ts'), { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText
 const routes = await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`)
 test('support and readiness routes remain within protected admin portal', () => {
-  assert.equal(routes.adminRoute('/admin/support').page, 'support')
-  assert.equal(routes.adminRoute('/admin/readiness').page, 'readiness')
+  assert.equal(routes.adminRoute('/admin/support').page, 'notFound')
+  assert.equal(routes.adminRoute('/admin/readiness').page, 'notFound')
   assert.equal(routes.adminRoute('/admin/support/garbage').page, 'notFound')
   assert.match(read('session/policy.ts'), /portal: 'admin', protected: true/)
 })

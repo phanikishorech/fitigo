@@ -1,0 +1,18 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert.ok(calls.filter(p => p.endsWith('/memberships/me')).length - mine <= 2)
+
+    at file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/Fitigo/frontend/scripts/member-entry-browser.mjs:55:12 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.16.0

@@ -26,7 +26,7 @@ def test_admin_grouped_revenue_is_mode_scoped_on_strict_mysql(mysql_api, monkeyp
     summary = client.get('/api/v1/admin/dashboard/summary', params=params, headers=headers)
     report = client.get('/api/v1/admin/reports/bookings/daily', params=params, headers=headers)
     assert summary.status_code == report.status_code == 200
-    assert Decimal(summary.json()['revenue']['in_period']) == 300
+    assert Decimal(summary.json()['revenue']['in_period']) == 0  # Paid but never checked in.
     assert Decimal(report.json()[0]['paid_amount_total']) == 300
     assert report.json()[0]['mode'] == mode
     selected = client.get('/api/v1/admin/reports/bookings/daily', params={**params, 'gym_id': 1}, headers=headers)

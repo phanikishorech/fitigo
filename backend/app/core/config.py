@@ -84,6 +84,11 @@ class Settings(BaseSettings):
     support_email: str = ''
     # Activate only after f02a3ce56824; operational audit is required too.
     support_workflows_enabled: bool = False
+    # Separate deployment gate; never enables a financial posting engine.
+    source_evidence_enabled: bool = False
+    marketplace_allocations_enabled: bool = False
+    marketplace_live_allocations_enabled: bool = False
+    marketplace_payouts_enabled: bool = False
 
     # App download links (configurable; do not hardcode in frontend)
     android_app_url: str | None = None

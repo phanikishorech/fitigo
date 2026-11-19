@@ -1,5 +1,6 @@
 // TEST ONLY: backend session fixtures, no real credentials/accounts are changed.
 import assert from 'node:assert/strict'
+import { businessSummary } from './business-browser-fixtures.mjs'
 const origin=process.env.FITIGO_TEST_ORIGIN||'http://localhost:5173',debug='http://localhost:9231'
 // Separate storage from other open fixture tabs: cross-tab logout is now real behavior.
 const browserInfo=await(await fetch(`${debug}/json/version`)).json()
@@ -47,6 +48,12 @@ ws.onmessage=async event=>{
     body={status:'ok'}
    }else if(path==='/api/v1/users/me')body=user
    else if(path==='/api/v1/users/me/roles')body=roles
+   else if(path.endsWith('/business/summary'))body=businessSummary(new URL(request.url).searchParams)
+   else if(path.endsWith('/notifications/inbox'))body={items:[],total:0,unread_count:0}
+   else if(path.endsWith('/cart/summary'))body={count:0,total:'0.00',currency:'INR'}
+   else if(path.endsWith('/notifications/preferences'))body={enabled:true,operational_email:false,email_available:false,message:'Fixture preferences'}
+   else if(path.endsWith('/gym-owner/analytics/transactions'))body={items:[],total:0}
+   else if(path.endsWith('/gym-owner/analytics'))body={summary:{generated_at:'2026-10-27T12:00:00+05:30',upcoming_visits:0,visits:{total:0,fitigo_member:0,single_gym_membership:0,individual_booking:0},bookings:{in_period:0},attendance:{upcoming:0,attended:0,cancelled:0,no_show:0,pending_payment:0,expired:0,unresolved:0},revenue:{mode:'test',total:'0',single_gym_membership:'0',individual_booking:'0',fully_refunded_sales:'0',partial_refund_count:0,excluded_paid_records:0}},grouping:'daily',series:[],revenue_by_gym:[]}
    else if(path==='/api/v1/gyms/discover')body={gyms:[],page:1,page_size:8,total_count:0,has_more:false}
    else if(['/api/v1/meta/gym-types','/api/v1/facilities','/api/v1/gym-owner/gyms','/api/v1/gym-staff/gyms','/api/v1/admin/gyms','/api/v1/admin/bookings','/api/v1/admin/reports/bookings/daily'].includes(path))body=[]
    else if(path==='/api/v1/gym-owner/dashboard/summary')body={gym_id:null,date:'2026-10-19',date_from:'2026-10-19',date_to:'2026-10-19',generated_at:'2026-10-19T12:00:00+05:30',upcoming_visits:0,visits:{fitigo_member:0,single_gym_membership:0,individual_booking:0,total:0},gyms:{total:0,approved:0,pending_approval:0,draft:0},bookings:{today:0,on_date:0,upcoming:0,in_period:0,confirmed_in_period:0},attendance:{upcoming:0,attended:0,cancelled:0,no_show:0,pending_payment:0,expired:0,unresolved:0},revenue:{mode:'test',last_30d:'0.00',in_period:'0.00',currency:'INR',total:'0.00',single_gym_membership:'0.00',individual_booking:'0.00',fully_refunded_sales:'0.00',partial_refund_count:0,excluded_paid_records:0}}
@@ -142,7 +149,7 @@ try{
   ['USER','/gyms/1/book/schedule?source=visit#schedule','Make time for yourself'],
   ['GYM_OWNER','/owner/revenue?period=month#report','Revenue'],
   ['GYM_STAFF','/owner/settings?tab=password#security','Owner profile'],
-  ['ADMIN','/admin/settings?tab=security#password','Settings']
+  ['ADMIN','/admin/profile?tab=security#password','Admin profile']
  ]) {
   await anonymous();await visit(path);await until(`location.pathname==='/login'`)
   assert.equal(await evaluate(`(()=>{const i=JSON.parse(sessionStorage.getItem('fitigo:return-intent:v1'));return i.pathname+i.search+i.hash})()`),path)
@@ -173,8 +180,12 @@ try{
  console.log('PASS public gym continuation, BOOK_VISIT resumes once, refresh cannot replay, no-membership resumes normal booking')
  // A second registered action resumes its EXISTING handler, with draft data
  // staying in the existing draft store rather than in the return intent.
- await visit('/gyms/1/book/schedule');await until(`document.querySelectorAll('input[type="time"]').length===2 && !document.querySelector('[aria-label="Loading"]')`)
- await fill('input[type="time"]','09:00');await evaluate(`(()=>{const el=document.querySelectorAll('input[type="time"]')[1];Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,'10:00');el.dispatchEvent(new Event('input',{bubbles:true}))})()`);await wait(80)
+  await visit('/gyms/1/book/schedule');await until(`!!document.querySelector('select[aria-label="Start hour (IST)"]') && !document.querySelector('[aria-label="Loading"]')`)
+  await fill('input[type="date"]',new Date(Date.now()+86400000).toISOString().slice(0,10))
+  for (const [label,value] of [['Start hour (IST)','09'],['Start minutes','00']]) {
+   await evaluate(`(()=>{const el=document.querySelector('select[aria-label="${label}"]');el.value='${value}';el.dispatchEvent(new Event('change',{bubbles:true}))})()`);await wait(80)
+  }
+  await fill('fieldset input','Fixture Visitor')
  await evaluate(`localStorage.removeItem('fitigo:access_token')`)
  await click('Check availability & add to cart');await until(`location.pathname==='/login'`)
  assert.deepEqual(await evaluate(`JSON.parse(sessionStorage.getItem('fitigo:return-intent:v1')).metadata`),{gymId:'1'})
@@ -183,12 +194,12 @@ try{
  assert.equal(await evaluate(`sessionStorage.getItem('fitigo:return-intent:v1')`),null)
  console.log('PASS generic ADD_TO_CART handler reuses existing validated draft and service exactly once, no pricing/payment data persisted')
  for(const role of ['CUSTOMER','GYM_OWNER','GYM_STAFF']) {
-  await anonymous();await visit('/admin/settings?tab=security');await customerLogin(role);await atHome(role)
+  await anonymous();await visit('/admin/profile?tab=security');await customerLogin(role);await atHome(role)
   assert.equal(await evaluate(`sessionStorage.getItem('fitigo:return-intent:v1')`),null)
  }
  // Already authenticated login also consumes an authorized intent.
  roles=['ADMIN'];await evaluate(`localStorage.setItem('fitigo:access_token','fixture-authenticated');sessionStorage.clear()`)
- await visit('/login?returnTo=%2Fadmin%2Fsettings%3Ftab%3Dsecurity%23password');await until(`location.pathname+location.search+location.hash==='/admin/settings?tab=security#password'`)
+ await visit('/login?returnTo=%2Fadmin%2Fprofile%3Ftab%3Dsecurity%23password');await until(`location.pathname+location.search+location.hash==='/admin/profile?tab=security#password'`)
  await until(`sessionStorage.getItem('fitigo:return-intent:v1')===null`)
  for(const value of ['https://evil.test','//evil.test','/login','/unknown','/owner/reports']){await visit('/login?returnTo='+encodeURIComponent(value));await atHome('ADMIN');assert.equal(await evaluate(`sessionStorage.getItem('fitigo:return-intent:v1')`),null)}
  // Expiry restores original location, not Home; a session failure does not consume intent.

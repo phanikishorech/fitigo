@@ -17,7 +17,9 @@ from app.models.notification_delivery import NotificationDelivery, NotificationP
 from app.services import account_delivery
 
 TEMPLATES = {
-    'BOOKING_CANCELLED': ('OPERATIONAL','Booking cancelled','Your booking was cancelled. Cancellation does not initiate or confirm a refund.'),
+    'BOOKING_CANCELLED': ('OPERATIONAL','Booking cancelled','Your booking was cancelled. Open its details to review any eligible FitiGo Wallet credit. No original-method refund is initiated.'),
+    'MEMBERSHIP_TRANSFERRED': ('SECURITY','Membership transferred','Your one-time membership transfer is complete. You no longer have access through this membership.'),
+    'MEMBERSHIP_RECEIVED': ('OPERATIONAL','Membership received','A Multi-Gym membership was transferred to you. Original validity and usage rules remain unchanged; it cannot be transferred again.'),
     'BOOKING_RESCHEDULED': ('OPERATIONAL','Booking rescheduled','Your direct booking was rescheduled. Review its updated details in FitiGo.'),
     'GYM_STATUS_CHANGED': ('OPERATIONAL','Gym review updated','Your gym review status changed. Sign in to review the current status.'),
     'STAFF_REMOVED': ('OPERATIONAL','Gym assignment removed','A gym staff assignment was removed. Sign in to review your current access.'),

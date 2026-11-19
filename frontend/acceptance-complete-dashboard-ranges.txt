@@ -1,0 +1,2 @@
+PASS GYM_OWNER: all presets, custom validation/apply, stale responses, leap-year chart, responsive layout, booking drill-down, gym range preservation
+PASS ADMIN: business presets, custom validation, stale responses and responsive layouts

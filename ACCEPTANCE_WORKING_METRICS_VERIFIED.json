@@ -1,0 +1,201 @@
+{
+  "read_only": true,
+  "test": {
+    "overall": {
+      "visits": 1,
+      "bookings": 8,
+      "users": 4,
+      "gyms": 39,
+      "active_memberships": 1
+    },
+    "visits": {
+      "individual": 1,
+      "single_gym": 0,
+      "multi_gym": 0,
+      "completed": 1,
+      "upcoming": 0,
+      "no_shows": 0,
+      "cancelled": 3
+    },
+    "collections": {
+      "categories": {
+        "individual": null,
+        "single_gym": null,
+        "multi_gym": null
+      },
+      "total": null,
+      "known_dated_total": "0.00",
+      "undated_purchases": 9,
+      "unattributed_purchases": 0,
+      "gym_gross_share": null,
+      "fitigo_commission": null,
+      "complete": false
+    },
+    "wallet": {
+      "applicable": true,
+      "outstanding": "200.00",
+      "ledger_net": "200.00",
+      "stored_balance": "200.00",
+      "reconciliation_difference": "0.00",
+      "mismatched_accounts": 0,
+      "status": "RECONCILED",
+      "unclassified_mode_balance": "0.00",
+      "credits": "300.00",
+      "debits": "100.00",
+      "spending": "100.00",
+      "booking_spending": "100.00",
+      "membership_spending": "0.00",
+      "unallocated_spending": "0.00",
+      "cancellation_credits": "300.00",
+      "opening_ledger_balance": "0.00",
+      "closing_ledger_balance": "200.00",
+      "movements_by_type": [
+        {
+          "txn_type": "CANCELLATION_CREDIT",
+          "direction": "IN",
+          "amount": "300.00",
+          "count": 2
+        },
+        {
+          "txn_type": "PAYMENT",
+          "direction": "OUT",
+          "amount": "100.00",
+          "count": 1
+        }
+      ],
+      "promotional_credits": {
+        "value": null,
+        "status": "NOT_CONFIGURED",
+        "reason": "No approved promotional credit classification exists."
+      },
+      "adjustments": {
+        "value": null,
+        "status": "NOT_CONFIGURED",
+        "reason": "No approved wallet-adjustment taxonomy/workflow exists; recorded transaction types remain visible."
+      },
+      "expirations": {
+        "value": null,
+        "status": "NOT_CONFIGURED",
+        "reason": "Wallet expiration is not implemented."
+      },
+      "source_liability": {
+        "value": null,
+        "status": "NOT_CONFIGURED",
+        "reason": "Debits are not allocated to original credits. FIFO is not assumed."
+      },
+      "liability_aging": {
+        "value": null,
+        "status": "NOT_CONFIGURED",
+        "reason": "Remaining credit lots and their consumption order are not recorded."
+      }
+    },
+    "bookings": {
+      "total": 8,
+      "confirmed": 5,
+      "cancelled": 3,
+      "attended": 1,
+      "no_show": 0,
+      "pending": 0,
+      "expired": 0,
+      "upcoming": 0,
+      "cancellation_rate": 37.5,
+      "no_show_rate": 0.0
+    }
+  },
+  "live": {
+    "overall": {
+      "visits": 0,
+      "bookings": 0,
+      "users": 4,
+      "gyms": 39,
+      "active_memberships": 0
+    },
+    "visits": {
+      "individual": 0,
+      "single_gym": 0,
+      "multi_gym": 0,
+      "completed": 0,
+      "upcoming": 0,
+      "no_shows": 0,
+      "cancelled": 0
+    },
+    "collections": {
+      "categories": {
+        "individual": "0.00",
+        "single_gym": "0.00",
+        "multi_gym": "0.00"
+      },
+      "total": "0.00",
+      "known_dated_total": "0.00",
+      "undated_purchases": 0,
+      "unattributed_purchases": 0,
+      "gym_gross_share": null,
+      "fitigo_commission": null,
+      "complete": true
+    },
+    "wallet": {
+      "applicable": true,
+      "outstanding": "0.00",
+      "ledger_net": "0.00",
+      "stored_balance": "0.00",
+      "reconciliation_difference": "0.00",
+      "mismatched_accounts": 0,
+      "status": "RECONCILED",
+      "unclassified_mode_balance": "0.00",
+      "credits": "0.00",
+      "debits": "0.00",
+      "spending": "0.00",
+      "booking_spending": "0.00",
+      "membership_spending": "0.00",
+      "unallocated_spending": "0.00",
+      "cancellation_credits": "0.00",
+      "opening_ledger_balance": "0.00",
+      "closing_ledger_balance": "0.00",
+      "movements_by_type": [],
+      "promotional_credits": {
+        "value": null,
+        "status": "NOT_CONFIGURED",
+        "reason": "No approved promotional credit classification exists."
+      },
+      "adjustments": {
+        "value": null,
+        "status": "NOT_CONFIGURED",
+        "reason": "No approved wallet-adjustment taxonomy/workflow exists; recorded transaction types remain visible."
+      },
+      "expirations": {
+        "value": null,
+        "status": "NOT_CONFIGURED",
+        "reason": "Wallet expiration is not implemented."
+      },
+      "source_liability": {
+        "value": null,
+        "status": "NOT_CONFIGURED",
+        "reason": "Debits are not allocated to original credits. FIFO is not assumed."
+      },
+      "liability_aging": {
+        "value": null,
+        "status": "NOT_CONFIGURED",
+        "reason": "Remaining credit lots and their consumption order are not recorded."
+      }
+    },
+    "bookings": {
+      "total": 0,
+      "confirmed": 0,
+      "cancelled": 0,
+      "attended": 0,
+      "no_show": 0,
+      "pending": 0,
+      "expired": 0,
+      "upcoming": 0,
+      "cancellation_rate": null,
+      "no_show_rate": null
+    }
+  },
+  "independent": {
+    "wallet_balance_sum": "200.00",
+    "wallet_ledger_net": "200.00",
+    "booking_count": "8",
+    "cancelled": "3",
+    "explicit_no_show": "0"
+  }
+}

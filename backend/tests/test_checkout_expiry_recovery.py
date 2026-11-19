@@ -33,7 +33,12 @@ def test_expired_booking_keeps_financial_state_and_returns_checkout_snapshot(api
     assert result['items'][0]['amount'] == result['amount'] == '200.00'
     resumed = checkout(api, {'kind': 'CART'}, key='new-browser-key')
     assert resumed['id'] == record['id'] and api[3].creations == 1
-    assert api[0].post(f"/api/v1/payments/checkouts/{record['id']}/cancel", headers=api[1][1]).status_code == 409
+    # Explicit cancellation now requests Cashfree termination, rather than
+    # requiring a support operator to close the order beforehand.
+    closed = api[0].post(f"/api/v1/payments/checkouts/{record['id']}/cancel", headers=api[1][1])
+    assert closed.status_code == 200
+    assert closed.json()['status'] == 'CANCELLED' and closed.json()['replacement_safe']
+    assert any(call.method == 'PATCH' for call in api[3].calls)
 
 
 @pytest.mark.parametrize('state', ['ACTIVE', 'TERMINATION_REQUESTED', 'EXPIRED'])
@@ -44,7 +49,12 @@ def test_processing_attempt_blocks_reopen_and_cancellation(api, state):
     result = refresh(api, record).json()
     assert result['payment_blocked_reason'] == 'PAYMENT_PROCESSING'
     assert not result['can_pay'] and not result['can_cancel']
-    assert api[0].post(f"/api/v1/payments/checkouts/{record['id']}/cancel", headers=api[1][1]).status_code == 409
+    response = api[0].post(f"/api/v1/payments/checkouts/{record['id']}/cancel", headers=api[1][1])
+    assert response.status_code == 200
+    assert response.json()['status'] != 'CANCELLED'
+    assert not response.json()['replacement_safe'] and not response.json()['can_pay']
+    assert response.json()['payment_blocked_reason'] == 'PAYMENT_PROCESSING'
+    assert not any(call.method == 'PATCH' for call in api[3].calls)
     assert api[3].creations == 1
 
 
@@ -97,7 +107,12 @@ def test_ambiguous_creation_cannot_be_cancelled(api):
     api[3].orders.clear()
     with Session(api[2]) as db:
         identifier = db.scalar(select(PaymentCheckout.id))
-    assert api[0].post(f'/api/v1/payments/checkouts/{identifier}/cancel', headers=api[1][1]).status_code == 409
+    response = api[0].post(f'/api/v1/payments/checkouts/{identifier}/cancel', headers=api[1][1])
+    assert response.status_code == 200
+    assert response.json()['status'] == 'CREATING'
+    assert not response.json()['replacement_safe'] and not response.json()['can_pay']
+    assert response.json()['cancellation_requested']
+    assert not any(call.method == 'PATCH' for call in api[3].calls)
     assert api[3].creations == 1
 
 

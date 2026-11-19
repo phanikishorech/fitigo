@@ -1,0 +1,470 @@
+﻿ M README.md
+ M backend/CHECKOUT_RECOVERY.md
+ M backend/LOCAL_DEPLOYMENT_PHASE4.md
+ M backend/LOCAL_FRESH_START.md
+ M backend/LOCAL_NONFINANCIAL_COMPLETION.md
+ M backend/LOCAL_SUPPORT_ACTIVATION.md
+ M backend/PHASE4_COMPLETION.md
+ M backend/app/core/config.py
+ M backend/app/main.py
+ M backend/app/models/__init__.py
+ M backend/app/models/gym.py
+ M backend/app/routers/admin.py
+ M backend/app/routers/bookings.py
+ M backend/app/routers/cart.py
+ M backend/app/routers/gym_owner.py
+ M backend/app/routers/gyms_public.py
+ M backend/app/routers/memberships.py
+ M backend/app/routers/meta.py
+ M backend/app/routers/payments.py
+ M backend/app/routers/profile.py
+ M backend/app/routers/wallet.py
+ M backend/app/schemas/admin_booking.py
+ M backend/app/schemas/booking.py
+ M backend/app/schemas/booking_owner.py
+ M backend/app/schemas/cart.py
+ M backend/app/schemas/gym.py
+ M backend/app/schemas/membership.py
+ M backend/app/schemas/payment_checkout.py
+ M backend/app/schemas/profile.py
+ M backend/app/schemas/wallet.py
+ M backend/app/services/access_service.py
+ M backend/app/services/admin_analytics_service.py
+ M backend/app/services/admin_booking_ops_service.py
+ M backend/app/services/admin_dashboard_service.py
+ M backend/app/services/admin_revenue.py
+ M backend/app/services/booking_access_service.py
+ M backend/app/services/booking_service.py
+ M backend/app/services/cashfree_provider.py
+ M backend/app/services/customer_payment_history.py
+ M backend/app/services/gym_service.py
+ M backend/app/services/membership_pause_service.py
+ M backend/app/services/membership_service.py
+ M backend/app/services/membership_wallet_service.py
+ M backend/app/services/notification_workflow.py
+ M backend/app/services/owner_analytics_service.py
+ M backend/app/services/owner_booking_policy.py
+ M backend/app/services/owner_dashboard_service.py
+ M backend/app/services/owner_member_service.py
+ M backend/app/services/owner_revenue.py
+ M backend/app/services/payment_checkout_service.py
+ M backend/app/services/payment_provider.py
+ M backend/app/services/razorpay_gateway.py
+ M backend/app/services/razorpay_provider.py
+ M backend/app/services/readiness_service.py
+ M backend/app/services/wallet_gateway_service.py
+ M backend/scripts/run_isolated_tests.py
+ M backend/tests/test_account_onboarding_mysql.py
+ M backend/tests/test_admin_financial_integrity.py
+ M backend/tests/test_admin_financial_mysql.py
+ M backend/tests/test_booking_access_mysql.py
+ M backend/tests/test_booking_access_qr.py
+ M backend/tests/test_booking_capacity.py
+ M backend/tests/test_cashfree_payments.py
+ M backend/tests/test_dashboard_date_ranges.py
+ M backend/tests/test_notification_migration_mysql.py
+ M backend/tests/test_notification_workflows.py
+ M backend/tests/test_phase4_migrations_mysql.py
+ M backend/tests/test_phase5_mysql.py
+ M backend/tests/test_phase5_workflows.py
+ M backend/tests/test_phase6_migration_mysql.py
+ M backend/tests/test_phase6_operations.py
+ M backend/tests/test_razorpay_payments.py
+ M backend/tests/test_support_migration_mysql.py
+ M backend/tests/test_support_workflows.py
+ M backend/tests/test_wallet_gateway_history.py
+ M frontend/scripts/admin.test.mjs
+ M frontend/scripts/auth-account-browser.mjs
+ M frontend/scripts/booking-qr-browser.mjs
+ M frontend/scripts/booking-time-browser.mjs
+ M frontend/scripts/checkout-recovery-browser.mjs
+ M frontend/scripts/customer-account-browser.mjs
+ M frontend/scripts/customerReviews.test.mjs
+ M frontend/scripts/dashboard-ranges-browser.mjs
+ M frontend/scripts/financialScope.test.mjs
+ M frontend/scripts/member-entry-browser.mjs
+ M frontend/scripts/memberHome.test.mjs
+ M frontend/scripts/membership-pause-browser.mjs
+ M frontend/scripts/my-access-browser.mjs
+ M frontend/scripts/owner-scanner-browser.mjs
+ M frontend/scripts/payment-history-browser.mjs
+ M frontend/scripts/razorpay-browser.mjs
+ M frontend/scripts/razorpay.test.mjs
+ M frontend/scripts/returnIntent.test.mjs
+ M frontend/scripts/role-session-browser.mjs
+ M frontend/scripts/support.test.mjs
+ M frontend/src/admin/Account.tsx
+ M frontend/src/admin/AdminApp.tsx
+ M frontend/src/admin/AdminLayout.tsx
+ M frontend/src/admin/Analytics.tsx
+ M frontend/src/admin/Bookings.tsx
+ M frontend/src/admin/Dashboard.tsx
+ M frontend/src/admin/Gyms.tsx
+ M frontend/src/admin/MembershipPlans.tsx
+ M frontend/src/admin/Users.tsx
+ M frontend/src/admin/WorkflowSettings.tsx
+ M frontend/src/admin/routes.ts
+ M frontend/src/components/common/CancellationNotice.tsx
+ M frontend/src/components/common/DateRangePicker.tsx
+ M frontend/src/components/common/GatewayPayment.tsx
+ M frontend/src/components/common/NotificationCenter.tsx
+ M frontend/src/components/membership/MyAccessCard.tsx
+ M frontend/src/components/membership/TodayMembershipAccess.tsx
+ M frontend/src/components/navigation/CustomerShell.tsx
+ M frontend/src/components/payments/CheckoutVisitCard.tsx
+ M frontend/src/customerRoutes.ts
+ M frontend/src/owner/Analytics.tsx
+ M frontend/src/owner/Bookings.tsx
+ M frontend/src/owner/Gyms.tsx
+ M frontend/src/owner/Members.tsx
+ M frontend/src/owner/analyticsService.ts
+ M frontend/src/pages/CustomerApp.tsx
+ M frontend/src/pages/booking/BookingDetailPage.tsx
+ M frontend/src/pages/booking/BookingPage.tsx
+ M frontend/src/pages/booking/BookingsPage.tsx
+ M frontend/src/pages/booking/CartPage.tsx
+ M frontend/src/pages/discovery/DiscoveryPage.tsx
+ M frontend/src/pages/discovery/GymPage.tsx
+ M frontend/src/pages/discovery/LocationPage.tsx
+ M frontend/src/pages/membership/MembershipOverview.tsx
+ M frontend/src/pages/profile/PaymentHistory.tsx
+ M frontend/src/pages/profile/SettingsPage.tsx
+ M frontend/src/pages/wallet/WalletPage.tsx
+ M frontend/src/screens/Admin/api.ts
+ M frontend/src/screens/Checkout/api.ts
+ M frontend/src/screens/GymAccess/types.ts
+ M frontend/src/screens/GymOwner/api.ts
+ M frontend/src/screens/NearbyGyms/LocationStore.ts
+ M frontend/src/screens/NearbyGyms/types.ts
+ M frontend/src/services/accountService.ts
+ M frontend/src/services/bookingService.ts
+ M frontend/src/services/gymService.ts
+ M frontend/src/services/myAccessService.ts
+ M frontend/src/services/paymentService.ts
+ M frontend/src/store/bookingStore.ts
+ M frontend/src/utils/checkoutRecovery.ts
+ M frontend/src/utils/dateRange.ts
+ M frontend/src/utils/membership.ts
+ M frontend/vite.config.ts
+?? ACCEPTANCE_AFTER.json
+?? ACCEPTANCE_BEFORE.json
+?? ACCEPTANCE_GATEWAY_PROBES.json
+?? ACCEPTANCE_WORKING_METRICS.json
+?? ACCEPTANCE_WORKING_METRICS_VERIFIED.json
+?? ACCOUNTING_PHASE2_POLICY_EVIDENCE.md
+?? ACCOUNTING_PHASE3_SOURCE_EVIDENCE.md
+?? ACCOUNTING_PHASE4_MARKETPLACE.md
+?? ADMIN_AGREEMENTS_LOCAL_RELEASE.md
+?? ADMIN_CLEANUP_AFTER.json
+?? ADMIN_CLEANUP_BEFORE.json
+?? ADMIN_FINANCIAL_METRICS.md
+?? ADMIN_REVENUE_SHARING_CONFIGURATION.md
+?? ADMIN_UI_SIMPLIFICATION.md
+?? CUSTOMER_ACTIVITY_AND_CART_EDIT.md
+?? CUSTOMER_POLICY_IMPLEMENTATION.md
+?? CUSTOMER_POLICY_LOCAL_RELEASE.md
+?? FINAL_RELEASE_INITIAL_STATUS.txt
+?? FINANCIAL_INCREMENT4_OPERATIONS.md
+?? FINANCIAL_SIMPLIFICATION_INCREMENT1.md
+?? FINANCIAL_SIMPLIFICATION_INCREMENT2.md
+?? FINANCIAL_SIMPLIFICATION_INCREMENT3.md
+?? FINANCIAL_SIMPLIFICATION_INCREMENT4.md
+?? FITIGO_BUSINESS_ACCEPTANCE_REPORT.md
+?? GOOGLE_MAPS_INTEGRATION.md
+?? INCREMENT4_DATA_READINESS_AFTER.json
+?? INCREMENT4_DATA_READINESS_BEFORE.json
+?? WALLET_LOCAL_RELEASE.md
+?? WALLET_SPLIT_PAYMENT_IMPLEMENTATION.md
+?? backend/alembic/versions/a13b4df67935_gym_geo_index.py
+?? backend/alembic/versions/a79ba3ed2591_marketplace_allocation.py
+?? backend/alembic/versions/b24c5ef78046_customer_policies.py
+?? backend/alembic/versions/b80cb4fe3602_gym_visit_payouts.py
+?? backend/alembic/versions/c35d6fa89157_checkout_funding.py
+?? backend/alembic/versions/c91dc50f4713_owner_payout_workflow.py
+?? backend/alembic/versions/d46e70ba9268_financial_agreements.py
+?? backend/alembic/versions/da2e6f105824_monthly_visit_completion.py
+?? backend/alembic/versions/e57f81cb0379_policy_evidence_pins.py
+?? backend/alembic/versions/eb3f70126935_financial_review_controls.py
+?? backend/alembic/versions/f68a92dc1480_source_evidence.py
+?? backend/app/models/checkout_funding.py
+?? backend/app/models/customer_policy.py
+?? backend/app/models/financial_agreement.py
+?? backend/app/models/financial_review.py
+?? backend/app/models/gym_visit_payout.py
+?? backend/app/models/marketplace_allocation.py
+?? backend/app/models/owner_payout.py
+?? backend/app/models/source_evidence.py
+?? backend/app/routers/admin_business.py
+?? backend/app/routers/admin_financial_agreements.py
+?? backend/app/routers/admin_financial_readiness.py
+?? backend/app/routers/admin_gym_financial_settings.py
+?? backend/app/routers/admin_marketplace.py
+?? backend/app/schemas/accounting_policy.py
+?? backend/app/schemas/customer_policy.py
+?? backend/app/schemas/financial_agreement.py
+?? backend/app/schemas/financial_evidence.py
+?? backend/app/schemas/financial_review.py
+?? backend/app/schemas/gateway_evidence.py
+?? backend/app/schemas/gym_financial_settings.py
+?? backend/app/schemas/marketplace_allocation.py
+?? backend/app/schemas/owner_payout.py
+?? backend/app/scripts/audit_gym_coordinates.py
+?? backend/app/scripts/recover_wallet_holds.py
+?? backend/app/services/accounting_policy.py
+?? backend/app/services/admin_business.py
+?? backend/app/services/admin_financial_queries.py
+?? backend/app/services/admin_financial_service.py
+?? backend/app/services/agreement_selection.py
+?? backend/app/services/booking_cancellation.py
+?? backend/app/services/checkout_funding.py
+?? backend/app/services/commercial_settlement.py
+?? backend/app/services/financial_agreements.py
+?? backend/app/services/financial_deployment_readiness.py
+?? backend/app/services/financial_evidence_contract.py
+?? backend/app/services/financial_readiness.py
+?? backend/app/services/financial_reviews.py
+?? backend/app/services/financial_startup.py
+?? backend/app/services/gym_discovery.py
+?? backend/app/services/gym_financial_settings.py
+?? backend/app/services/gym_geo.py
+?? backend/app/services/gym_visit_payouts.py
+?? backend/app/services/marketplace_allocations.py
+?? backend/app/services/marketplace_calculation.py
+?? backend/app/services/marketplace_corrections.py
+?? backend/app/services/marketplace_reconciliation.py
+?? backend/app/services/marketplace_reporting.py
+?? backend/app/services/membership_transfer.py
+?? backend/app/services/owner_payouts.py
+?? backend/app/services/payment_evidence.py
+?? backend/app/services/payment_quote.py
+?? backend/app/services/policy_schema.py
+?? backend/app/services/source_evidence.py
+?? backend/app/services/source_outbox.py
+?? backend/app/services/wallet_hold_recovery.py
+?? backend/scripts/business_acceptance_metrics.py
+?? backend/scripts/financial_readiness_inventory.py
+?? backend/scripts/marketplace_allocation_worker.py
+?? backend/scripts/source_event_worker.py
+?? backend/tests/allocation_migration_helper.py
+?? backend/tests/policy_fixtures.py
+?? backend/tests/test_accounting_policy_contract.py
+?? backend/tests/test_admin_business_cleanup.py
+?? backend/tests/test_admin_financial_gateway_reconciliation.py
+?? backend/tests/test_admin_financial_position.py
+?? backend/tests/test_agreement_selection_contract.py
+?? backend/tests/test_business_acceptance.py
+?? backend/tests/test_business_purchase_journey.py
+?? backend/tests/test_cart_edit.py
+?? backend/tests/test_cart_edit_mysql.py
+?? backend/tests/test_customer_policy.py
+?? backend/tests/test_customer_policy_mysql.py
+?? backend/tests/test_financial_agreements.py
+?? backend/tests/test_gateway_evidence_contract.py
+?? backend/tests/test_gym_financial_settings.py
+?? backend/tests/test_gym_financial_settings_mysql.py
+?? backend/tests/test_gym_geo_discovery.py
+?? backend/tests/test_gym_geo_migration.py
+?? backend/tests/test_gym_geo_mysql.py
+?? backend/tests/test_gym_visit_payout_mysql.py
+?? backend/tests/test_increment2_calculation.py
+?? backend/tests/test_increment2_migration.py
+?? backend/tests/test_increment2_mysql.py
+?? backend/tests/test_increment2_purchase_evidence.py
+?? backend/tests/test_increment3_mysql.py
+?? backend/tests/test_increment3_readiness.py
+?? backend/tests/test_increment4_execution.py
+?? backend/tests/test_increment4_migrations.py
+?? backend/tests/test_increment4_operations.py
+?? backend/tests/test_increment4_reconciliation.py
+?? backend/tests/test_marketplace_allocation_mysql.py
+?? backend/tests/test_marketplace_api_mysql.py
+?? backend/tests/test_marketplace_booking_mysql.py
+?? backend/tests/test_marketplace_calculation.py
+?? backend/tests/test_marketplace_membership_mysql.py
+?? backend/tests/test_marketplace_reporting_mysql.py
+?? backend/tests/test_owner_payout_workflow_mysql.py
+?? backend/tests/test_source_evidence_mysql.py
+?? backend/tests/test_source_evidence_providers.py
+?? backend/tests/test_split_payment.py
+?? backend/tests/test_split_payment_mysql.py
+?? frontend/.env.example
+?? frontend/acceptance-browser-admin-cleanup.txt
+?? frontend/acceptance-browser-auth-account.txt
+?? frontend/acceptance-browser-booking-qr.txt
+?? frontend/acceptance-browser-booking-time.txt
+?? frontend/acceptance-browser-checkout-recovery.txt
+?? frontend/acceptance-browser-customer-activity.txt
+?? frontend/acceptance-browser-customer-policy.txt
+?? frontend/acceptance-browser-dashboard-ranges.txt
+?? frontend/acceptance-browser-discovery-alignment.txt
+?? frontend/acceptance-browser-financial-settings.txt
+?? frontend/acceptance-browser-membership-pause.txt
+?? frontend/acceptance-browser-my-access.txt
+?? frontend/acceptance-browser-owner-analytics.txt
+?? frontend/acceptance-browser-owner-dashboard.txt
+?? frontend/acceptance-browser-owner-scanner.txt
+?? frontend/acceptance-browser-owner-staff.txt
+?? frontend/acceptance-browser-payment-history.txt
+?? frontend/acceptance-browser-razorpay.txt
+?? frontend/acceptance-browser-results.json
+?? frontend/acceptance-browser-role-session.txt
+?? frontend/acceptance-browser-split-payment.txt
+?? frontend/acceptance-build.txt
+?? frontend/acceptance-complete-admin-cleanup.txt
+?? frontend/acceptance-complete-auth-account.txt
+?? frontend/acceptance-complete-booking-qr.txt
+?? frontend/acceptance-complete-booking-time.txt
+?? frontend/acceptance-complete-checkout-recovery.txt
+?? frontend/acceptance-complete-class-sync.txt
+?? frontend/acceptance-complete-customer-activity.txt
+?? frontend/acceptance-complete-customer-policy.txt
+?? frontend/acceptance-complete-dashboard-ranges.txt
+?? frontend/acceptance-complete-discovery-alignment.txt
+?? frontend/acceptance-complete-financial-settings.txt
+?? frontend/acceptance-complete-maps.txt
+?? frontend/acceptance-complete-member-entry.txt
+?? frontend/acceptance-complete-membership-pause.txt
+?? frontend/acceptance-complete-my-access.txt
+?? frontend/acceptance-complete-owner-analytics.txt
+?? frontend/acceptance-complete-owner-dashboard.txt
+?? frontend/acceptance-complete-owner-scanner.txt
+?? frontend/acceptance-complete-owner-staff.txt
+?? frontend/acceptance-complete-payment-history.txt
+?? frontend/acceptance-complete-razorpay.txt
+?? frontend/acceptance-complete-role-session.txt
+?? frontend/acceptance-complete-split-payment.txt
+?? frontend/acceptance-extra-class-sync.txt
+?? frontend/acceptance-extra-maps.txt
+?? frontend/acceptance-extra-member-entry.txt
+?? frontend/acceptance-final-admin-cleanup.txt
+?? frontend/acceptance-final-booking-time.txt
+?? frontend/acceptance-final-browser-results.json
+?? frontend/acceptance-final-build.txt
+?? frontend/acceptance-final-customer-activity.txt
+?? frontend/acceptance-final-maps.txt
+?? frontend/acceptance-final-role-session.txt
+?? frontend/acceptance-final-split-payment.txt
+?? frontend/acceptance-final-typecheck.txt
+?? frontend/acceptance-final-unit.txt
+?? frontend/acceptance-final2-maps.txt
+?? frontend/acceptance-final2-member-entry.txt
+?? frontend/acceptance-final2-membership-pause.txt
+?? frontend/acceptance-final2-my-access.txt
+?? frontend/acceptance-rerun-auth-account.txt
+?? frontend/acceptance-rerun-booking-qr.txt
+?? frontend/acceptance-rerun-booking-time.txt
+?? frontend/acceptance-rerun-dashboard-ranges.txt
+?? frontend/acceptance-rerun-membership-pause.txt
+?? frontend/acceptance-rerun-my-access.txt
+?? frontend/acceptance-rerun-payment-history.txt
+?? frontend/acceptance-rerun-role-session.txt
+?? frontend/acceptance-rerun2-dashboard-ranges.txt
+?? frontend/acceptance-rerun2-role-session.txt
+?? frontend/acceptance-rerun3-role-session.txt
+?? frontend/acceptance-rerun4-role-session.txt
+?? frontend/acceptance-unit-rerun.txt
+?? frontend/acceptance-unit.txt
+?? frontend/acceptance-verified-booking-time.txt
+?? frontend/acceptance-verified-customer-activity.txt
+?? frontend/acceptance-verified-role-session.txt
+?? frontend/acceptance-verified-split-payment.txt
+?? frontend/admin-cleanup-browser-results.txt
+?? frontend/admin-cleanup-build.txt
+?? frontend/admin-cleanup-tests.txt
+?? frontend/agreement-activation-browser-results.txt
+?? frontend/agreement-activation-build-results.txt
+?? frontend/agreement-activation-unit-results.txt
+?? frontend/agreement-browser-results.txt
+?? frontend/agreement-build-results.txt
+?? frontend/agreement-unit-results.txt
+?? frontend/alignment-build-results.txt
+?? frontend/alignment-test-results.txt
+?? frontend/commission-cleanup-browser-results.txt
+?? frontend/customer-activity-build.txt
+?? frontend/customer-activity-tests.txt
+?? frontend/financial-browser-results.txt
+?? frontend/financial-build-results.txt
+?? frontend/financial-settings-browser-results.txt
+?? frontend/financial-settings-build-results.txt
+?? frontend/financial-settings-unit-results.txt
+?? frontend/financial-unit-results.txt
+?? frontend/increment2-build.txt
+?? frontend/increment2-tests.txt
+?? frontend/increment3-browser.txt
+?? frontend/increment3-build.txt
+?? frontend/increment3-tests.txt
+?? frontend/increment4-build.txt
+?? frontend/increment4-tests.txt
+?? frontend/maps-build-results.txt
+?? frontend/maps-unit-results.txt
+?? frontend/marketplace-agreement-browser-results.txt
+?? frontend/marketplace-browser-results.txt
+?? frontend/marketplace-build-results.txt
+?? frontend/marketplace-payout-browser-results.txt
+?? frontend/marketplace-test-results.txt
+?? frontend/policy-build-results.txt
+?? frontend/policy-contract-browser-results.txt
+?? frontend/policy-contract-build-results.txt
+?? frontend/policy-contract-unit-results.txt
+?? frontend/policy-release-build-results.txt
+?? frontend/policy-release-unit-results.txt
+?? frontend/policy-unit-results.txt
+?? frontend/scripts/admin-cleanup-browser.mjs
+?? frontend/scripts/admin-cleanup.test.mjs
+?? frontend/scripts/admin-financial-browser.mjs
+?? frontend/scripts/admin-financial.test.mjs
+?? frontend/scripts/agreements-browser.mjs
+?? frontend/scripts/agreements.test.mjs
+?? frontend/scripts/business-browser-fixtures.mjs
+?? frontend/scripts/customer-activity-browser.mjs
+?? frontend/scripts/customer-policy-browser.mjs
+?? frontend/scripts/customerActivity.test.mjs
+?? frontend/scripts/customerPolicy.test.mjs
+?? frontend/scripts/discovery-alignment-browser.mjs
+?? frontend/scripts/financial-settings-browser.mjs
+?? frontend/scripts/gym-financial-settings.test.mjs
+?? frontend/scripts/maps-browser.mjs
+?? frontend/scripts/maps.test.mjs
+?? frontend/scripts/marketplace.test.mjs
+?? frontend/scripts/policy-contract.test.mjs
+?? frontend/scripts/reconciliation-browser.mjs
+?? frontend/scripts/reconciliation.test.mjs
+?? frontend/scripts/split-payment-browser.mjs
+?? frontend/scripts/split-payment.test.mjs
+?? frontend/split-build-results.txt
+?? frontend/split-unit-results.txt
+?? frontend/src/admin/BookingAttendance.tsx
+?? frontend/src/admin/BusinessOverview.tsx
+?? frontend/src/admin/CustomerActivity.tsx
+?? frontend/src/admin/FinancialOverview.tsx
+?? frontend/src/admin/FinancialReconciliation.tsx
+?? frontend/src/admin/FinancialSettings.tsx
+?? frontend/src/admin/GymBusinessActions.tsx
+?? frontend/src/admin/HistoricalFinancialReview.tsx
+?? frontend/src/admin/MarketplaceFinancials.tsx
+?? frontend/src/admin/MembershipTransfers.tsx
+?? frontend/src/admin/Memberships.tsx
+?? frontend/src/admin/PolicyContractEditor.tsx
+?? frontend/src/admin/RevenueSharingSettings.tsx
+?? frontend/src/admin/SettlementSettingsEditor.tsx
+?? frontend/src/admin/agreementService.ts
+?? frontend/src/admin/agreements.css
+?? frontend/src/admin/businessService.ts
+?? frontend/src/admin/financial.css
+?? frontend/src/admin/financialService.ts
+?? frontend/src/admin/gymFinancialSettingsService.ts
+?? frontend/src/admin/marketplaceService.ts
+?? frontend/src/admin/reconciliationService.ts
+?? frontend/src/components/booking/
+?? frontend/src/components/membership/MembershipTransfer.tsx
+?? frontend/src/components/navigation/CustomerActivity.tsx
+?? frontend/src/components/navigation/customerActivity.css
+?? frontend/src/components/payments/WalletFunding.tsx
+?? frontend/src/maps/
+?? frontend/src/pages/booking/EditCartVisitPage.tsx
+?? frontend/src/pages/profile/NotificationsPage.tsx
+?? frontend/src/services/customerActivity.ts
+?? frontend/src/utils/cartEdit.ts
+?? frontend/wallet-local-browser-results.txt
+?? frontend/wallet-local-build-results.txt
+?? frontend/wallet-local-unit-results.txt

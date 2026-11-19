@@ -1,0 +1,53 @@
+{
+  "environment": "development",
+  "gateway": "RAZORPAY",
+  "mode": "test",
+  "payment_return_url": "http://localhost:5173/checkout",
+  "public_frontend_url": "",
+  "allowed_origins": [
+    "http://localhost:5173"
+  ],
+  "credential_presence": {
+    "cashfree_client_id": true,
+    "cashfree_client_secret": true,
+    "razorpay_key_id": true,
+    "razorpay_key_secret": true,
+    "razorpay_webhook_secret": true
+  },
+  "gates": {
+    "source_evidence_enabled": false,
+    "marketplace_allocations_enabled": false,
+    "marketplace_live_allocations_enabled": false,
+    "marketplace_payouts_enabled": false
+  },
+  "jwt_configuration_validation": "passed locally; entropy/rotation/production binding not verified",
+  "database": {
+    "version": "26.7.0",
+    "revision": "d46e70ba9268",
+    "log_bin": 1,
+    "binlog_format": "ROW",
+    "sync_binlog": 1,
+    "innodb_flush_log_at_trx_commit": 1,
+    "gtid_mode": "ON",
+    "binlog_expire_logs_seconds": 2592000,
+    "require_secure_transport": 0
+  },
+  "local_privilege_findings": {
+    "grant_option": true,
+    "all_privileges": false,
+    "grant_statements": 3
+  },
+  "repository_heads": [
+    "eb3f70126935"
+  ],
+  "pending_migrations": [
+    "e57f81cb0379",
+    "f68a92dc1480",
+    "a79ba3ed2591",
+    "b80cb4fe3602",
+    "c91dc50f4713",
+    "da2e6f105824",
+    "eb3f70126935"
+  ],
+  "production_target_verified": false
+}

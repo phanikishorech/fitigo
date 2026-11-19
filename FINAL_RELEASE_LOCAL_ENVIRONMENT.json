@@ -1,0 +1,22 @@
+{
+  "scope": "LOCAL WORKING SERVER ONLY; NOT PRODUCTION",
+  "database": {
+    "version": "26.7.0",
+    "log_bin": 1,
+    "binlog_format": "ROW",
+    "flush_at_commit": 1,
+    "sync_binlog": 1,
+    "transaction_isolation": "REPEATABLE-READ"
+  },
+  "runtime_grant_risks": {
+    "all_privileges": false,
+    "grant_option": true
+  },
+  "gates": {
+    "source_evidence_enabled": false,
+    "marketplace_allocations_enabled": false,
+    "marketplace_live_allocations_enabled": false,
+    "marketplace_payouts_enabled": false
+  },
+  "production_environment_validated": false
+}

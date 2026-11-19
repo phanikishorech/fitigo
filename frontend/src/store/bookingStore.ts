@@ -1,6 +1,9 @@
 import { useSyncExternalStore } from 'react'
 import { localDate } from '../services/client'
-export type BookingDraft = { gymId: number; accessType: 'GYM' | 'CLASS'; date: string; memberCount: number; start: string; end: string; classId: number | null }
+export type BookingDraft = { gymId: number; accessType: 'GYM' | 'CLASS'; date: string; memberCount: number; start: string; end: string; classId: number | null; visitorNames?: string[]; visitorOwnerId?: number }
+export function draftVisitors(draft: BookingDraft, userId: number) {
+  return draft.visitorOwnerId === userId ? draft.visitorNames : undefined
+}
 const drafts = new Map<string, BookingDraft>()
 const listeners = new Set<() => void>()
 export function getDraft(gymId: number, companionsDate?: string): BookingDraft {

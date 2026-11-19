@@ -1,0 +1,109 @@
+﻿
+> fitigo-frontend@0.1.0 build
+> node ./scripts/vite.mjs build
+
+[36mvite v6.4.3 [32mbuilding for production...[36m[39m
+transforming...
+[32mΓ£ô[39m 220 modules transformed.
+rendering chunks...
+computing gzip size...
+[2mdist/[22m[32mindex.html                                    [39m[1m[2m  0.61 kB[22m[1m[22m[2m Γöé gzip:  0.37 kB[22m
+[2mdist/[22m[35massets/FinancialOverview-B6Ex08ug.css         [39m[1m[2m  0.96 kB[22m[1m[22m[2m Γöé gzip:  0.45 kB[22m
+[2mdist/[22m[35massets/DiscoveryPage-DPYvMEsv.css             [39m[1m[2m  1.02 kB[22m[1m[22m[2m Γöé gzip:  0.46 kB[22m
+[2mdist/[22m[35massets/FinancialSettings-Bs8VSeNC.css         [39m[1m[2m  1.06 kB[22m[1m[22m[2m Γöé gzip:  0.47 kB[22m
+[2mdist/[22m[35massets/CheckIn-Dk3y1w2k.css                   [39m[1m[2m  1.15 kB[22m[1m[22m[2m Γöé gzip:  0.54 kB[22m
+[2mdist/[22m[35massets/DateRangePicker-ntANYuBD.css           [39m[1m[2m  1.30 kB[22m[1m[22m[2m Γöé gzip:  0.57 kB[22m
+[2mdist/[22m[35massets/maps-BRwwkZ9E.css                      [39m[1m[2m  2.23 kB[22m[1m[22m[2m Γöé gzip:  0.77 kB[22m
+[2mdist/[22m[35massets/PaymentHistory-SEK0Qeph.css            [39m[1m[2m  8.44 kB[22m[1m[22m[2m Γöé gzip:  2.05 kB[22m
+[2mdist/[22m[35massets/GatewayPayment-C7IgD9b1.css            [39m[1m[2m  8.69 kB[22m[1m[22m[2m Γöé gzip:  2.03 kB[22m
+[2mdist/[22m[35massets/MembershipUI-Dav6DSvF.css              [39m[1m[2m 22.00 kB[22m[1m[22m[2m Γöé gzip:  4.75 kB[22m
+[2mdist/[22m[35massets/AdminApp-BOXdRWoy.css                  [39m[1m[2m 27.69 kB[22m[1m[22m[2m Γöé gzip:  6.04 kB[22m
+[2mdist/[22m[35massets/OwnerApp-KLbasaiw.css                  [39m[1m[2m 35.61 kB[22m[1m[22m[2m Γöé gzip:  7.24 kB[22m
+[2mdist/[22m[35massets/index-le_uMzHr.css                     [39m[1m[2m 36.64 kB[22m[1m[22m[2m Γöé gzip:  8.49 kB[22m
+[2mdist/[22m[36massets/StaffPage-BofhLA6Y.js                  [39m[1m[2m  0.16 kB[22m[1m[22m[2m Γöé gzip:  0.15 kB[22m
+[2mdist/[22m[36massets/Dashboard-FYgeDQnE.js                  [39m[1m[2m  0.30 kB[22m[1m[22m[2m Γöé gzip:  0.24 kB[22m
+[2mdist/[22m[36massets/Analytics-D_EsESEM.js                  [39m[1m[2m  0.30 kB[22m[1m[22m[2m Γöé gzip:  0.24 kB[22m
+[2mdist/[22m[36massets/CancellationNotice-DH7nMvig.js         [39m[1m[2m  0.36 kB[22m[1m[22m[2m Γöé gzip:  0.27 kB[22m
+[2mdist/[22m[36massets/membershipPauseService-Bg36p4-w.js     [39m[1m[2m  0.44 kB[22m[1m[22m[2m Γöé gzip:  0.27 kB[22m
+[2mdist/[22m[36massets/usePendingAction-lX2FT4ZU.js           [39m[1m[2m  0.45 kB[22m[1m[22m[2m Γöé gzip:  0.32 kB[22m
+[2mdist/[22m[36massets/NotificationsPage-ytHppukE.js          [39m[1m[2m  0.46 kB[22m[1m[22m[2m Γöé gzip:  0.31 kB[22m
+[2mdist/[22m[36massets/api-CFvNB3bP.js                        [39m[1m[2m  0.62 kB[22m[1m[22m[2m Γöé gzip:  0.36 kB[22m
+[2mdist/[22m[36massets/useMembershipResource-CdKrfi6a.js      [39m[1m[2m  0.67 kB[22m[1m[22m[2m Γöé gzip:  0.38 kB[22m
+[2mdist/[22m[36massets/gymService-Dxytzdgl.js                 [39m[1m[2m  0.74 kB[22m[1m[22m[2m Γöé gzip:  0.44 kB[22m
+[2mdist/[22m[36massets/SupportContact-IRquvrNc.js             [39m[1m[2m  0.74 kB[22m[1m[22m[2m Γöé gzip:  0.45 kB[22m
+[2mdist/[22m[36massets/paymentInstructions-B4LSi0A8.js        [39m[1m[2m  0.76 kB[22m[1m[22m[2m Γöé gzip:  0.39 kB[22m
+[2mdist/[22m[36massets/platformMembershipService-wkx6u7gc.js  [39m[1m[2m  0.84 kB[22m[1m[22m[2m Γöé gzip:  0.48 kB[22m
+[2mdist/[22m[36massets/MembershipPausePage-BMpGA67Z.js        [39m[1m[2m  0.87 kB[22m[1m[22m[2m Γöé gzip:  0.50 kB[22m
+[2mdist/[22m[36massets/EditCartVisitPage-D02zjlw_.js          [39m[1m[2m  0.94 kB[22m[1m[22m[2m Γöé gzip:  0.58 kB[22m
+[2mdist/[22m[36massets/bookingService-B9DTp9oH.js             [39m[1m[2m  1.01 kB[22m[1m[22m[2m Γöé gzip:  0.48 kB[22m
+[2mdist/[22m[36massets/CompanionBooking-hQnQDy_S.js           [39m[1m[2m  1.02 kB[22m[1m[22m[2m Γöé gzip:  0.60 kB[22m
+[2mdist/[22m[36massets/hooks-TWKrJRZO.js                      [39m[1m[2m  1.24 kB[22m[1m[22m[2m Γöé gzip:  0.62 kB[22m
+[2mdist/[22m[36massets/booking-CwMD2wRw.js                    [39m[1m[2m  1.27 kB[22m[1m[22m[2m Γöé gzip:  0.76 kB[22m
+[2mdist/[22m[36massets/CoordinatePicker-DYqm489v.js           [39m[1m[2m  1.29 kB[22m[1m[22m[2m Γöé gzip:  0.72 kB[22m
+[2mdist/[22m[36massets/myAccessService-tBXaqxQw.js            [39m[1m[2m  1.36 kB[22m[1m[22m[2m Γöé gzip:  0.71 kB[22m
+[2mdist/[22m[36massets/accountService-D86q6khA.js             [39m[1m[2m  1.37 kB[22m[1m[22m[2m Γöé gzip:  0.69 kB[22m
+[2mdist/[22m[36massets/PasswordRecoveryPage-CJyaBGVu.js       [39m[1m[2m  1.39 kB[22m[1m[22m[2m Γöé gzip:  0.68 kB[22m
+[2mdist/[22m[36massets/visitAccessService-BJZg2MYH.js         [39m[1m[2m  1.56 kB[22m[1m[22m[2m Γöé gzip:  0.66 kB[22m
+[2mdist/[22m[36massets/membershipPlanService-Dgt5NXGq.js      [39m[1m[2m  1.56 kB[22m[1m[22m[2m Γöé gzip:  0.81 kB[22m
+[2mdist/[22m[36massets/GymCard-Zb02bnw_.js                    [39m[1m[2m  1.60 kB[22m[1m[22m[2m Γöé gzip:  0.71 kB[22m
+[2mdist/[22m[36massets/MultiGymPlansPage-DcsGSRZe.js          [39m[1m[2m  1.61 kB[22m[1m[22m[2m Γöé gzip:  0.91 kB[22m
+[2mdist/[22m[36massets/membership-BduPe65B.js                 [39m[1m[2m  1.65 kB[22m[1m[22m[2m Γöé gzip:  0.80 kB[22m
+[2mdist/[22m[36massets/WalletMembershipPayment-DEQezMUh.js    [39m[1m[2m  1.68 kB[22m[1m[22m[2m Γöé gzip:  0.85 kB[22m
+[2mdist/[22m[36massets/DiscoveryMap-btJiGoJT.js               [39m[1m[2m  1.79 kB[22m[1m[22m[2m Γöé gzip:  0.91 kB[22m
+[2mdist/[22m[36massets/LocationPage-fgyFiOx7.js               [39m[1m[2m  1.82 kB[22m[1m[22m[2m Γöé gzip:  0.99 kB[22m
+[2mdist/[22m[36massets/MembershipVisitHistory-zi2x7K7K.js     [39m[1m[2m  1.89 kB[22m[1m[22m[2m Γöé gzip:  0.99 kB[22m
+[2mdist/[22m[36massets/AccountProfileEditor-DLF4pBnv.js       [39m[1m[2m  2.10 kB[22m[1m[22m[2m Γöé gzip:  0.98 kB[22m
+[2mdist/[22m[36massets/AccessQr-Br0UrieI.js                   [39m[1m[2m  2.16 kB[22m[1m[22m[2m Γöé gzip:  1.19 kB[22m
+[2mdist/[22m[36massets/BookingCancellation-DojFZ1ce.js        [39m[1m[2m  2.45 kB[22m[1m[22m[2m Γöé gzip:  1.06 kB[22m
+[2mdist/[22m[36massets/useDebouncedValue-FyfZ4in8.js          [39m[1m[2m  2.46 kB[22m[1m[22m[2m Γöé gzip:  1.08 kB[22m
+[2mdist/[22m[36massets/ProfilePage-uX61fTiA.js                [39m[1m[2m  2.65 kB[22m[1m[22m[2m Γöé gzip:  1.22 kB[22m
+[2mdist/[22m[36massets/DateRangePicker-t-YzT5GC.js            [39m[1m[2m  2.67 kB[22m[1m[22m[2m Γöé gzip:  1.21 kB[22m
+[2mdist/[22m[36massets/MembershipOrderPage-COzDNs3U.js        [39m[1m[2m  2.75 kB[22m[1m[22m[2m Γöé gzip:  1.26 kB[22m
+[2mdist/[22m[36massets/ConfirmVisitPage-BVDNtvQE.js           [39m[1m[2m  2.82 kB[22m[1m[22m[2m Γöé gzip:  1.28 kB[22m
+[2mdist/[22m[36massets/ReportMetrics-BCrj8_hA.js              [39m[1m[2m  2.90 kB[22m[1m[22m[2m Γöé gzip:  1.36 kB[22m
+[2mdist/[22m[36massets/Login-8Fa-xsH0.js                      [39m[1m[2m  2.91 kB[22m[1m[22m[2m Γöé gzip:  1.23 kB[22m
+[2mdist/[22m[36massets/StaffInvitationPage-BKTssPSb.js        [39m[1m[2m  3.01 kB[22m[1m[22m[2m Γöé gzip:  1.25 kB[22m
+[2mdist/[22m[36massets/usePlanRefresh-Dqjw31D3.js             [39m[1m[2m  3.01 kB[22m[1m[22m[2m Γöé gzip:  1.22 kB[22m
+[2mdist/[22m[36massets/UI-B9xVAF6G.js                         [39m[1m[2m  3.20 kB[22m[1m[22m[2m Γöé gzip:  1.30 kB[22m
+[2mdist/[22m[36massets/Dashboard-BzoyhMiD.js                  [39m[1m[2m  3.28 kB[22m[1m[22m[2m Γöé gzip:  1.50 kB[22m
+[2mdist/[22m[36massets/ReviewPage-f3pqRggt.js                 [39m[1m[2m  3.53 kB[22m[1m[22m[2m Γöé gzip:  1.60 kB[22m
+[2mdist/[22m[36massets/FindGymPage-z0K2r4Do.js                [39m[1m[2m  3.66 kB[22m[1m[22m[2m Γöé gzip:  1.67 kB[22m
+[2mdist/[22m[36massets/MembershipPage-CRLHCsDn.js             [39m[1m[2m  3.82 kB[22m[1m[22m[2m Γöé gzip:  1.60 kB[22m
+[2mdist/[22m[36massets/BookingsPage-9H-WU2mE.js               [39m[1m[2m  3.86 kB[22m[1m[22m[2m Γöé gzip:  1.70 kB[22m
+[2mdist/[22m[36massets/SettingsPage-Dd5iBM4u.js               [39m[1m[2m  4.02 kB[22m[1m[22m[2m Γöé gzip:  1.62 kB[22m
+[2mdist/[22m[36massets/AuthPage-ClLoEIra.js                   [39m[1m[2m  4.28 kB[22m[1m[22m[2m Γöé gzip:  1.80 kB[22m
+[2mdist/[22m[36massets/WalletPage-DS17hnHU.js                 [39m[1m[2m  4.54 kB[22m[1m[22m[2m Γöé gzip:  1.79 kB[22m
+[2mdist/[22m[36massets/NotificationCenter-BP5EiHAd.js         [39m[1m[2m  4.64 kB[22m[1m[22m[2m Γöé gzip:  1.72 kB[22m
+[2mdist/[22m[36massets/Users-CaIOJz0W.js                      [39m[1m[2m  4.88 kB[22m[1m[22m[2m Γöé gzip:  2.00 kB[22m
+[2mdist/[22m[36massets/MapCanvas-DK35laB4.js                  [39m[1m[2m  5.35 kB[22m[1m[22m[2m Γöé gzip:  2.41 kB[22m
+[2mdist/[22m[36massets/MembershipPause-CNay7Y9m.js            [39m[1m[2m  5.45 kB[22m[1m[22m[2m Γöé gzip:  2.05 kB[22m
+[2mdist/[22m[36massets/Account-BhL3nN63.js                    [39m[1m[2m  5.53 kB[22m[1m[22m[2m Γöé gzip:  2.23 kB[22m
+[2mdist/[22m[36massets/TodayMembershipAccess-11v6PV9s.js      [39m[1m[2m  5.53 kB[22m[1m[22m[2m Γöé gzip:  2.25 kB[22m
+[2mdist/[22m[36massets/MembershipCalendar-BYjnNl7_.js         [39m[1m[2m  5.67 kB[22m[1m[22m[2m Γöé gzip:  2.22 kB[22m
+[2mdist/[22m[36massets/MembershipUI-DhaDF7zt.js               [39m[1m[2m  5.80 kB[22m[1m[22m[2m Γöé gzip:  2.08 kB[22m
+[2mdist/[22m[36massets/SupportRequests-Ca1gI6mh.js            [39m[1m[2m  6.92 kB[22m[1m[22m[2m Γöé gzip:  2.48 kB[22m
+[2mdist/[22m[36massets/Account-94zVJWIa.js                    [39m[1m[2m  8.09 kB[22m[1m[22m[2m Γöé gzip:  3.15 kB[22m
+[2mdist/[22m[36massets/Bookings-0Fib_-lE.js                   [39m[1m[2m  8.69 kB[22m[1m[22m[2m Γöé gzip:  3.05 kB[22m
+[2mdist/[22m[36massets/GymPage-D0aovqzK.js                    [39m[1m[2m  8.70 kB[22m[1m[22m[2m Γöé gzip:  3.16 kB[22m
+[2mdist/[22m[36massets/Bookings-CERIl7AR.js                   [39m[1m[2m  8.79 kB[22m[1m[22m[2m Γöé gzip:  3.18 kB[22m
+[2mdist/[22m[36massets/Gyms-BjyObzLD.js                       [39m[1m[2m  9.35 kB[22m[1m[22m[2m Γöé gzip:  3.43 kB[22m
+[2mdist/[22m[36massets/BookingDetailPage-BZ7dCVEh.js          [39m[1m[2m  9.72 kB[22m[1m[22m[2m Γöé gzip:  3.82 kB[22m
+[2mdist/[22m[36massets/FinancialSettings-CVBSFI05.js          [39m[1m[2m 10.70 kB[22m[1m[22m[2m Γöé gzip:  3.88 kB[22m
+[2mdist/[22m[36massets/AccessPage-BApnhKfR.js                 [39m[1m[2m 10.72 kB[22m[1m[22m[2m Γöé gzip:  3.54 kB[22m
+[2mdist/[22m[36massets/BookingPage-o-lBM8xQ.js                [39m[1m[2m 12.55 kB[22m[1m[22m[2m Γöé gzip:  4.50 kB[22m
+[2mdist/[22m[36massets/MembershipOverview-C1_Oim-O.js         [39m[1m[2m 12.96 kB[22m[1m[22m[2m Γöé gzip:  4.33 kB[22m
+[2mdist/[22m[36massets/DiscoveryPage-CLuSJkRv.js              [39m[1m[2m 13.76 kB[22m[1m[22m[2m Γöé gzip:  4.58 kB[22m
+[2mdist/[22m[36massets/PaymentHistory-BWCSt7HM.js             [39m[1m[2m 13.89 kB[22m[1m[22m[2m Γöé gzip:  4.45 kB[22m
+[2mdist/[22m[36massets/CartPage-D2QRShxs.js                   [39m[1m[2m 13.96 kB[22m[1m[22m[2m Γöé gzip:  4.38 kB[22m
+[2mdist/[22m[36massets/Analytics-DCRKgcNY.js                  [39m[1m[2m 14.86 kB[22m[1m[22m[2m Γöé gzip:  4.83 kB[22m
+[2mdist/[22m[36massets/OwnerApp-5AqF-hc2.js                   [39m[1m[2m 15.05 kB[22m[1m[22m[2m Γöé gzip:  4.93 kB[22m
+[2mdist/[22m[36massets/MembershipPlans-Cg6uqNxL.js            [39m[1m[2m 15.47 kB[22m[1m[22m[2m Γöé gzip:  4.95 kB[22m
+[2mdist/[22m[36massets/GatewayPayment-BmvqfPZ-.js             [39m[1m[2m 16.08 kB[22m[1m[22m[2m Γöé gzip:  5.44 kB[22m
+[2mdist/[22m[36massets/Operations-CyZUXBwH.js                 [39m[1m[2m 16.25 kB[22m[1m[22m[2m Γöé gzip:  5.09 kB[22m
+[2mdist/[22m[36massets/CheckIn-BJ2fq9R5.js                    [39m[1m[2m 16.77 kB[22m[1m[22m[2m Γöé gzip:  5.81 kB[22m
+[2mdist/[22m[36massets/AdminApp-BHIugmgJ.js                   [39m[1m[2m 18.25 kB[22m[1m[22m[2m Γöé gzip:  6.04 kB[22m
+[2mdist/[22m[36massets/Gyms-D5Ip7OC6.js                       [39m[1m[2m 20.41 kB[22m[1m[22m[2m Γöé gzip:  6.61 kB[22m
+[2mdist/[22m[36massets/FinancialOverview-CtTOtBDg.js          [39m[1m[2m 33.61 kB[22m[1m[22m[2m Γöé gzip:  9.69 kB[22m
+[2mdist/[22m[36massets/jsQR-Bkgebx2R.js                       [39m[1m[2m130.72 kB[22m[1m[22m[2m Γöé gzip: 47.46 kB[22m
+[2mdist/[22m[36massets/index-DX9h6ahJ.js                      [39m[1m[2m220.75 kB[22m[1m[22m[2m Γöé gzip: 70.68 kB[22m
+[32mΓ£ô built in 1.96s[39m

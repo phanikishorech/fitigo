@@ -1,0 +1,4 @@
+PASS backend allowance/date bounds, responsive selection and preview, network failure, duplicate prevention, authoritative dates, history and refresh
+PASS paused/disabled/Single-Gym states, live policy refresh, sanitized technical error and retry
+PASS matching pause cards, desktop/mobile alignment and standalone pause page without nested cards
+PASS Admin/Owner existing plan editors persist policy, disable limits appropriately, mobile layouts and no browser exceptions

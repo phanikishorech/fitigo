@@ -183,6 +183,15 @@ class BookingAccessService:
     def validate(self, token_hash: str, booking_id: int, gym, scanned_by: int | None) -> dict:
         try:
             # Booking first in ALL write paths; serializes QR issuance, use, refund and cancellation.
+            # Match cancellation's customer -> gym -> booking order. Checkin's
+            # foreign-key validation must not acquire the customer after booking.
+            purchaser_id = self.db.scalar(select(Booking.user_id).where(Booking.id == booking_id))
+            if purchaser_id is not None:
+                self.db.scalar(select(User).where(User.id == purchaser_id).with_for_update().execution_options(populate_existing=True))
+            from app.models.gym import Gym
+            gym = self.db.scalar(select(Gym).where(Gym.id == gym.id).with_for_update().execution_options(populate_existing=True))
+            if not gym or gym.status != 'APPROVED' or not gym.is_active:
+                reject('GYM_NOT_ELIGIBLE', 'This gym is not available for check-in.')
             booking = self.db.scalar(select(Booking).where(Booking.id == booking_id).with_for_update()
                                      .execution_options(populate_existing=True))
             if not booking:
@@ -226,6 +235,8 @@ class BookingAccessService:
             used = len(self.db.scalars(select(Checkin.id).where(Checkin.booking_id == booking.id).with_for_update()).all())
             if used == booking.quantity:
                 booking.attendance_status, booking.attendance_marked_at = "ATTENDED", stored_instant(now)
+            from app.services.source_evidence import attendance
+            attendance(self.db, checkin, token, booking=booking)
             self.db.commit()
             return {"success": True, "status": "CHECKED_IN", "customer_name": token.visitor_name,
                     "gym_name": gym.name, "access_type": AccessSource.BOOKING_ACCESS.value,

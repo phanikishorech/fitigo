@@ -236,7 +236,15 @@ class BookingService:
         # Reject paying expired bookings
         if booking.expires_at < self._now():
             # Mark expired and release capacity
-            self.cancel_booking(user_id=user_id, booking_id=booking_id, reason="Expired")
+            # Expiration is an internal unpaid reservation transition, not customer cancellation.
+            av = self.db.scalar(select(SlotAvailability).where(SlotAvailability.gym_slot_id == booking.gym_slot_id,
+                SlotAvailability.slot_date == booking.slot_date).with_for_update())
+            if av:
+                av.booked_count = max(0, av.booked_count - booking.quantity)
+                if av.status == 'FULL': av.status = 'AVAILABLE'
+            booking.status, booking.expired_at = 'EXPIRED', self._now()
+            BookingAccessService(self.db).revoke(booking)
+            self.db.commit()
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Booking expired")
 
         try:
@@ -266,65 +274,9 @@ class BookingService:
         return booking
 
     def cancel_booking(self, *, user_id: int, booking_id: int, reason: str | None = None) -> Booking:
-        booking = self.db.execute(select(Booking).where(Booking.id == booking_id, Booking.user_id == user_id).with_for_update().execution_options(populate_existing=True)).scalars().first()
-        if not booking:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
+        from app.services.booking_cancellation import cancel
+        return cancel(self.db, booking_id=booking_id, actor_id=user_id, customer_id=user_id, reason=reason)
 
-        if booking.status in {BookingStatus.CANCELLED.value, BookingStatus.EXPIRED.value}:
-            return booking
-
-        if booking.status not in {BookingStatus.PENDING_PAYMENT.value, BookingStatus.CONFIRMED.value}:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Cannot cancel booking in status {booking.status}")
-
-        try:
-            # Release capacity
-            av = (
-                self.db.execute(
-                    select(SlotAvailability)
-                    .where(SlotAvailability.gym_slot_id == booking.gym_slot_id, SlotAvailability.slot_date == booking.slot_date)
-                    .with_for_update()
-                )
-                .scalars()
-                .first()
-            )
-            if av:
-                av.booked_count = max(0, av.booked_count - booking.quantity)
-                if av.status == SlotAvailabilityStatus.FULL.value:
-                    cap_total = av.capacity_override
-                    if cap_total is None:
-                        slot = self.db.execute(select(GymSlot).where(GymSlot.id == booking.gym_slot_id)).scalars().first()
-                        cap_total = slot.capacity if slot else None
-                    if cap_total is not None and (cap_total - av.booked_count - av.blocked_count) > 0:
-                        av.status = SlotAvailabilityStatus.AVAILABLE.value
-
-            if reason == "Expired":
-                booking.status = BookingStatus.EXPIRED.value
-                booking.expired_at = self._now()
-            else:
-                booking.status = BookingStatus.CANCELLED.value
-                booking.cancelled_at = datetime.utcnow()
-            if reason:
-                booking.notes = (booking.notes + "\n" if booking.notes else "") + f"Cancel reason: {reason}"
-
-            payment = (
-                self.db.execute(select(Payment).where(Payment.booking_id == booking.id).with_for_update())
-                .scalars()
-                .first()
-            )
-            # Cancellation revokes access, not money. No gateway refund or wallet
-            # reversal is issued here; preserve the recorded payment state.
-
-            BookingAccessService(self.db).revoke(booking)
-            record(self.db, 'BOOKING_CANCELLED', booking.id, user_id, gym_id=booking.gym_id)
-            if booking.status == BookingStatus.CANCELLED.value:
-                publish(self.db, booking.user_id, 'BOOKING_CANCELLED', booking.id)
-            self.db.commit()
-        except Exception:
-            self.db.rollback()
-            raise
-
-        self.db.refresh(booking)
-        return booking
 
     def reschedule_booking(
         self,
@@ -348,6 +300,12 @@ class BookingService:
 
         if booking.status in {BookingStatus.CANCELLED.value, BookingStatus.EXPIRED.value}:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Cannot reschedule booking in status {booking.status}")
+
+        if booking.status == 'CONFIRMED':
+            from app.services.booking_cancellation import summary
+            policy = summary(self.db, booking)
+            if not policy['eligible']:
+                raise HTTPException(409, 'A confirmed booking cannot be rescheduled after its cancellation deadline or when cancellation is ineligible.')
 
         # Only allow reschedule for pending/confirmed
         if booking.checkout_id:
@@ -562,74 +520,9 @@ class BookingService:
         return b, u, s, p
 
     def owner_cancel_booking(self, *, owner_user_id: int, booking_id: int, reason: str | None = None) -> Booking:
-        # Resolve booking + verify ownership via join on gyms
-        booking = (
-            self.db.execute(
-                select(Booking)
-                .join(Gym, Gym.id == Booking.gym_id)
-                .where(Booking.id == booking_id, Gym.owner_user_id == owner_user_id)
-                .with_for_update().execution_options(populate_existing=True)
-            )
-            .scalars()
-            .first()
-        )
-        if not booking:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
+        from app.services.booking_cancellation import cancel
+        return cancel(self.db, booking_id=booking_id, actor_id=owner_user_id, owner_id=owner_user_id, reason=reason)
 
-        if booking.status == BookingStatus.CANCELLED.value:
-            return booking
-
-        from app.services.owner_booking_policy import owner_actions
-        policy = owner_actions(self.db, booking, owner_user_id, lock=True)
-        if 'CANCEL' not in policy['allowed_actions']:
-            raise HTTPException(409, detail=policy['action_unavailable_reasons']['CANCEL'])
-
-        if booking.status not in {BookingStatus.PENDING_PAYMENT.value, BookingStatus.CONFIRMED.value}:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Cannot cancel booking in status {booking.status}")
-
-        try:
-            av = (
-                self.db.execute(
-                    select(SlotAvailability)
-                    .where(SlotAvailability.gym_slot_id == booking.gym_slot_id, SlotAvailability.slot_date == booking.slot_date)
-                    .with_for_update()
-                )
-                .scalars()
-                .first()
-            )
-            if av:
-                av.booked_count = max(0, int(av.booked_count) - int(booking.quantity))
-                if av.status == SlotAvailabilityStatus.FULL.value:
-                    cap_total = av.capacity_override
-                    if cap_total is None:
-                        slot = self.db.execute(select(GymSlot).where(GymSlot.id == booking.gym_slot_id)).scalars().first()
-                        cap_total = slot.capacity if slot else None
-                    if cap_total is not None and (cap_total - av.booked_count - av.blocked_count) > 0:
-                        av.status = SlotAvailabilityStatus.AVAILABLE.value
-
-            booking.status = BookingStatus.CANCELLED.value
-            booking.cancelled_at = datetime.utcnow()
-            if reason:
-                booking.notes = (booking.notes + "\n" if booking.notes else "") + f"Owner cancel reason: {reason}"
-            booking.notes = (booking.notes + "\n" if booking.notes else "") + f"Owner cancellation actor={owner_user_id} at={self._now().isoformat()}"
-
-            payment = (
-                self.db.execute(select(Payment).where(Payment.booking_id == booking.id).with_for_update())
-                .scalars()
-                .first()
-            )
-            # Preserve payment history: cancellation does not issue a refund.
-
-            BookingAccessService(self.db).revoke(booking)
-            record(self.db, 'BOOKING_CANCELLED', booking.id, owner_user_id, gym_id=booking.gym_id)
-            publish(self.db, booking.user_id, 'BOOKING_CANCELLED', booking.id)
-            self.db.commit()
-        except Exception:
-            self.db.rollback()
-            raise
-
-        self.db.refresh(booking)
-        return booking
 
     def owner_mark_attendance(
         self,
@@ -677,6 +570,9 @@ class BookingService:
             booking.attendance_note = note
         BookingAccessService(self.db).revoke(booking)
         record(self.db, 'ATTENDANCE_RECORDED', booking.id, actor_user_id or owner_user_id, to_status=attendance_status)
+        if attendance_status == 'NO_SHOW':
+            from app.services.source_evidence import no_show
+            no_show(self.db, booking, actor_user_id or owner_user_id)
         self.db.commit()
         self.db.refresh(booking)
         return booking

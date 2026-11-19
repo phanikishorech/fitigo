@@ -18,20 +18,28 @@ from test_owner_dashboard_mysql import mysql_api, booking, DAY, pytestmark
 
 def test_concurrent_owner_cancel_releases_capacity_once_and_preserves_payment(mysql_api):
     engine=mysql_api[2]
+    from policy_fixtures import fund_wallet_booking
+    from app.models.customer_policy import BookingCancellation
+    from app.models.wallet import WalletTransaction
     with Session(engine) as db:
         b=booking(db,1,day=DAY+timedelta(days=100));b.status='CONFIRMED';b.attendance_status=None
         db.add(Payment(booking_id=b.id,status='PAID',provider='DUMMY',amount=b.total_price,currency='INR'))
         av=SlotAvailability(gym_slot_id=b.gym_slot_id,slot_date=b.slot_date,booked_count=4,blocked_count=0,status='AVAILABLE')
         db.add(av);db.commit();bid=b.id;aid=av.id;quantity=b.quantity
+        fund_wallet_booking(db, bid); db.commit()
     barrier=Barrier(2)
     def cancel(_):
         with Session(engine) as db:
             barrier.wait(timeout=10)
-            return BookingService(db).owner_cancel_booking(owner_user_id=1,booking_id=bid).status
-    with ThreadPoolExecutor(max_workers=2) as pool:assert list(pool.map(cancel,range(2)))==['CANCELLED','CANCELLED']
+            try: return BookingService(db).owner_cancel_booking(owner_user_id=1,booking_id=bid).status
+            except HTTPException as error:
+                assert error.status_code == 409
+                return 'REJECTED'
+    with ThreadPoolExecutor(max_workers=2) as pool:assert sorted(pool.map(cancel,range(2)))==['CANCELLED','REJECTED']
     with Session(engine) as db:
         assert db.get(SlotAvailability,aid).booked_count==4-quantity
-        assert db.get(Booking,bid).notes.count('Owner cancellation actor=')==1
+        assert db.scalar(select(func.count(BookingCancellation.id)).where(BookingCancellation.booking_id==bid))==1
+        assert db.scalar(select(func.count(WalletTransaction.id)).where(WalletTransaction.txn_type=='CANCELLATION_CREDIT'))==1
         assert db.scalar(select(Payment.status).where(Payment.booking_id==bid))=='PAID'
 
 

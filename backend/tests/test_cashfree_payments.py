@@ -271,15 +271,23 @@ def test_cashfree_selection_blocks_legacy_bypasses(api):
     assert not wallet_enabled()
 
 
-def test_dashboard_refund_reconciliation_and_cancel_never_fabricates_refund(api):
+def test_dashboard_refund_reconciliation_and_cancel_never_fabricates_refund(api, monkeypatch):
     record = checkout(api)
     payment = api[3].pay(record)
     assert verify(api, record).json()['status'] == 'PAID'
+    from app.services import booking_cancellation
+    monkeypatch.setattr(booking_cancellation, 'utcnow', lambda: NOW.replace(hour=7))
     response = api[0].post(f"/api/v1/bookings/{record['booking_ids'][0]}/cancel", headers=api[1][1], json={'reason': 'cancel'})
+    assert response.status_code == 200, response.text
     assert response.json()['payment']['status'] == 'PAID'
+    assert response.json()['cancellation']['wallet_credit_amount'] == '100.00'
     api[3].refunds[record['gateway_order_id']] = [{'cf_refund_id': '1', 'cf_payment_id': payment['cf_payment_id'],
         'order_id': record['gateway_order_id'], 'refund_currency': 'INR', 'refund_amount': 100, 'refund_status': 'SUCCESS'}]
-    assert refresh(api, record).json()['status'] == 'REFUNDED'
+    result = refresh(api, record).json()
+    assert result['status'] == 'REVIEW_REQUIRED'
+    assert result['failure_code'] == 'WALLET_CREDIT_EXTERNAL_REFUND'
+    with Session(api[2]) as db:
+        assert db.scalar(select(Payment.status)) == 'REFUNDED'  # Real refund evidence is retained.
 
 
 def test_duplicate_success_webhook_rechecks_pending_provider_status(api):

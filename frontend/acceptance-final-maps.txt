@@ -1,0 +1,35 @@
+﻿node : file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/Fitigo/fronten
+d/scripts/maps-browser.mjs:10
+At line:1 char:78
++ ... ces\chat\fitigo\frontend'; node scripts/maps-browser.mjs 2>&1 | Out-F 
+...
++                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (file:///C:/User...-browser.mjs 
+   :10:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+async function evaluate(expression) { const response = await 
+command('Runtime.evaluate', { expression, returnByValue: true, 
+awaitPromise: true }); if (response.exceptionDetails) throw 
+Error(JSON.stringify(response.exceptionDetails)); return 
+response.result.value }
+                                                                            
+                                                                            
+                                ^
+
+Error: {"exceptionId":1,"text":"Uncaught","lineNumber":0,"columnNumber":14,"
+scriptId":"4","stackTrace":{"callFrames":[{"functionName":"","scriptId":"4",
+"url":"","lineNumber":0,"columnNumber":14}]},"exception":{"type":"object","s
+ubtype":"error","className":"TypeError","description":"TypeError: Cannot 
+read properties of null (reading 'innerText')\n    at 
+<anonymous>:1:15","objectId":"4444181451845618441.2.2"}}
+    at evaluate (file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/Fiti
+go/frontend/scripts/maps-browser.mjs:10:185)
+    at async until (file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/F
+itigo/frontend/scripts/maps-browser.mjs:11:72)
+    at async page (file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/Fi
+tigo/frontend/scripts/maps-browser.mjs:53:59)
+    at async file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/Fitigo/f
+rontend/scripts/maps-browser.mjs:58:3
+
+Node.js v24.16.0

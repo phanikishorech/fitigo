@@ -27,6 +27,7 @@ ws.onmessage=async event=>{
    if(path.endsWith('/auth/session'))body={user:{id:9001,first_name:'Scanner',last_name:'Test',email:'scanner@example.test',phone:null},roles:['GYM_STAFF']}
    else if(path.endsWith('/users/me'))body={id:9001,first_name:'Scanner',last_name:'Test',email:'scanner@example.test',phone:null}
    else if(path.endsWith('/users/me/roles'))body=['GYM_STAFF']
+    else if(path.endsWith('/notifications/preferences'))body={enabled:true,operational_email:false,email_available:false,message:'Isolated scanner account preferences'}
    else if(path.endsWith('/gym-staff/gyms'))body=[{id:19,name:'Scanner Fixture Gym',city:'Test City'}]
    else if(path.endsWith('/checkins/validate')){
     assert.equal(request.method,'POST');calls.push(JSON.parse(request.postData))

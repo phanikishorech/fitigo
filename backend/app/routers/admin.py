@@ -1,4 +1,10 @@
 from __future__ import annotations
+from app.services.checkout_funding import booking_breakdown
+from app.services.booking_cancellation import summary as cancellation_summary
+from app.models.customer_policy import MembershipTransfer
+from app.models.membership import UserMembership
+from app.services.policy_schema import available as policy_available
+from app.core.time import as_ist
 
 from datetime import date
 from typing import Literal
@@ -36,13 +42,23 @@ from app.services.review_service import ReviewService
 from app.schemas.admin_users import AdminUpdateUserStatusRequest, AdminUserDetail, AdminUserListItem
 from app.services.admin_user_service import AdminUserService
 from app.services.admin_dashboard_service import AdminDashboardService
-from app.services.admin_revenue import eligible_admin_payment, admin_revenue_scope
+from app.services.admin_revenue import gateway_booking_amount, eligible_admin_payment, admin_revenue_scope
 from app.schemas.admin_gyms import AdminGymListItem as AdminGymListItemSchema
 
 
 router = APIRouter(prefix="/admin")
 from app.routers.admin_audit import router as audit_router
 router.include_router(audit_router)
+from app.routers.admin_financial_agreements import router as agreement_router
+router.include_router(agreement_router)
+from app.routers.admin_gym_financial_settings import router as financial_settings_router
+router.include_router(financial_settings_router)
+from app.routers.admin_financial_readiness import router as financial_readiness_router
+router.include_router(financial_readiness_router)
+from app.routers.admin_business import router as business_router
+router.include_router(business_router)
+from app.routers.admin_marketplace import router as marketplace_router
+router.include_router(marketplace_router)
 
 
 @router.post("/reviews/{review_id}/hide", response_model=dict)
@@ -94,11 +110,20 @@ def admin_ping(current_user: User = Depends(require_role({ROLE_ADMIN, ROLE_SUPER
 
 @router.get("/dashboard/summary", response_model=dict)
 def admin_dashboard_summary(
+    response: Response,
     date_from: date | None = Query(default=None),
     date_to: date | None = Query(default=None),
+    financial: bool = Query(False),
+    gym_id: int | None = Query(None, gt=0),
+    mode: Literal['test', 'live'] | None = None,
+    source: Literal['RAZORPAY', 'CASHFREE', 'WALLET'] | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role({ROLE_ADMIN, ROLE_SUPER_ADMIN})),
 ):
+    response.headers['Cache-Control'] = 'no-store'
+    if financial or mode is not None or source is not None or gym_id is not None:
+        from app.services.admin_financial_service import AdminFinancialService
+        return AdminFinancialService(db).report(date_from=date_from, date_to=date_to, gym_id=gym_id, mode=mode, source=source)
     svc = AdminDashboardService(db)
     return svc.summary(date_from=date_from, date_to=date_to)
 
@@ -107,12 +132,42 @@ def admin_dashboard_summary(
 def analytics(response: Response, date_from: date | None = Query(None), date_to: date | None = Query(None),
               grain: Literal['day', 'week', 'month'] = Query('day'), gym_id: int | None = Query(None, gt=0),
               country: str | None = Query(None, max_length=100), state: str | None = Query(None, max_length=100),
-              city: str | None = Query(None, max_length=100), db: Session = Depends(get_db),
+              city: str | None = Query(None, max_length=100), financial: bool = Query(False),
+              mode: Literal['test', 'live'] | None = None, source: Literal['RAZORPAY', 'CASHFREE', 'WALLET'] | None = None,
+              db: Session = Depends(get_db),
               current_user: User = Depends(require_role({ROLE_ADMIN, ROLE_SUPER_ADMIN}))):
     from app.services.admin_analytics_service import AdminAnalyticsService
     response.headers['Cache-Control'] = 'no-store'
+    if financial or mode is not None or source is not None:
+        if any(value is not None for value in (country, state, city)):
+            from fastapi import HTTPException
+            raise HTTPException(422, 'Use gym_id for financial attribution; location filters belong to the legacy booking audit.')
+        from app.services.admin_financial_service import AdminFinancialService
+        return AdminFinancialService(db).report(date_from=date_from, date_to=date_to, gym_id=gym_id, mode=mode, source=source)
     return AdminAnalyticsService(db).report(date_from=date_from, date_to=date_to, grain=grain,
         gym_id=gym_id, country=country, state=state, city=city)
+
+
+@router.get('/reports/financial')
+def financial_report(response: Response, date_from: date | None = None, date_to: date | None = None,
+                     gym_id: int | None = Query(None, gt=0), mode: Literal['test', 'live'] | None = None,
+                     source: Literal['RAZORPAY', 'CASHFREE', 'WALLET'] | None = None,
+                     db: Session = Depends(get_db), user: User = Depends(require_role({ROLE_ADMIN, ROLE_SUPER_ADMIN}))):
+    from app.services.admin_financial_service import AdminFinancialService
+    response.headers['Cache-Control'] = 'no-store'
+    return AdminFinancialService(db).report(date_from=date_from, date_to=date_to, gym_id=gym_id, mode=mode, source=source)
+
+
+@router.get('/reports/wallet-ledger')
+def wallet_ledger_report(response: Response, date_from: date | None = None, date_to: date | None = None,
+                         mode: Literal['test', 'live'] | None = None, direction: Literal['IN', 'OUT'] | None = None,
+                         txn_type: str | None = Query(None, max_length=20), limit: int = Query(50, ge=1, le=100),
+                         offset: int = Query(0, ge=0), db: Session = Depends(get_db),
+                         user: User = Depends(require_role({ROLE_ADMIN, ROLE_SUPER_ADMIN}))):
+    from app.services.admin_financial_service import AdminFinancialService
+    response.headers['Cache-Control'] = 'no-store'
+    return AdminFinancialService(db).wallet_ledger(date_from=date_from, date_to=date_to, mode=mode,
+        direction=direction, txn_type=txn_type, limit=limit, offset=offset)
 
 
 @router.get("/users", response_model=list[AdminUserListItem])
@@ -348,6 +403,7 @@ def search_bookings(
     for b, u, g, s, p in rows:
         out.append(
             AdminBookingResponse(
+                cancellation=cancellation_summary(db, b), funding=booking_breakdown(db, b),
                 id=b.id,
                 user_id=b.user_id,
                 gym_id=b.gym_id,
@@ -405,6 +461,20 @@ def search_bookings(
     return out
 
 
+@router.get('/memberships/transfers')
+def membership_transfer_history(limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0),
+        db: Session = Depends(get_db), current_user: User = Depends(require_role({ROLE_ADMIN, ROLE_SUPER_ADMIN}))):
+    if not policy_available(db): return {'enabled': False, 'items': [], 'has_more': False}
+    rows = list(db.execute(select(MembershipTransfer, UserMembership).join(UserMembership,
+        UserMembership.id == MembershipTransfer.membership_id).order_by(MembershipTransfer.created_at.desc(), MembershipTransfer.id)
+        .offset(offset).limit(limit + 1)))
+    return {'enabled': True, 'has_more': len(rows) > limit, 'items': [dict(reference=t.id, membership_id=t.membership_id,
+        original_customer_id=t.original_user_id, receiving_customer_id=t.recipient_user_id, current_owner_id=m.user_id,
+        transferred_by=t.actor_id, status=t.status, membership_status=m.status, transferred_at=as_ist(t.created_at),
+        start_at=as_ist(t.start_at), end_at=as_ist(t.end_at), original_end_at=as_ist(t.original_end_at),
+        plan_id=m.platform_plan_id, purchase_reference=m.gateway_checkout_id or m.checkout_key) for t, m in rows[:limit]]}
+
+
 @router.get("/bookings/{booking_id}", response_model=AdminBookingResponse)
 def get_booking(
     booking_id: int,
@@ -414,6 +484,7 @@ def get_booking(
     svc = AdminBookingService(db)
     b, u, g, s, p = svc.get(booking_id=booking_id)
     return AdminBookingResponse(
+        cancellation=cancellation_summary(db, b), funding=booking_breakdown(db, b),
         id=b.id,
         user_id=b.user_id,
         gym_id=b.gym_id,
@@ -480,7 +551,8 @@ def admin_cancel_booking(
     b = svc.cancel_booking(booking_id=booking_id, reason=payload.reason, actor_id=current_user.id)
     from app.schemas.booking import CANCELLATION_MESSAGE
     return {"status": "ok", "booking_id": b.id, "new_status": b.status,
-            "refund_initiated": False, "cancellation_message": CANCELLATION_MESSAGE}
+            "refund_initiated": False, "cancellation_message": CANCELLATION_MESSAGE,
+            "cancellation": cancellation_summary(db, b)}
 
 
 @router.post("/bookings/{booking_id}/payment/status", response_model=dict)
@@ -520,7 +592,7 @@ def report_daily_bookings(
             func.sum(case((Booking.status == "CONFIRMED", 1), else_=0)).label("confirmed_bookings"),
             func.sum(case((Booking.status == "CANCELLED", 1), else_=0)).label("cancelled_bookings"),
             func.sum(case((Booking.status == "EXPIRED", 1), else_=0)).label("expired_bookings"),
-            func.sum(case((eligible_admin_payment(), Payment.amount), else_=0)).label("paid_amount_total"),
+            func.sum(case((eligible_admin_payment(), gateway_booking_amount(db)), else_=0)).label("paid_amount_total"),
         )
         .select_from(Booking)
         .outerjoin(Payment, Payment.booking_id == Booking.id)

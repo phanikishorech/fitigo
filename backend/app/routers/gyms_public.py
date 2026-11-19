@@ -447,228 +447,18 @@ def discover_gyms(
     membership_access: Annotated[str | None, Query(max_length=40)] = None,
     sort_by: Annotated[str | None, Query(max_length=40)] = None,
     # Geo
-    latitude: Annotated[float | None, Query()] = None,
-    longitude: Annotated[float | None, Query()] = None,
+    latitude: Annotated[float | None, Query(ge=-90, le=90)] = None,
+    longitude: Annotated[float | None, Query(ge=-180, le=180)] = None,
     radius_km: Annotated[float | None, Query(ge=0.1, le=200.0)] = 10.0,
     # Pagination
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=60)] = 12,
 ):
-    """Discovery endpoint for the Nearby Gyms listing.
-
-    Notes:
-    - Distance is computed server-side (MVP uses haversine in Python).
-    - Facility, rating, membership and open-now filters are applied server-side.
-    - Returns pagination metadata + total_count for the listing header.
-    """
-
-    # Correlated subquery: pick one image file path per gym (prefer cover)
-    cover_path_sq = (
-        select(GymImage.file_path)
-        .where(GymImage.gym_id == Gym.id)
-        .order_by(GymImage.is_cover.desc(), GymImage.id.asc())
-        .limit(1)
-        .scalar_subquery()
-    )
-
-    filters = [Gym.status == "APPROVED", Gym.is_active.is_(True)]
-
-    if search:
-        like = f"%{search.strip()}%"
-        filters.append(or_(Gym.name.like(like), Gym.description.like(like), Gym.address_line_1.like(like), Gym.address_line_2.like(like)))
-
-    if city:
-        filters.append(Gym.city == city)
-
-    # MVP: gym_type is accepted for forward-compat but not yet stored on gyms table.
-    _ = gym_type
-
-    if facilities:
-        gym_ids_sq = select(GymFacilityMapping.gym_id).where(GymFacilityMapping.facility_id.in_(facilities)).distinct()
-        filters.append(Gym.id.in_(gym_ids_sq))
-
-    # Fetch a bigger window first; we will apply distance/open/rating/membership filters in Python.
-    stmt = (
-        select(Gym, cover_path_sq.label("cover_path"))
-        .where(and_(*filters))
-        .order_by(Gym.is_featured.desc(), Gym.id.desc())
-        .limit(700)
-    )
-    rows: list[tuple[Gym, str | None]] = list(db.execute(stmt).all())
-
-    gyms = [g for g, _ in rows]
-    gym_ids = [int(g.id) for g in gyms]
-    if not gym_ids:
-        return GymDiscoverResponse(total_count=0, page=page, page_size=page_size, has_more=False, gyms=[])
-
-    # Ratings summary for the window
-    rating_rows = list(
-        db.execute(
-            select(GymReview.gym_id, func.avg(GymReview.rating), func.count(GymReview.id))
-            .where(GymReview.gym_id.in_(gym_ids), GymReview.status == ReviewStatus.PUBLISHED.value)
-            .group_by(GymReview.gym_id)
-        ).all()
-    )
-    rating_map: dict[int, tuple[float, int]] = {int(gid): (float(avg or 0), int(cnt or 0)) for gid, avg, cnt in rating_rows}
-
-    # Facilities for window
-    fac_rows = list(
-        db.execute(
-            select(GymFacilityMapping.gym_id, GymFacility)
-            .join(GymFacility, GymFacility.id == GymFacilityMapping.facility_id)
-            .where(GymFacilityMapping.gym_id.in_(gym_ids))
-            .order_by(GymFacility.name.asc())
-        ).all()
-    )
-    fac_map: dict[int, list[GymFacility]] = {}
-    for gid, fac in fac_rows:
-        fac_map.setdefault(int(gid), []).append(fac)
-
-    # Open-now for window (today only)
-    from datetime import datetime, timezone
-
-    now = ist_now()
-    # 0=Mon...6=Sun
-    dow = int((now.weekday()) % 7)
-    time_now = now.time()
-    hours_rows = list(
-        db.execute(
-            select(GymOperatingHours)
-            .where(GymOperatingHours.gym_id.in_(gym_ids), GymOperatingHours.day_of_week == dow)
-        ).scalars().all()
-    )
-    hours_map: dict[int, GymOperatingHours] = {int(h.gym_id): h for h in hours_rows}
-
-    def _is_open(gid: int) -> bool | None:
-        h = hours_map.get(gid)
-        if not h:
-            return None
-        if h.is_closed:
-            return False
-        if h.open_time is None or h.close_time is None:
-            return None
-        return bool(h.open_time <= time_now <= h.close_time)
-
-    # Membership access (MVP): included if user has an active membership for this gym.
-    included_gym_ids: set[int] = set()
-    if current_user is not None:
-        included_gym_ids = membership_gym_ids(db, current_user.id, now)
-
-    import math
-
-    def _dist_km(a_lat: float, a_lon: float, b_lat: float, b_lon: float) -> float:
-        # haversine
-        r = 6371.0
-        p = math.pi / 180.0
-        dlat = (b_lat - a_lat) * p
-        dlon = (b_lon - a_lon) * p
-        x = math.sin(dlat / 2) ** 2 + math.cos(a_lat * p) * math.cos(b_lat * p) * math.sin(dlon / 2) ** 2
-        return 2 * r * math.asin(math.sqrt(x))
-
-    doing_geo = latitude is not None and longitude is not None
-    lat = float(latitude) if latitude is not None else None
-    lon = float(longitude) if longitude is not None else None
-
-    # Build enriched items and apply computed filters.
-    enriched: list[GymDiscoverItem] = []
-    for (g, cover_path) in rows:
-        avg, cnt = rating_map.get(int(g.id), (0.0, 0))
-        if min_rating is not None and cnt > 0 and avg < float(min_rating):
-            continue
-        if min_rating is not None and cnt == 0 and float(min_rating) > 0:
-            continue
-
-        dist_val: float | None = None
-        if doing_geo:
-            if not g.latitude or not g.longitude:
-                continue
-            try:
-                glat = float(g.latitude)
-                glon = float(g.longitude)
-            except ValueError:
-                continue
-            dist_val = _dist_km(lat or 0, lon or 0, glat, glon)
-            if radius_km is not None and dist_val > float(radius_km):
-                continue
-
-        is_open_now = _is_open(int(g.id))
-        if open_now is True and is_open_now is not True:
-            continue
-
-        access_status = "INCLUDED" if int(g.id) in included_gym_ids else "NO_ACTIVE_MEMBERSHIP"
-        if membership_access and access_status != membership_access:
-            continue
-
-        enriched.append(
-            GymDiscoverItem(
-                gym_id=int(g.id),
-                gym_name=g.name,
-                primary_image=(f"/uploads/{cover_path}" if cover_path else None),
-                images=[],
-                latitude=g.latitude,
-                longitude=g.longitude,
-                address=g.address_line_1,
-                locality=g.address_line_2 or g.city,
-                city=g.city,
-                distance_km=dist_val,
-                average_rating=(avg if cnt > 0 else None),
-                review_count=cnt,
-                facilities=[
-                    {"id": f.id, "name": f.name, "description": f.description, "icon": f.icon}
-                    for f in (fac_map.get(int(g.id)) or [])
-                ],
-                is_featured=bool(g.is_featured),
-                membership_access_status=access_status,
-                required_membership_tier=None,
-                active_promotion=None,
-                is_open_now=is_open_now,
-            )
-        )
-
-    # Sorting
-    def _membership_rank(status_val: str | None) -> int:
-        if status_val == "INCLUDED":
-            return 0
-        if status_val == "DAY_PASS_AVAILABLE":
-            return 1
-        if status_val == "UPGRADE_REQUIRED":
-            return 2
-        if status_val == "NO_ACTIVE_MEMBERSHIP":
-            return 3
-        if status_val == "UNAVAILABLE":
-            return 4
-        return 5
-
-    if sort_by == "rating":
-        enriched.sort(key=lambda x: (x.average_rating is None, -(x.average_rating or 0), -(x.review_count or 0)))
-    elif sort_by == "distance":
-        enriched.sort(key=lambda x: (x.distance_km is None, x.distance_km or 1e9))
-    else:
-        # recommended
-        enriched.sort(
-            key=lambda x: (
-                _membership_rank(x.membership_access_status),
-                x.distance_km is None,
-                x.distance_km or 1e9,
-                x.average_rating is None,
-                -(x.average_rating or 0),
-                -(x.review_count or 0),
-            )
-        )
-
-    total_count = len(enriched)
-    start = (page - 1) * page_size
-    end = start + page_size
-    page_items = enriched[start:end]
-    has_more = end < total_count
-
-    return GymDiscoverResponse(
-        total_count=total_count,
-        page=page,
-        page_size=page_size,
-        has_more=has_more,
-        gyms=page_items,
-    )
+    from app.services.gym_discovery import discover
+    return discover(db, current_user, search=search, city=city, facilities=facilities,
+                    min_rating=min_rating, open_now=open_now, membership_access=membership_access,
+                    sort_by=sort_by, latitude=latitude, longitude=longitude, radius_km=radius_km,
+                    page=page, page_size=page_size)
 
 
 @router.get("/{gym_id}/reviews", response_model=list[ReviewResponse])
@@ -913,8 +703,8 @@ def get_gym_details(
             if p
         ]
     )
-    lat_f = float(gym.latitude) if gym.latitude else None
-    lon_f = float(gym.longitude) if gym.longitude else None
+    from app.services.gym_geo import coordinates
+    lat_f, lon_f = coordinates(gym.latitude, gym.longitude) or (None, None)
     location = GymDetailsLocation(
         locality=gym.address_line_2,
         city=gym.city,

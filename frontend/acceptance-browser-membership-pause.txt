@@ -1,0 +1,77 @@
+PASS backend allowance/date bounds, responsive selection and preview, network failure, duplicate prevention, authoritative dates, history and refresh
+PASS paused/disabled/Single-Gym states, live policy refresh, sanitized technical error and retry
+PASS matching pause cards, desktop/mobile alignment and standalone pause page without nested cards
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+
++ [
++   'Unexpected GET /api/v1/notifications/inbox',
++   'Unexpected GET /api/v1/notifications/inbox',
++   'Unexpected GET /api/v1/cart/summary',
++   'Unexpected GET /api/v1/cart/summary',
++   'Unexpected GET /api/v1/notifications/inbox',
++   'Unexpected GET /api/v1/notifications/inbox',
++   'Unexpected GET /api/v1/cart/summary',
++   'Unexpected GET /api/v1/cart/summary',
++   'Unexpected GET /api/v1/notifications/inbox',
++   'Unexpected GET /api/v1/notifications/inbox',
++   'Unexpected GET /api/v1/cart/summary',
++   'Unexpected GET /api/v1/cart/summary',
++   'Unexpected GET /api/v1/notifications/inbox',
++   'Unexpected GET /api/v1/notifications/inbox',
++   'Unexpected GET /api/v1/cart/summary',
++   'Unexpected GET /api/v1/cart/summary',
++   'Unexpected GET /api/v1/notifications/inbox',
++   'Unexpected GET /api/v1/notifications/inbox',
++   'Unexpected GET /api/v1/cart/summary',
++   'Unexpected GET /api/v1/cart/summary',
++   'Unexpected GET /api/v1/notifications/inbox',
++   'Unexpected GET /api/v1/notifications/inbox',
++   'Unexpected GET /api/v1/cart/summary',
++   'Unexpected GET /api/v1/cart/summary',
++   'Unexpected GET /api/v1/admin/memberships/transfers',
++   'Unexpected GET /api/v1/admin/memberships/transfers'
++ ]
+- []
+
+    at file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/Fitigo/frontend/scripts/membership-pause-browser.mjs:124:9 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: [
+    'Unexpected GET /api/v1/notifications/inbox',
+    'Unexpected GET /api/v1/notifications/inbox',
+    'Unexpected GET /api/v1/cart/summary',
+    'Unexpected GET /api/v1/cart/summary',
+    'Unexpected GET /api/v1/notifications/inbox',
+    'Unexpected GET /api/v1/notifications/inbox',
+    'Unexpected GET /api/v1/cart/summary',
+    'Unexpected GET /api/v1/cart/summary',
+    'Unexpected GET /api/v1/notifications/inbox',
+    'Unexpected GET /api/v1/notifications/inbox',
+    'Unexpected GET /api/v1/cart/summary',
+    'Unexpected GET /api/v1/cart/summary',
+    'Unexpected GET /api/v1/notifications/inbox',
+    'Unexpected GET /api/v1/notifications/inbox',
+    'Unexpected GET /api/v1/cart/summary',
+    'Unexpected GET /api/v1/cart/summary',
+    'Unexpected GET /api/v1/notifications/inbox',
+    'Unexpected GET /api/v1/notifications/inbox',
+    'Unexpected GET /api/v1/cart/summary',
+    'Unexpected GET /api/v1/cart/summary',
+    'Unexpected GET /api/v1/notifications/inbox',
+    'Unexpected GET /api/v1/notifications/inbox',
+    'Unexpected GET /api/v1/cart/summary',
+    'Unexpected GET /api/v1/cart/summary',
+    'Unexpected GET /api/v1/admin/memberships/transfers',
+    'Unexpected GET /api/v1/admin/memberships/transfers'
+  ],
+  expected: [],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.16.0

@@ -2,6 +2,10 @@ import type { PaymentCheckout } from '../services/paymentService'
 
 export function checkoutMessage(checkout: PaymentCheckout): string {
   const reason = checkout.payment_blocked_reason
+  if (reason === 'CANCELLATION_PENDING') return 'Cancellation is being checked with the payment provider. Your previous payment is unresolved; please do not pay again. Wallet funds stay reserved until safe closure is confirmed. Refresh payment status, or contact support if this does not resolve.'
+  if (checkout.status === 'CANCELLED' && checkout.replacement_safe && checkout.wallet_status !== 'HELD') return 'The unpaid checkout is safely cancelled. Any wallet reservation has been released. Review the current plan, price and wallet balance before starting a fresh payment.'
+  if (reason === 'WALLET_HOLD_RECONCILING') return 'The checkout deadline passed. Wallet funds remain reserved until the original payment is resolved. Refresh status; do not pay another order. Contact support if the provider cannot close this order.'
+  if (reason === 'WALLET_RESERVATION_RELEASED') return 'The wallet reservation was released. This checkout cannot be paid again. Review payment history before starting a new purchase.'
   if (checkout.status === 'SUPERSEDED') return 'This checkout was replaced and cannot be reopened in FitiGo. The gateway order was not cancelled. Any delayed payment will be recorded for review; do not pay this old order.'
   if (reason === 'BOOKING_EXPIRED') return 'Booking payment window expired. This does not mean the payment failed. Refresh the original payment status before making another purchase.'
   if (reason === 'BOOKING_UNAVAILABLE') return 'This visit is no longer available for payment. Resolve the original checkout, then choose a future available visit.'

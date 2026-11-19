@@ -1,0 +1,1 @@
+PASS history redesign: preserved font/theme, details/currency/status/modes, filters/pagination, guarded actions, close-in-flight, keyboard, empty/error and 360/768/1440. Artifacts: C:\Users\ckishor\AppData\Local\Temp\fitigo-payment-history

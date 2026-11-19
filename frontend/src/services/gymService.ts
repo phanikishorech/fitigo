@@ -18,7 +18,7 @@ export function discoveryQuery(params: DiscoverParams) {
   return query.toString()
 }
 export const gymService = {
-  discover: (params: DiscoverParams) => request<GymDiscoverResponse>(`/gyms/discover?${discoveryQuery(params)}`),
+  discover: (params: DiscoverParams) => cachedRead(`discovery:${discoveryQuery(params)}`, () => request<GymDiscoverResponse>(`/gyms/discover?${discoveryQuery(params)}`, { cache: 'no-store' }), 2000),
   details: (id: number) => cachedRead(`gym:${id}`, () => request<GymDetailsResponse>(`/gyms/${id}/details`)),
   accessDetails: async (id: number) => {
     // Strict identity first: public detail endpoints otherwise accept anonymous fallback.

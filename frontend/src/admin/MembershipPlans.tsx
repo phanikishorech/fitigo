@@ -1,4 +1,5 @@
 import { useId, useState, type ReactNode } from 'react'
+import MembershipTransfers from './MembershipTransfers'
 import { paymentInstructions } from '../utils/paymentInstructions'
 import { navigate } from '../router'
 import { money } from '../services/client'
@@ -28,7 +29,7 @@ function PlanList() {
         {plan.badge && <p>Customer badge: <strong>{plan.badge}</strong></p>}
         <div className="ad-plan-links"><Link to={`${basePath}/${plan.id}`} className="fg-button fg-button--secondary" label={`Edit ${plan.name}`}>Edit Plan</Link><Link to={`${basePath}/${plan.id}/offer`} className="fg-button fg-button--text" label={`Manage offer for ${plan.name}`}>Manage Offer</Link></div>
       </DataCard>)}</div>}
-    </>}</Resource></>
+    </>}</Resource><MembershipTransfers /></>
 }
 
 function PlanDetail({ id, offer }: { id: number; offer: boolean }) {

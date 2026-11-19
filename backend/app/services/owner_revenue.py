@@ -9,13 +9,20 @@ from app.models.payment_checkout import PaymentCheckout
 from app.core.time import ist_day_bounds
 
 
-def sales_query(scope, first, last):
+def sales_query(scope, first, last, db=None):
     start, end = ist_day_bounds(first)[0], ist_day_bounds(last)[1]
     queries = []
     for model, amount, state, link, kind in [
         (Payment, Payment.amount, Payment.status, Booking.checkout_id, 'individual_booking'),
         (UserMembership, UserMembership.paid_amount, UserMembership.payment_status, UserMembership.gateway_checkout_id, 'single_gym_membership'),
     ]:
+        purchase_amount = amount
+        from app.services.checkout_funding import available
+        if db is not None and available(db):
+            from app.models.checkout_funding import BookingFunding, CheckoutFunding
+            allocated = (select(BookingFunding.gateway_amount).where(BookingFunding.booking_id == Payment.booking_id).correlate(Payment).scalar_subquery()
+                if model is Payment else select(CheckoutFunding.gateway_amount).where(CheckoutFunding.checkout_id == UserMembership.gateway_checkout_id).correlate(UserMembership).scalar_subquery())
+            amount = func.coalesce(allocated, amount)
         paid = and_(state == 'PAID', PaymentCheckout.status == 'PAID', PaymentCheckout.mode == settings.gateway_mode,
             PaymentCheckout.gateway_payment_id.is_not(None), PaymentCheckout.provider.in_(['RAZORPAY', 'CASHFREE']))
         eligible = literal(True)
@@ -28,7 +35,8 @@ def sales_query(scope, first, last):
         included = and_(paid, eligible)
         recorded = func.coalesce(PaymentCheckout.created_at, model.created_at)
         query = select(model.id.label('record_id'), literal(kind).label('category'), Gym.id.label('gym_id'),
-            Gym.name.label('gym_name'), recorded.label('recorded_at'), amount.label('amount'), state.label('payment_status'),
+            Gym.name.label('gym_name'), recorded.label('recorded_at'), amount.label('amount'), purchase_amount.label('purchase_amount'),
+            (purchase_amount - amount).label('wallet_amount'), amount.label('gateway_amount'), state.label('payment_status'),
             model.currency.label('currency'), PaymentCheckout.mode.label('mode'), PaymentCheckout.status.label('checkout_status'),
             case((included, amount), else_=0).label('recognized_amount'), case((included, True), else_=False).label('included'),
             case((~paid, 'PAYMENT_NOT_ELIGIBLE'), (~eligible, 'NO_ELIGIBLE_CHECKIN'), else_=literal(None)).label('exclusion_reason'),

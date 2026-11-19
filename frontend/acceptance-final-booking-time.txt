@@ -1,0 +1,1 @@
+PASS quarter-hour dropdowns, automatic one-hour end, past dates/times excluded, future visit uses original cart flow

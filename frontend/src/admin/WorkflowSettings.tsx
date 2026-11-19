@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { request } from '../services/client'
 import { useAdminResource } from './hooks'
-import { Alert, DataCard, Details, EmptyState, PageHeader, Pagination, Resource } from './UI'
+import { Alert, DataCard, Details, EmptyState, Link, PageHeader, Pagination, Resource } from './UI'
 import { istDateTime } from '../utils/membership'
 
 type Settings = { payment: { enabled: boolean; provider: string | null; mode: string; wallet_test_credit: boolean }; limitations: Record<string, string> }
@@ -9,7 +9,7 @@ type Audit = { id: string; actor_id: number | null; action: string; resource_typ
 export default function WorkflowSettings({ audit = false }: { audit?: boolean }) { return audit ? <AuditLog /> : <SettingsView /> }
 function SettingsView() {
   const resource = useAdminResource(() => request<Settings>('/admin/settings', { cache: 'no-store' }), 'admin-settings')
-  return <><PageHeader title="Runtime settings" subtitle="Read-only backend capabilities. Deployment configuration cannot be edited here." /><Resource resource={resource}>{data => <>
+  return <><PageHeader title="Runtime settings" subtitle="Deployment capabilities are read-only. Gym financial configuration has its own page." /><DataCard><Link to="/admin/financial-settings">Open Financial Settings</Link></DataCard><Resource resource={resource}>{data => <>
     <DataCard title="Payment configuration"><Details rows={[["Gateway", data.payment.enabled ? data.payment.provider : 'Unavailable'], ['Mode', data.payment.mode], ['Development wallet credits', data.payment.wallet_test_credit ? 'Enabled' : 'Disabled']]} /></DataCard>
     <DataCard title="Workflow limitations">{Object.entries(data.limitations).map(([key, value]) => <p key={key}>{value}</p>)}</DataCard>
   </>}</Resource></>

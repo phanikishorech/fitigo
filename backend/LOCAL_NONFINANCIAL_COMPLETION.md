@@ -74,9 +74,9 @@ Upload-root ACL was reviewed: SYSTEM, Administrators, current application user;
 no media symlinks/junctions were present. No existing file was deleted. Cleanup
 and email workers were not executed or scheduled on working data.
 
-Only the verified FitiGo 8001 process tree was stopped for maintenance and
+Only the verified FitiGo 8000 process tree was stopped for maintenance and
 restarted. The unrelated port-8000 listener was preserved. Frontend remains on
-5173, API on 8001. Runtime logs:
+5173, API on 8000. Runtime logs:
 `C:/Users/ckishor/AppData/Local/FitiGo/runtime/backend-20261111-213951-c6a10fe5`.
 
 Private local `.env` flags now:

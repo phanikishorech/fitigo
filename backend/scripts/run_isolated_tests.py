@@ -25,15 +25,28 @@ def main():
     parser.add_argument('--operational', action='store_true', help='Exercise Phase 6 audit/deletion with migrated isolated schema')
     parser.add_argument('--notifications', action='store_true', help='Exercise notification inbox/outbox on isolated data; no sender enabled')
     parser.add_argument('--support', action='store_true', help='Exercise support workflows; also enables transactional audit on isolated data')
+    parser.add_argument('--source-evidence', action='store_true', help='Enable source evidence only in the isolated test child')
     parser.add_argument('--test-timeout', type=int, default=900, help='Bounded pytest timeout in seconds (60..3600)')
+    parser.add_argument('--diagnostics', action='store_true', help='Write per-test phase/SQL timings without SQL values')
+    parser.add_argument('--shard-count', type=int, default=1)
+    parser.add_argument('--shard-index', type=int, default=0)
+    parser.add_argument('--artifact-pointer', help='Absolute new JSON file pointing to private artifacts')
     options, tests = parser.parse_known_args()
     if not 60 <= options.test_timeout <= 3600: parser.error('test-timeout must be 60..3600')
+    if not 1 <= options.shard_count <= 8 or not 0 <= options.shard_index < options.shard_count:
+        parser.error('Invalid shard index/count')
+    if options.shard_count > 1 and not options.diagnostics: parser.error('Shards require diagnostics/coverage manifest')
     binary = Path(options.mysql_bin).resolve()
     if not binary.is_file():
         parser.error('MySQL server binary not found')
     root = Path(__file__).resolve().parents[1]
     run = secrets.token_hex(8)
     directory = Path(tempfile.mkdtemp(prefix='fitigo-isolated-'+run+'-'))
+    if options.artifact_pointer:
+        pointer = Path(options.artifact_pointer)
+        if not pointer.is_absolute(): parser.error('Artifact pointer must be absolute')
+        with pointer.open('x', encoding='utf-8') as stream:
+            json.dump({'directory': str(directory), 'shard_index': options.shard_index, 'shard_count': options.shard_count}, stream)
     datadir = directory/'data'
     with socket.socket() as probe:
         probe.bind(('127.0.0.1', 0)); port = probe.getsockname()[1]
@@ -95,16 +108,28 @@ def main():
         env['SUPPORT_WORKFLOWS_ENABLED'] = 'true' if options.support else 'false'
         env['NOTIFICATION_WORKFLOWS_ENABLED'] = 'true' if options.notifications else 'false'
         env['NOTIFICATION_EMAIL_ENABLED'] = 'false'
+        env['SOURCE_EVIDENCE_ENABLED'] = 'true' if options.source_evidence else 'false'
+        if options.diagnostics:
+            env.update(FITIGO_TEST_ARTIFACTS=str(directory), FITIGO_TEST_SHARD_COUNT=str(options.shard_count),
+                       FITIGO_TEST_SHARD_INDEX=str(options.shard_index))
+            tests = ['-p', 'release_test_diagnostics', '-o', 'faulthandler_timeout=120', *tests]
         print('Isolated MySQL', version, 'test schema', name, 'artifacts', directory, flush=True)
         with (directory/'migration.log').open('w', encoding='utf-8') as output:
             result = subprocess.run([sys.executable, '-m', 'alembic', 'upgrade', 'head'], cwd=root, env=env,
                 stdout=output, stderr=subprocess.STDOUT, timeout=120)
         if result.returncode:
             raise RuntimeError('Isolated migration failed; working database was not contacted.')
-        with (directory/'pytest.log').open('w', encoding='utf-8') as output:
-            result = subprocess.run([sys.executable, '-m', 'pytest', *tests, '--junitxml='+str(directory/'results.xml')],
-                cwd=root, env=env, stdout=output, stderr=subprocess.STDOUT, timeout=options.test_timeout)
-        summary = {'pytest_exit': result.returncode, 'run_id': run, 'database': name, 'mysql_version': version}
+        started = time.monotonic()
+        try:
+            with (directory/'pytest.log').open('w', encoding='utf-8') as output:
+                result = subprocess.run([sys.executable, '-m', 'pytest', *tests, '--junitxml='+str(directory/'results.xml')],
+                    cwd=root, env=env, stdout=output, stderr=subprocess.STDOUT, timeout=options.test_timeout)
+        except subprocess.TimeoutExpired:
+            (directory/'summary.json').write_text(json.dumps({'pytest_exit': None, 'timeout': True,
+                'elapsed_seconds': time.monotonic()-started, 'run_id': run, 'database': name, 'mysql_version': version}, indent=2))
+            raise
+        summary = {'pytest_exit': result.returncode, 'elapsed_seconds': time.monotonic()-started,
+                   'run_id': run, 'database': name, 'mysql_version': version}
         (directory/'summary.json').write_text(json.dumps(summary, indent=2))
         print('Pytest exit:', result.returncode, 'private log:', directory/'pytest.log', flush=True)
         return result.returncode

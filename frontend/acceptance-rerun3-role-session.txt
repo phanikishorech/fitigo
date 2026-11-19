@@ -1,0 +1,116 @@
+﻿PASS all six backend roles: login response routing, existing homes, login aliases, cross-role guards and refresh
+PASS wrong-portal login uses actual role; incorrect credentials remain inline; anonymous protected routes go to /login
+PASS network/server/expired/forbidden/invalid-role/loading states, retries and cross-tab logout
+PASS all active logout UIs clear credentials and redirect /login even if server revocation fails
+PASS customer membership/booking, owner report, staff settings, admin settings restore exact query/hash after login reload
+PASS public gym continuation, BOOK_VISIT resumes once, refresh cannot replay, no-membership resumes normal booking
+node : file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/Fitigo/fronten
+d/scripts/role-session-browser.mjs:25
+At line:1 char:78
++ ... \fitigo\frontend'; node scripts/role-session-browser.mjs 2>&1 | Out-F 
+...
++                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (file:///C:/User...-browser.mjs 
+   :25:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+async function until(expression){for(let i=0;i<120;i++){if(await 
+evaluate(expression))return;await wait(100)}throw Error(`Not ready: 
+${expression}; ${await evaluate('document.body?.innerText')}`)}
+                                                                            
+                                       ^
+
+Error: Not ready: location.pathname==='/cart'; Skip to content
+Fiti
+Go
+YOUR LOCATION
+Choose location
+Return fixture gym
+YOUR NEXT WORKOUT
+Make time for yourself
+
+Choose your visit. WeΓÇÖll take care of the next step.
+
+01 Access
+02 Schedule
+03 Checkout
+Select date (IST)
+
+Booking times are in IST. Choose a start time in the future; availability 
+is checked again before payment.
+
+Open 06:00 ΓÇô 22:00
+
+Start hour (IST)
+Select hour
+06
+07
+08
+09
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+Minutes
+Select minutes
+00
+15
+30
+45
+
+Visit: 09:00ΓÇô10:00 IST ┬╖ 1 hour (end time set automatically)
+
+Your one-time entry QR allows arrival from one hour before your start time 
+(not before opening) until the gym closes on your visit date.
+
+Members
+You and your workout crew
+ΓêÆ
+1
++
+Enter the name of each person who will use the booking.
+Who will use this booking?
+
+Each person receives their own one-time QR after payment. Enter the actual 
+visitors, not just the purchaser.
+
+Visitor 1 full name
+Check availability & add to cart
+The gym validates your selection when it is added. Nothing is charged until 
+you confirm payment.
+Change access type
+Your visit
+
+Return fixture gym
+
+Gym access ┬╖ 1 member
+
+Γé╣425.00 ├ù 1 members
+
+Estimated total
+Γé╣425.00
+Final pricing is provided by the gym and confirmed in your cart.
+Fiti
+Go
+
+Your Fitness. Your Way.
+
+Discover. Book. Show up.
+Home
+Explore
+Memberships
+Profile
+    at until (file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/Fitigo/
+frontend/scripts/role-session-browser.mjs:25:116)
+    at async file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/Fitigo/f
+rontend/scripts/role-session-browser.mjs:190:34
+
+Node.js v24.16.0

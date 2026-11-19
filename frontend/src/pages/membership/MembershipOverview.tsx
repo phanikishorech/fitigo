@@ -1,3 +1,4 @@
+import MembershipTransfer from '../../components/membership/MembershipTransfer'
 import { membershipService, type Membership, type MembershipSummary } from '../../services/accountService'
 import { gymService } from '../../services/gymService'
 import { useMembershipResource } from '../../hooks/useMembershipResource'
@@ -22,7 +23,7 @@ export default function MembershipOverview({ id, details = false, success = fals
     const purchased = memberships.find(item => item.id === Number(new URLSearchParams(window.location.search).get('id')))
     const primary = selected || current.find(membership => membership.id === summary.membership_id && ['ACTIVE', 'PAUSED'].includes(membership.status)) || current.find(membership => membership.status === 'ACTIVE') || current.find(membership => membership.status === 'PAUSED') || current[0]
     const multi = !id && primary.membership_type !== 'MULTI_GYM' && overviewState === 'active' && summary.status === 'ACTIVE' && summary.membership_scope === 'MULTI_GYM'
-    return <>{success && purchased?.status === 'ACTIVE' && <MembershipNotice>Your membership is active. Your current plan information has been loaded from FitiGo.</MembershipNotice>}<div className={`fm-membership-layout${multi ? '' : ' fm-membership-layout--with-pause'}`}><div className="fm-primary-membership">{multi ? <MultiGymCard summary={summary} /> : <MembershipCardContent membership={primary} summary={summary} expanded={!!id} details={details} />}</div>{!multi && <div className="fm-primary-pause"><MembershipPauseCard membershipId={primary.id} /></div>}<aside className="fm-current-access"><TodayMembershipAccess known={{ memberships, summary }} /></aside><div className="fm-stack fm-additional-memberships">{(selected ? [] : multi ? current : current.filter(membership => membership.id !== primary.id)).map(membership => <MembershipCard key={membership.id} membership={membership} summary={summary} expanded={false} details={false} />)}</div><aside className="fm-membership-links"><MembershipLinks multi={summary.membership_scope === 'MULTI_GYM'} /></aside></div>{!id && <MembershipHistory memberships={history} summary={summary} />}</>
+    return <>{success && purchased?.status === 'ACTIVE' && <MembershipNotice>Your membership is active. Your current plan information has been loaded from FitiGo.</MembershipNotice>}<div className={`fm-membership-layout${multi ? '' : ' fm-membership-layout--with-pause'}`}><div className="fm-primary-membership">{multi ? <MultiGymCard summary={summary} /> : <MembershipCardContent membership={primary} summary={summary} expanded={!!id} details={details} />}</div>{!multi && primary.status !== 'TRANSFERRED' && <div className="fm-primary-pause"><MembershipPauseCard membershipId={primary.id} /></div>}<aside className="fm-current-access"><TodayMembershipAccess known={{ memberships, summary }} /></aside><div className="fm-stack fm-additional-memberships">{(selected ? [] : multi ? current : current.filter(membership => membership.id !== primary.id)).map(membership => <MembershipCard key={membership.id} membership={membership} summary={summary} expanded={false} details={false} />)}</div><aside className="fm-membership-links"><MembershipLinks multi={summary.membership_scope === 'MULTI_GYM'} /></aside></div>{!id && <MembershipHistory memberships={history} summary={summary} />}</>
   }}</MembershipResource></div></RefreshMembership.Provider>
 }
 function MultiGymCard({ summary }: { summary: MembershipSummary }) {
@@ -38,19 +39,20 @@ function MembershipHistory({ memberships, summary }: { memberships: Membership[]
 }
 
 function MembershipCard({ membership, summary, expanded, details }: { membership: Membership; summary: MembershipSummary; expanded: boolean; details: boolean }) {
-  return <div className="fm-stack"><MembershipCardContent membership={membership} summary={summary} expanded={expanded} details={details} /><MembershipPauseCard membershipId={membership.id} /></div>
+  return <div className="fm-stack"><MembershipCardContent membership={membership} summary={summary} expanded={expanded} details={details} />{membership.status !== 'TRANSFERRED' && <MembershipPauseCard membershipId={membership.id} />}</div>
 }
 function MembershipPauseCard({ membershipId }: { membershipId: number }) {
   const refresh = useContext(RefreshMembership)
   return <MembershipPanel className="fm-pause-card"><MembershipPause membershipId={membershipId} onChanged={refresh} /></MembershipPanel>
 }
 function MembershipCardContent({ membership, summary, expanded, details }: { membership: Membership; summary: MembershipSummary; expanded: boolean; details: boolean }) {
+  const refresh = useContext(RefreshMembership)
   if (membership.membership_type === 'MULTI_GYM') return <MembershipPanel className="fm-membership-card"><div className="fm-card-brand"><span>Multi-Gym Access</span><MembershipStatusBadge status={membership.status} /></div><h2>{membership.terms_snapshot?.name || 'FitiGo Multi-Gym'}</h2><MembershipFacts rows={[
     ['Access', 'Eligible FitiGo partner gyms'], ['Daily access', '1 gym access per active day'],
     ['Membership period', `${membershipDate(membership.start_at)} – ${membershipDate(membership.end_at)}`],
     ['Payment', membership.payment_provider === 'WALLET' ? 'Wallet · Test credits' : membership.payment_status],
     ...(membership.terms_snapshot ? [['Plan duration', `${membership.terms_snapshot.duration_value} ${membership.terms_snapshot.duration_unit.toLowerCase()}`] as [string, string]] : []),
-  ]} /><div className="fm-card-actions"><Link to={`/membership/${membership.id}/details`} className="fg-button fg-button--secondary">Membership Details</Link><Link to="/profile/visits" className="fg-button fg-button--text">Visit History</Link></div></MembershipPanel>
+  ]} /><MembershipTransfer id={membership.id} policy={membership.transfer} refresh={refresh} /><div className="fm-card-actions"><Link to={`/membership/${membership.id}/details`} className="fg-button fg-button--secondary">Membership Details</Link><Link to="/profile/visits" className="fg-button fg-button--text">Visit History</Link></div></MembershipPanel>
   return <SingleMembershipCard membership={membership} summary={summary} expanded={expanded} details={details} />
 }
 function SingleMembershipCard({ membership, summary, expanded, details }: { membership: Membership; summary: MembershipSummary; expanded: boolean; details: boolean }) {

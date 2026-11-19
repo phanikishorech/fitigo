@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import CustomerActivity from './CustomerActivity'
 import { adminUpdateUserStatus, fetchAdminUser, fetchAdminUsers, type AdminUserListItem } from '../screens/Admin/api'
 import { dateLabel } from '../services/client'
 import { useAdminResource, useListQuery } from './hooks'
@@ -6,7 +7,7 @@ import { Alert, Button, ConfirmationModal, DataCard, DataTable, Details, FilterP
 
 const roles = [{ value: '', label: 'All users' }, { value: 'CUSTOMER', label: 'Customers' }, { value: 'GYM_OWNER', label: 'Owners' }, { value: 'ADMIN', label: 'Admins' }, { value: 'SUPER_ADMIN', label: 'Super admins' }]
 export function UserCard({ user }: { user: AdminUserListItem }) { return <><div className="ad-record-top"><Identity name={personName(user)} caption={user.roles.map(readable).join(', ')} /><StatusBadge status={user.status} /></div><p>{user.email}</p><small>Created {dateLabel(user.created_at)}</small><Link className="fg-button fg-button--secondary" to={`/admin/users/${user.id}`}>View user</Link></> }
-export default function Users({ id }: { id?: number }) { return id ? <UserDetails id={id} /> : <UserList /> }
+export default function Users({ id }: { id?: number }) { return id ? <><UserDetails id={id} /><CustomerActivity id={id} /></> : <UserList /> }
 function UserList() {
   const list = useListQuery(); const role = list.query.get('role') || ''; const status = list.query.get('status') || ''
   const resource = useAdminResource(async () => {

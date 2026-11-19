@@ -1,0 +1,37 @@
+file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/Fitigo/frontend/scripts/role-session-browser.mjs:24
+async function until(expression){for(let i=0;i<120;i++){if(await evaluate(expression))return;await wait(100)}throw Error(`Not ready: ${expression}; ${await evaluate('document.body?.innerText')}`)}
+                                                                                                                   ^
+
+Error: Not ready: location.pathname==="/admin/dashboard" && !!document.querySelector(".ad-metrics"); Skip to main content
+FitiGo Admin
+SA
+Dashboard
+
+Your gym marketplace at a glance.
+
+Today
+Yesterday
+Last 7 days
+This month
+Last 30 days
+Custom
+
+Showing 17 Nov 2026 · IST. Week starts Monday. Custom ranges: up to 366 days.
+
+Gym
+All gyms
+Payment records
+Current environment
+Live payments
+Test payments
+Unable to connect
+
+Unable to connect. Check your internet connection and try again.
+
+Try again
+FitiGo Admin Portal
+    at until (file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/Fitigo/frontend/scripts/role-session-browser.mjs:24:116)
+    at async atHome (file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/Fitigo/frontend/scripts/role-session-browser.mjs:30:29)
+    at async file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/Fitigo/frontend/scripts/role-session-browser.mjs:78:40
+
+Node.js v24.16.0

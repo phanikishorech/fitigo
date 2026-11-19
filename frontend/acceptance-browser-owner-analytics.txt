@@ -1,0 +1,1 @@
+PASS analytics charts/tooltips, All Gyms and selected scope, filters/pagination, refresh/error/empty states, responsive 320-1440px

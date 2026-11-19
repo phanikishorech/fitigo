@@ -62,3 +62,13 @@ class RazorpayGateway:
 
     def payments(self, order_id):
         return self.request("GET", f"orders/{order_id}/payments").get("items", [])
+
+    def refunds(self, payment_id):
+        """Read only, bounded pagination. Never initiate a refund."""
+        rows = []
+        for offset in range(0, 10000, 100):
+            page = self.request('GET', f'payments/{payment_id}/refunds', params={'count':100, 'skip':offset}).get('items')
+            if not isinstance(page, list): raise HTTPException(409, 'Invalid provider refund list')
+            rows.extend(page)
+            if len(page) < 100: return rows
+        raise HTTPException(409, 'Refund evidence pagination requires review')

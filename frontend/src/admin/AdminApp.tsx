@@ -8,12 +8,14 @@ import './admin.css'
 
 const Login = lazy(() => import('./Login'))
 const Dashboard = lazy(() => import('./Dashboard'))
-const Analytics = lazy(() => import('./Analytics'))
+const BusinessOverview = lazy(() => import('./BusinessOverview'))
 const Users = lazy(() => import('./Users'))
 const Gyms = lazy(() => import('./Gyms'))
 const Bookings = lazy(() => import('./Bookings'))
 const Account = lazy(() => import('./Account'))
 const MembershipPlans = lazy(() => import('./MembershipPlans'))
+const FinancialSettings = lazy(() => import('./FinancialSettings'))
+const Memberships = lazy(() => import('./Memberships'))
 export default function AdminApp({ path }: { path: string }) {
   const route = adminRoute(path)
   return <div className="fg-app ad-app"><ToastProvider><Suspense fallback={<div className="ad-loading"><Skeleton /></div>}>{route.page === 'login' ? <Login /> : route.page === 'access-denied' ? <SystemPage denied /> : route.page === 'session-expired' ? <SystemPage /> : <Authenticated path={path} route={route} />}</Suspense></ToastProvider></div>
@@ -25,7 +27,9 @@ function Authenticated({ path, route }: { path: string; route: AdminRoute }) {
   const { user, roles } = useIdentity()
   let content
   if (route.page === 'dashboard') content = <Dashboard />
-  else if (route.page === 'analytics') content = <Analytics />
+  else if (route.page === 'financial-settings') content = <FinancialSettings />
+  else if (route.page === 'analytics' || route.page === 'reports') content = <BusinessOverview reportsOnly />
+  else if (route.page === 'memberships') content = <Memberships />
   else if (route.page === 'users' || route.page === 'user') content = <Users id={route.id} />
   else if (['gyms', 'gym', 'review'].includes(route.page)) content = <Gyms id={route.id} review={route.page === 'review'} />
   else if (route.page === 'bookings' || route.page === 'booking') content = <Bookings id={route.id} />

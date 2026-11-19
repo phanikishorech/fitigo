@@ -13,3 +13,11 @@ from app.models import access  # noqa: F401
 from app.models import operations  # noqa: F401
 from app.models import notification_delivery  # noqa: F401
 from app.models import support  # noqa: F401
+from app.models import customer_policy  # noqa: F401
+from app.models import checkout_funding  # noqa: F401
+from app.models import financial_agreement  # noqa: F401
+from app.models import source_evidence  # noqa: F401
+from app.models import marketplace_allocation  # noqa: F401
+from app.models import gym_visit_payout  # noqa: F401
+from app.models import owner_payout  # noqa: F401
+from app.models import financial_review  # noqa: F401

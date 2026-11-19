@@ -4,7 +4,8 @@ import { openAuthModal } from '../../authUi'
 import { useMutation, useResource } from '../../hooks/useResource'
 import { bookingService } from '../../services/bookingService'
 import { money } from '../../services/client'
-import { useBookingDraft } from '../../store/bookingStore'
+import { draftVisitors, useBookingDraft } from '../../store/bookingStore'
+import { useIdentity } from '../../session/SessionGuard'
 import { navigate } from '../../router'
 import { Alert, Button, EmptyState, ErrorState, Heading, Link, Skeleton } from '../../components/common/UI'
 import Icon from '../../components/common/Icon'
@@ -12,10 +13,20 @@ import { isBookableSession, isFutureBookingStart, gymStartOptions, oneHourVisitE
 import { visitAccessService } from '../../services/visitAccessService'
 import { todayFrom } from '../../utils/membership'
 import { usePendingAction } from '../../session/usePendingAction'
+import type { CartItemResponse } from '../../screens/GymAccess/types'
+import type { BookingDraft } from '../../store/bookingStore'
+import { cartEditDraft } from '../../utils/cartEdit'
 
-export default function BookingPage({ gymId, schedule, companionsDate }: { gymId: number; schedule: boolean; companionsDate?: string }) {
-  const [draft, update] = useBookingDraft(gymId, companionsDate)
-  const [visitors, setVisitors] = useState<string[]>([])
+export default function BookingPage({ gymId, schedule, companionsDate, editItem }: { gymId: number; schedule: boolean; companionsDate?: string; editItem?: CartItemResponse }) {
+  const { user } = useIdentity()
+  const [regularDraft, updateRegular] = useBookingDraft(gymId, companionsDate)
+  const [editedDraft, setEditedDraft] = useState(() => editItem ? cartEditDraft(editItem) : null)
+  const draft = editedDraft ?? regularDraft
+  const update = (values: Partial<BookingDraft>) => editItem ? setEditedDraft(previous => ({ ...previous!, ...values })) : updateRegular(values)
+  // Keep visitor names with the existing in-memory draft across a login redirect.
+  // Do not place names in the return URL, return intent or persistent storage.
+  const visitors = draftVisitors(draft, user.id) ?? editItem?.visitor_names ?? []
+  const setVisitors = (change: (previous: string[]) => string[]) => update({ visitorNames: change(visitors), visitorOwnerId: user.id })
   const options = useResource(async () => ({ ...await bookingService.options(gymId), receivedAt: Date.now() }), String(gymId))
   const [clock, setClock] = useState(Date.now())
   useEffect(() => { const timer = setInterval(() => setClock(Date.now()), 1000); return () => clearInterval(timer) }, [])
@@ -33,7 +44,7 @@ export default function BookingPage({ gymId, schedule, companionsDate }: { gymId
   const mutation = useMutation()
   usePendingAction('ADD_TO_CART', () => add(), !!options.data && !!availability.data && !options.loading && !availability.loading && !options.error && !availability.error)
   useEffect(() => {
-    if (!companionsDate && new URLSearchParams(window.location.search).get('type') === 'CLASS' && options.data?.has_classes) update({ accessType: 'CLASS' })
+    if (!editItem && !companionsDate && new URLSearchParams(window.location.search).get('type') === 'CLASS' && options.data?.has_classes) update({ accessType: 'CLASS' })
   }, [gymId, options.data?.has_classes, companionsDate])
   if (options.loading) return <Skeleton cards={2} />
   if (options.error) return <ErrorState message={options.error} retry={options.retry} />
@@ -67,16 +78,20 @@ export default function BookingPage({ gymId, schedule, companionsDate }: { gymId
       if (!starts.includes(draft.start) || !endTime) throw new Error('Choose an available quarter-hour start for a one-hour visit.')
       // In companion mode memberCount contains additional people only. The member's
       // QR entitlement is never submitted as a paid cart item or a fake discount.
-      await bookingService.addGym({ booking_type: 'GYM', gym_id: gymId, booking_date: draft.date, preferred_start_time: draft.start, member_count: draft.memberCount, visitor_names })
+      const body = { booking_type: 'GYM' as const, gym_id: gymId, booking_date: draft.date, preferred_start_time: draft.start, member_count: draft.memberCount, visitor_names }
+      if (editItem) await bookingService.updateCart(editItem.id, { ...body, expected_updated_at: editItem.updated_at })
+      else await bookingService.addGym(body)
     } else {
       if (!selected || selected.available_capacity < draft.memberCount || !isBookableSession(selected.status, selected.available_capacity)) throw new Error('That session is no longer available. Choose another time.')
-      await bookingService.addClass({ booking_type: 'CLASS', gym_id: gymId, booking_date: draft.date, class_session_id: selected.id, member_count: draft.memberCount, visitor_names })
+      const body = { booking_type: 'CLASS' as const, gym_id: gymId, booking_date: draft.date, class_session_id: selected.id, member_count: draft.memberCount, visitor_names }
+      if (editItem) await bookingService.updateCart(editItem.id, { ...body, expected_updated_at: editItem.updated_at })
+      else await bookingService.addClass(body)
     }
     navigate('/cart')
   }) }
   return <>
     <Link to={`/gyms/${gymId}`} className="fg-inline-link"><Icon name="back" />{options.data?.gym_name}</Link>
-    <Heading eyebrow="YOUR NEXT WORKOUT" title={companionsDate ? 'Add People' : schedule ? 'Make time for yourself' : 'How do you want to work out?'} subtitle={companionsDate ? 'Choose paid day visits for friends or family joining you today. Do not include yourself in the count.' : 'Choose your visit. We’ll take care of the next step.'} />
+    <Heading eyebrow="YOUR NEXT WORKOUT" title={editItem ? 'Edit Visit' : companionsDate ? 'Add People' : schedule ? 'Make time for yourself' : 'How do you want to work out?'} subtitle={companionsDate ? 'Choose paid day visits for friends or family joining you today. Do not include yourself in the count.' : 'Choose your visit. We’ll take care of the next step.'} />
     <div className="fg-stepper"><strong>{companionsDate ? '01 People' : '01 Access'}</strong><Icon name="chevron" size={15} /><strong>{schedule ? '02 Schedule' : ''}</strong><span>{schedule ? '' : '02 Schedule'}</span><Icon name="chevron" size={15} /><span>03 Checkout</span></div>
     <div className="fg-two-column"><div className="fg-panel fg-stack">
       {!schedule ? <>
@@ -97,9 +112,9 @@ export default function BookingPage({ gymId, schedule, companionsDate }: { gymId
         {mutation.error && <Alert>{mutation.error}</Alert>}
         {startTime && !futureStart && <Alert>This start time has passed. Choose a future date and time.</Alert>}
         <fieldset className="fg-stack"><legend>Who will use this booking?</legend><p className="fg-muted">Each person receives their own one-time QR after payment. Enter the actual visitors, not just the purchaser.</p>{Array.from({ length: draft.memberCount }, (_, index) => <label className="fg-field" key={index}>Visitor {index + 1} full name<input required maxLength={150} autoComplete="off" value={visitors[index] || ''} onChange={event => setVisitors(previous => { const next = [...previous]; next[index] = event.target.value; return next })} /></label>)}</fieldset>
-        <Button loading={mutation.pending} disabled={!futureStart || availability.loading || !!availability.error || (draft.accessType === 'GYM' ? !starts.includes(draft.start) || !endTime || availability.data?.hours.is_closed : !selected || selected.available_capacity < 1)} onClick={add}>Check availability & add to cart</Button>
-        <small className="fg-muted">The gym validates your selection when it is added. Nothing is charged until you confirm payment.</small>
-        {!companionsDate && <Link to={`/gyms/${gymId}/book/access`} className="fg-inline-link">Change access type</Link>}
+        <Button loading={mutation.pending} disabled={!futureStart || availability.loading || !!availability.error || (draft.accessType === 'GYM' ? !starts.includes(draft.start) || !endTime || availability.data?.hours.is_closed : !selected || selected.available_capacity < 1)} onClick={add}>{editItem ? 'Save visit changes' : 'Check availability & add to cart'}</Button>
+        <small className="fg-muted">{editItem ? 'Saving updates this draft, not a new visit. Availability and pricing are checked again. Nothing is charged.' : 'The gym validates your selection when it is added. Nothing is charged until you confirm payment.'}</small>
+        {editItem ? <Link to="/cart" className="fg-inline-link">Cancel editing</Link> : !companionsDate && <Link to={`/gyms/${gymId}/book/access`} className="fg-inline-link">Change access type</Link>}
       </>}
     </div><aside className="fg-panel fg-stack"><h3>{companionsDate ? 'Your group visit' : 'Your visit'}</h3><p>{options.data?.gym_name}</p>
       {companionsDate && <div className="fg-success"><strong>You · Covered by membership</strong><p>Your own visit uses My Access and is not added to this paid cart. Only the additional people below are charged.</p></div>}

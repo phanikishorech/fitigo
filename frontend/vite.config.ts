@@ -25,14 +25,14 @@ export default defineConfig(() => ({
   server: {
     port: 5173,
     strictPort: true,
-    allowedHosts: ['increase-eminem-alexandria-proceedings.trycloudflare.com'],    
+    allowedHosts: ['adjusted-bar-million-pairs.trycloudflare.com'],    
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8001',
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true
       },
       '/uploads': {
-        target: 'http://127.0.0.1:8001',
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true
       }
     }

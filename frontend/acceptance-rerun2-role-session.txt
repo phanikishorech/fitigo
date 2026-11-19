@@ -1,0 +1,54 @@
+PASS all six backend roles: login response routing, existing homes, login aliases, cross-role guards and refresh
+PASS wrong-portal login uses actual role; incorrect credentials remain inline; anonymous protected routes go to /login
+PASS network/server/expired/forbidden/invalid-role/loading states, retries and cross-tab logout
+PASS all active logout UIs clear credentials and redirect /login even if server revocation fails
+file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/Fitigo/frontend/scripts/role-session-browser.mjs:25
+async function until(expression){for(let i=0;i<120;i++){if(await evaluate(expression))return;await wait(100)}throw Error(`Not ready: ${expression}; ${await evaluate('document.body?.innerText')}`)}
+                                                                                                                   ^
+
+Error: Not ready: location.pathname+location.search+location.hash==="/admin/profile?tab=security#password" && document.body.innerText.includes("Profile"); Skip to main content
+FitiGo Admin
+SA
+Admin profile
+
+Your verified administrator identity
+
+SA
+Same Account
+Admin
+Name
+Same Account
+Email
+same@example.com
+Phone
+Not provided
+User ID
+#1
+Roles
+Admin
+First nameLast nameEmailPhone
+Current password (required to change email or phone)
+
+Changing contact details clears their verification and signs you out on all devices. Password and recovery rules are unchanged.
+
+Save profile
+Password
+
+Update the password for your account. This signs you out on all devices.
+
+Change password
+Notification preferences
+
+Fixture preferences
+
+Optional operational email: Off. Channel: unavailable or email unverified.
+
+Enable operational email
+
+Security notices are not optional. SMS and push notification preferences are not available.
+
+FitiGo Admin Portal
+    at until (file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/Fitigo/frontend/scripts/role-session-browser.mjs:25:116)
+    at async file:///C:/Users/ckishor/PROJECT%20CODE/GIT%20Code/poc/Fitigo/frontend/scripts/role-session-browser.mjs:155:3
+
+Node.js v24.16.0

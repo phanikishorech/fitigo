@@ -80,9 +80,16 @@ def test_recharge_validation_cancel_and_legacy_bypass(api):
     before = balance(api)
     record = checkout(api, {'kind': 'WALLET_TOPUP', 'amount': '100'})
     assert api[0].post('/api/v1/payments/checkouts', headers={**api[1][1], 'Idempotency-Key': 'checkout-0001'}, json={'kind': 'WALLET_TOPUP', 'amount': '200'}).status_code == 409
-    assert api[0].post(f"/api/v1/payments/checkouts/{record['id']}/cancel", headers=api[1][1]).status_code == 200
-    assert confirm(api, record, api[3].pay(record)).json()['status'] == 'REVIEW_REQUIRED'
+    # Open/unverified orders cannot be locally cancelled. A subsequent verified
+    # capture remains a legitimate top-up, credited once rather than lost money.
+    assert api[0].post(f"/api/v1/payments/checkouts/{record['id']}/cancel", headers=api[1][1]).status_code == 409
     assert balance(api) == before
+    entity = api[3].pay(record)
+    assert confirm(api, record, entity).json()['status'] == 'PAID'
+    assert confirm(api, record, entity).json()['status'] == 'PAID'
+    assert balance(api) == before + 100
+    with Session(api[2]) as db:
+        assert db.scalar(select(func.count(WalletTransaction.id)).where(WalletTransaction.checkout_id==record['id'])) == 1
 
 
 def test_gateway_refund_reverses_credit_once_even_if_spent(api):
@@ -96,12 +103,14 @@ def test_gateway_refund_reverses_credit_once_even_if_spent(api):
         api[3].refunds[record['gateway_order_id']] = [{'cf_refund_id': '1', 'cf_payment_id': entity['cf_payment_id'], 'order_id': record['gateway_order_id'], 'refund_currency': 'INR', 'refund_amount': 100, 'refund_status': 'SUCCESS'}]
     else:
         api[3].entities[entity['id']].update(status='refunded', amount_refunded=10000)
-    assert refresh(api, record).json()['status'] == 'REFUNDED'
-    assert balance(api) == -80
-    assert refresh(api, record).json()['status'] == 'REFUNDED'
-    assert balance(api) == -80
+    assert refresh(api, record).json()['status'] == 'REVIEW_REQUIRED'
+    assert balance(api) == 20
+    assert refresh(api, record).json()['status'] == 'REVIEW_REQUIRED'
+    assert balance(api) == 20
     with Session(api[2]) as db:
-        assert db.scalar(select(func.count(WalletTransaction.id)).where(WalletTransaction.txn_type == 'REFUND_REVERSAL')) == 1
+        assert db.scalar(select(func.count(WalletTransaction.id)).where(WalletTransaction.txn_type == 'REFUND_REVERSAL')) == 0
+        assert db.get(PaymentCheckout, record['id']).snapshot['wallet_refund_pending_minor'] == 10000
+    assert Decimal(api[0].get('/api/v1/wallet/balance', headers=api[1][1]).json()['available_balance']) == 0
 
 
 def test_wallet_mode_mismatch_fails_before_order(api):
@@ -111,6 +120,28 @@ def test_wallet_mode_mismatch_fails_before_order(api):
     response = api[0].post('/api/v1/payments/checkouts', headers={**api[1][1], 'Idempotency-Key': 'mode-mismatch'}, json={'kind': 'WALLET_TOPUP', 'amount': 100})
     assert response.status_code == 409
     assert api[3].creations == 0
+
+
+@pytest.mark.parametrize('restriction', ['none', 'migration', 'mode'])
+def test_wallet_reads_preserve_balance_and_explain_spending_restriction(api, monkeypatch, restriction):
+    from app.services import checkout_funding
+    with Session(api[2]) as db:
+        account = db.scalar(select(WalletAccount).where(WalletAccount.user_id == 1))
+        account.balance = Decimal('300.00')
+        account.payment_mode = 'live' if restriction == 'mode' else 'test'
+        db.commit()
+    if restriction == 'migration':
+        monkeypatch.setattr(checkout_funding, 'available', lambda db: False)
+    for path in ('balance', 'transactions'):
+        response = api[0].get('/api/v1/wallet/' + path, headers=api[1][1])
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert Decimal(data['balance']) == 300
+        assert Decimal(data['reserved_balance']) == 0
+        assert Decimal(data['available_balance']) == (300 if restriction == 'none' else 0)
+        if restriction == 'none': assert data['wallet_unavailable_reason'] is None
+        else: assert ('migration' if restriction == 'migration' else 'environment') in data['wallet_unavailable_reason']
+    assert balance(api) == 300
 
 
 def test_history_filters_pagination_do_not_duplicate_booking_purchase(api):

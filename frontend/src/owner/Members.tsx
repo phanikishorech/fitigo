@@ -6,7 +6,7 @@ import { istDateTime } from '../utils/membership'
 import { Button, Card, EmptyState, ErrorState, Input, Notice, PageHeader, Pagination, Skeleton, StatusBadge } from './UI'
 
 type Member = { id: number; name: string; membership_status: string }
-type History = { id: number; name: string; memberships: { id: number; status: string; start_at: string; end_at: string }[];
+type History = { current_membership_access?: boolean; id: number; name: string; memberships: { id: number; status: string; start_at: string; end_at: string }[];
   bookings: { id: number; date: string; status: string; attendance_status: string | null; quantity: number }[];
   visits: { id: number; at: string; source: string; booking_id: number | null }[]; booking_total: number; visit_total: number }
 
@@ -28,7 +28,7 @@ function MemberHistory({ gymId, id, back }: { gymId: number; id: number; back: (
   const resource = useResource(() => request<History>(`/gym-owner/gyms/${gymId}/members/${id}?limit=20&offset=${page * 20}`), `history:${gymId}:${id}:${page}`)
   return <div className="ow-stack"><Button variant="secondary" onClick={back}>Back to members</Button>{resource.loading ? <Skeleton /> : resource.error ? <ErrorState message={resource.error} retry={resource.retry} /> : resource.data && <>
     <PageHeader title={resource.data.name} description="History at the selected gym only. Manual attendance is not a verified visit." />
-    <Card title="Gym memberships">{resource.data.memberships.length ? resource.data.memberships.map(m => <p key={m.id}><StatusBadge status={m.status} /> {dateLabel(m.start_at)} – {dateLabel(m.end_at)}</p>) : <EmptyState title="No membership sold by this gym" />}</Card>
+    {resource.data.current_membership_access != null && <Notice>{resource.data.current_membership_access ? "This customer currently has eligible membership access at this gym. Use QR check-in to validate daily availability." : "No current membership entitlement covers this customer at this gym. Historical visits remain unchanged."}</Notice>}<Card title="Gym memberships">{resource.data.memberships.length ? resource.data.memberships.map(m => <p key={m.id}><StatusBadge status={m.status} /> {dateLabel(m.start_at)} – {dateLabel(m.end_at)}</p>) : <EmptyState title="No membership sold by this gym" />}</Card>
     <Card title="Bookings">{resource.data.bookings.length ? resource.data.bookings.map(b => <p key={b.id}>#{b.id} · {dateLabel(b.date)} · {b.quantity} places · <StatusBadge status={b.status} /> {b.attendance_status && <StatusBadge status={b.attendance_status} />}</p>) : <EmptyState title="No bookings on this page" />}</Card>
     <Card title="Verified visits">{resource.data.visits.length ? resource.data.visits.map(v => <p key={v.id}>{istDateTime(v.at)} · {v.source.replaceAll('_', ' ')}{v.booking_id ? ` · Booking #${v.booking_id}` : ''}</p>) : <EmptyState title="No verified visits on this page" />}</Card>
     <Pagination page={page} hasMore={(page + 1) * 20 < Math.max(resource.data.booking_total, resource.data.visit_total)} onChange={setPage} />

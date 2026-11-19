@@ -152,6 +152,10 @@ class MembershipPauseService:
             membership.end_at = record.new_end_at
             self.db.flush()
             result = self.eligibility(membership, lock=True)
+            from app.services.source_evidence import membership_event
+            membership_event(self.db, membership, 'MEMBERSHIP_PAUSED', record.id, record.created_at,
+                extra={'pause_id':record.id, 'start_date':record.start_date, 'end_date':record.end_date,
+                    'days':record.days, 'previous_end_at':record.previous_end_at, 'new_end_at':record.new_end_at})
             self.db.commit()
             return result
         except Exception:

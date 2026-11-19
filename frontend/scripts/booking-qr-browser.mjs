@@ -18,6 +18,8 @@ const access = () => ({ access_type: 'BOOKING_ACCESS', status, message: status =
   return { qr_id: id, status: used ? 'USED' : 'ACTIVE', visitor_name: id === 99 ? 'David Visitor' : 'Mary Visitor', checked_in_at: used && verifiedCheckin ? '2026-10-09T18:00:00+05:30' : null }
 }) })
 function fixture(path, request) {
+  if (path.endsWith('/notifications/inbox')) return { items: [], total: 0, unread_count: 0 }
+  if (path.endsWith('/cart/summary')) return { count: 0, total: '0.00', currency: 'INR' }
   if (path.endsWith('/auth/session')) return { user, roles: ['CUSTOMER'] }
   if (path.endsWith('/users/me')) return user
   if (path.endsWith('/bookings/42/qr')) {

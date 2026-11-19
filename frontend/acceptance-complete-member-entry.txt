@@ -1,0 +1,1 @@
+PASS membership/home Single-Gym and Multi-Gym entry, explicit QR generation once, My Access links, paused/used/nonmember/anonymous/error states, 360–1440px

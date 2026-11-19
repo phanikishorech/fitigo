@@ -80,7 +80,7 @@ class AccessService:
     def _active_memberships_for_date(self, *, user_id: int, at: datetime) -> list[UserMembership]:
         return active_memberships(self.db, user_id, at)
 
-    def _resolve_today_access_context(self, *, user_id: int) -> dict:
+    def _resolve_today_access_context(self, *, user_id: int, lock: bool = False) -> dict:
         now = utcnow()
         today = as_ist(now).date()
 
@@ -90,9 +90,9 @@ class AccessService:
         if self._is_paused(user_id=user_id, access_date=today):
             return {"status": "PAUSED", "today": today, "now": now}
 
-        memberships = self._active_memberships_for_date(user_id=user_id, at=now)
+        memberships = active_memberships(self.db, user_id, now, lock=True) if lock else self._active_memberships_for_date(user_id=user_id, at=now)
         if not memberships:
-            if active_memberships(self.db, user_id, now, include_paused=True):
+            if active_memberships(self.db, user_id, now, include_paused=True, lock=lock):
                 return {"status": "PAUSED", "today": today, "now": now}
             return {"status": "NO_ACCESS", "today": today, "now": now}
 
@@ -104,6 +104,10 @@ class AccessService:
         # SINGLE_GYM: the only membership.
         # MULTI_GYM: choose the one with latest end_at.
         primary = max(memberships, key=lambda m: (_utc(m.end_at), int(m.id)))
+        from app.services.membership_transfer import used_membership_day
+        if used_membership_day(self.db, primary.id, today, lock=lock):
+            return {'status': 'USED', 'today': today, 'now': now}
+
         gym_id = gym_ids[0] if access_type == "SINGLE_GYM" else None
 
         gym = None
@@ -143,16 +147,7 @@ class AccessService:
         )
 
         self.db.add(rec)
-        try:
-            self.db.commit()
-        except IntegrityError:
-            self.db.rollback()
-            # Race: someone else created it.
-            existing2 = self.db.execute(select(CustomerDailyAccess).where(CustomerDailyAccess.access_key == access_key)).scalars().first()
-            if existing2:
-                return existing2
-            raise
-        self.db.refresh(rec)
+        self.db.flush()
         return rec
 
     def _get_active_token_for_daily_access(self, *, daily_access_id: int, now: datetime) -> AccessQrToken | None:
@@ -182,6 +177,9 @@ class AccessService:
             token_hash=token_hash,
             status=QrTokenStatus.ACTIVE.value,
             generated_at=stored_instant(now),
+            # Existing MySQL DATETIME is whole-second. Floor rather than round
+            # forward and briefly reject a token just issued in this second.
+            valid_from=stored_instant(now).replace(microsecond=0),
             expires_at=stored_instant(exp),
             used_at=None,
             used_gym_id=None,
@@ -203,8 +201,10 @@ class AccessService:
         return self.get_or_create_active_qr_token(user_id=user_id)
 
     def get_or_create_active_qr_token(self, *, user_id: int) -> dict:
+        # Transfer and QR issue share the customer row. Helpers must not commit mid-operation.
+        self.db.scalar(select(User).where(User.id == user_id).with_for_update().execution_options(populate_existing=True))
         # Helper for API: always return a qr_token when access is ACTIVE.
-        used = self._used_access(user_id=user_id, access_date=access_today())
+        used = self._used_access(user_id=user_id, access_date=access_today(), lock=True)
         if used:
             gym = self.db.get(Gym, used.used_gym_id) if used.used_gym_id else None
             return {"status": "USED", "gym_name": gym.name if gym else None, "used_at": as_ist(used.used_at) if used.used_at else None}
@@ -212,16 +212,22 @@ class AccessService:
         if legacy:
             gym = self.db.get(Gym, legacy.gym_id)
             return {"status": "USED", "gym_name": gym.name if gym else None, "used_at": as_ist(legacy.scanned_at or legacy.created_at)}
-        ctx = self._resolve_today_access_context(user_id=user_id)
+        # Establish a current locking read after acquiring the user lock; avoid a
+        # pre-transfer repeatable-read snapshot being reused to issue old ownership.
+        active_memberships(self.db, user_id, utcnow(), lock=True, include_paused=True)
+        ctx = self._resolve_today_access_context(user_id=user_id, lock=True)
         today = ctx["today"]
         now = ctx["now"]
 
-        if ctx["status"] in {"PAUSED", "NO_ACCESS"}:
+        if ctx["status"] in {"PAUSED", "NO_ACCESS", "USED"}:
             return {"status": ctx["status"]}
 
         access_type = ctx["access_type"]
         gym_id = ctx["gym_id"]
         membership_id = ctx["membership_id"]
+        from app.services.membership_transfer import used_membership_day
+        if used_membership_day(self.db, membership_id, today, lock=True):
+            return {'status': 'USED'}
         gym = ctx.get("gym")
 
         daily = self._get_or_create_daily_access(
@@ -374,6 +380,8 @@ class AccessService:
                     raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="QR code has already been used.")
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired QR")
 
+            if token_row.valid_from is not None and _utc(token_row.valid_from) > now:
+                raise HTTPException(status_code=400, detail="QR validity has not started")
             if _utc(token_row.expires_at) <= now:
                 # Expire token
                 token_row.status = QrTokenStatus.EXPIRED.value
@@ -421,6 +429,9 @@ class AccessService:
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Membership is not active")
 
             # Pause-day policy
+            from app.services.membership_transfer import used_membership_day
+            if used_membership_day(self.db, m.id, today, lock=True):
+                raise HTTPException(409, "Today's membership access has already been used.")
             from app.services.membership_pause_service import paused_on
             if paused_on(self.db, m.id, today):
                 raise HTTPException(status_code=403, detail={"code": "MEMBERSHIP_PAUSED"})
@@ -477,6 +488,8 @@ class AccessService:
             token_row.checkin_id = int(checkin.id)
             token_row.updated_at = datetime.utcnow()
 
+            from app.services.source_evidence import attendance
+            attendance(self.db, checkin, token_row, membership=m, daily=daily)
             self.db.commit()
 
             return {
@@ -551,8 +564,12 @@ class AccessService:
 
         # Keep each historical membership interval separate: gaps between plans
         # are not missed visits, and pausing today must not erase past eligibility.
+        from app.models.customer_policy import MembershipTransfer
+        from app.services.policy_schema import available
+        transfer_rows = list(self.db.scalars(select(MembershipTransfer).where(or_(MembershipTransfer.original_user_id == user_id, MembershipTransfer.recipient_user_id == user_id)))) if available(self.db) else []
+        transfers = {row.membership_id: row for row in transfer_rows}
         memberships = self.db.execute(select(UserMembership).where(
-            UserMembership.user_id == user_id,
+            or_(UserMembership.user_id == user_id, UserMembership.id.in_([row.membership_id for row in transfer_rows if row.original_user_id == user_id])),
             UserMembership.payment_status == "PAID",
             UserMembership.status.in_([status.value for status in MembershipStatus]),
             UserMembership.start_at < month_end,
@@ -566,8 +583,13 @@ class AccessService:
                 if membership.cancelled_at is None:
                     continue
                 interval_end = min(interval_end, _utc(membership.cancelled_at))
-            intervals.append((_utc(membership.start_at), interval_end))
-            member_intervals.append((membership.id, _utc(membership.start_at), interval_end))
+            interval_start = _utc(membership.start_at)
+            transfer = transfers.get(membership.id)
+            if transfer:
+                if transfer.original_user_id == user_id: interval_end = min(interval_end, _utc(transfer.created_at))
+                else: interval_start = max(interval_start, _utc(transfer.created_at))
+            intervals.append((interval_start, interval_end))
+            member_intervals.append((membership.id, interval_start, interval_end))
 
         # A pause of one membership must not disable another unpaused entitlement.
         day = start
@@ -617,6 +639,8 @@ class AccessService:
                         days.append({"date": cur, "status": "TODAY", "qr_available": False, "qr_status": "NO_ACCESS" if daily_status == "REVOKED" else daily_status})
                     elif today_status == "OK":
                         days.append({"date": cur, "status": "TODAY", "qr_available": True, "qr_status": "ACTIVE"})
+                    elif today_status == "USED":
+                        days.append({"date": cur, "status": "TODAY", "qr_available": False, "qr_status": "USED"})
                     elif today_status == "PAUSED":
                         days.append({"date": cur, "status": "TODAY", "qr_available": False, "qr_status": "PAUSED"})
                     else:
